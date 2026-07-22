@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.mkengage.dev/events/conv.agent.assigned/1.0.0.schema.json",
+  "title": "conv.agent.assigned.v1 payload",
+  "description": "An agent was assigned to a conversation (routing, transfer, chatbot handoff, or manual claim).",
+  "type": "object",
+  "required": ["conversation_id", "agent_id", "assignment_type", "assigned_at"],
+  "additionalProperties": false,
+  "properties": {
+    "conversation_id": { "type": "string", "format": "uuid" },
+    "agent_id": { "type": "string", "format": "uuid" },
+    "previous_agent_id": { "type": ["string", "null"], "format": "uuid" },
+    "department_id": { "type": ["string", "null"], "format": "uuid" },
+    "assignment_type": { "type": "string", "enum": ["auto_routed", "manual_claim", "transferred", "chatbot_handoff", "escalation", "reassigned_offline"] },
+    "assigned_by": { "type": ["string", "null"], "description": "Principal that caused the assignment (actor format, see envelope.actorid)." },
+    "handoff_summary_available": { "type": "boolean", "default": false, "description": "True when the AI service produced a conversation summary for the receiving agent." },
+    "assigned_at": { "type": "string", "format": "date-time" }
+  }
+}

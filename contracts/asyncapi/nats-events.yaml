@@ -1,0 +1,83 @@
+asyncapi: 3.0.0
+info:
+  title: mkEngage Event Backbone (NATS JetStream)
+  version: 1.0.0
+  description: |
+    Stream and subject topology for the operational event backbone (ADR-005).
+    Every message is an envelope per ../events/envelope.schema.json; payload schemas
+    live in ../events/. Subject grammar: {domain}.{entity}.{action}. Organization ID
+    travels in the envelope + headers — never in subjects.
+
+    Delivery contract: at-least-once. Producers publish via transactional outbox with
+    Nats-Msg-Id = envelope.id (JetStream dedup window 10 min). Consumers are durable,
+    pull-based, explicitly acked, inbox-deduped, idempotent. Max deliveries 5, then
+    DLQ.{stream} with alerting (RULES-failure-retry).
+
+defaultContentType: application/json
+
+servers:
+  backbone:
+    host: nats.internal
+    protocol: nats
+    description: Region-local 3-node JetStream cluster; TLS; per-service accounts with subject-level permissions (ADR-009).
+
+channels:
+  conversations:
+    address: "conv.>"
+    description: |
+      Stream CONVERSATIONS — retention 7 days, file storage, replicas 3.
+      Subjects: conv.created, conv.message.accepted, conv.message.delivered,
+      conv.message.read, conv.agent.assigned, conv.transferred, conv.closed.
+      Producers: realtime-gateway (message facts), control-plane (lifecycle facts).
+      Consumers: ai-service (context/summarization triggers), workflow-workers
+      (SLA/escalation timers), analytics-consumer, control-plane (projections).
+  visitors:
+    address: "visitor.>"
+    description: |
+      Stream VISITORS — retention 3 days (high volume; durable home is ClickHouse).
+      Subjects: visitor.identified, visitor.event.recorded, visitor.session.started,
+      visitor.session.ended. Producers: gateway (widget events API), control-plane.
+      Consumers: analytics-consumer, workflow-workers (campaign/cart-recovery triggers).
+  knowledge:
+    address: "knowledge.>"
+    description: |
+      Stream KNOWLEDGE — retention 14 days.
+      Subjects: knowledge.source.updated, knowledge.ingestion.started,
+      knowledge.ingestion.completed, knowledge.ingestion.failed.
+      Producers: control-plane (admin actions), ingestion-worker (job facts).
+      Consumers: ai-service (cache/index refresh), control-plane (status projections).
+  workflows:
+    address: "workflow.>"
+    description: |
+      Stream WORKFLOWS — retention 14 days.
+      Subjects: workflow.started, workflow.completed, workflow.failed,
+      workflow.tool.approval.requested, workflow.tool.execution.completed.
+      Producers: workflow-workers. Consumers: control-plane (approval inbox,
+      notifications), realtime-gateway (agent console fan-out), analytics-consumer.
+  platform:
+    address: "org.>"
+    description: |
+      Stream PLATFORM — retention 30 days. Also binds subscription.> and usage.> and
+      integration.> subjects.
+      Subjects: org.created, org.region.assigned, subscription.changed,
+      usage.limit.reached, integration.failed.
+      Producers: control-plane. Consumers: all services (entitlement + budget gates).
+  analytics:
+    address: "analytics.>"
+    description: |
+      Stream ANALYTICS — fan-in subject for ClickHouse ingest; retention 24 h post-ack.
+      Other streams' consumers re-publish enriched analytical facts here when
+      transformation is needed; high-volume visitor events flow directly.
+      Consumer: analytics-consumer (batched ClickHouse inserts, dedup by event ID).
+
+operations:
+  publishConversationFact:
+    action: send
+    channel: { $ref: "#/channels/conversations" }
+    description: Producers publish conversation facts via their transactional outbox relay only — never direct JetStream publishes from request handlers (ADR-005).
+  consumeConversationFacts:
+    action: receive
+    channel: { $ref: "#/channels/conversations" }
+    description: Durable pull consumers; ack after side effects committed; inbox-dedupe by envelope id.
+
+components: {}

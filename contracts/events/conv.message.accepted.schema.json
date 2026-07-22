@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.mkengage.dev/events/conv.message.accepted/1.0.0.schema.json",
+  "title": "conv.message.accepted.v1 payload",
+  "description": "Emitted by the realtime-gateway after a message is durably persisted (ADR-002, §27). This is the fact other services react to; it is NOT the delivery mechanism to chat clients (that is Phoenix fan-out).",
+  "type": "object",
+  "required": ["message_id", "conversation_id", "channel_id", "sender_type", "sender_id", "sequence_number", "persisted_at", "content_type"],
+  "additionalProperties": false,
+  "properties": {
+    "message_id": { "type": "string", "format": "uuid" },
+    "conversation_id": { "type": "string", "format": "uuid" },
+    "channel_id": { "type": "string", "format": "uuid", "description": "Origin channel (web widget, mobile, email adapter, etc.)." },
+    "sender_type": { "type": "string", "enum": ["visitor", "contact", "agent", "chatbot", "system"] },
+    "sender_id": { "type": "string", "format": "uuid" },
+    "sequence_number": { "type": "integer", "minimum": 1, "description": "Per-conversation total order (RULES-message-ordering)." },
+    "persisted_at": { "type": "string", "format": "date-time" },
+    "content_type": { "type": "string", "enum": ["text", "attachment", "rich", "system_note"] },
+    "attachment_count": { "type": "integer", "minimum": 0, "default": 0 },
+    "content_preview": {
+      "type": ["string", "null"],
+      "maxLength": 140,
+      "description": "Truncated preview for routing/notification purposes only. Full bodies are read from PostgreSQL by authorized consumers — never carried on the bus (data minimization, ADR-009)."
+    },
+    "ai_involvement": { "type": "string", "enum": ["none", "chatbot_reply", "suggested_reply_used"], "default": "none" }
+  }
+}

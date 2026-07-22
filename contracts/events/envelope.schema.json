@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.mkengage.dev/events/envelope.schema.json",
+  "title": "mkEngage Event Envelope",
+  "description": "CloudEvents 1.0-compatible envelope wrapping every event on the NATS backbone (ADR-005). Payload contracts are referenced via dataschema and validated separately.",
+  "type": "object",
+  "required": ["specversion", "id", "type", "source", "time", "orgid", "correlationid", "dataschema", "data"],
+  "additionalProperties": false,
+  "properties": {
+    "specversion": { "const": "1.0" },
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUIDv7 event ID. Also used as Nats-Msg-Id for publish dedup and as the consumer inbox key."
+    },
+    "type": {
+      "type": "string",
+      "pattern": "^[a-z]+(\\.[a-z_]+){1,3}\\.v[0-9]+$",
+      "description": "Event type with major version suffix, e.g. conv.message.accepted.v1. Breaking changes bump the version in the type name.",
+      "examples": ["conv.message.accepted.v1", "visitor.identified.v1", "workflow.tool.approval.requested.v1"]
+    },
+    "source": {
+      "type": "string",
+      "description": "Producing service identifier.",
+      "enum": ["control-plane", "realtime-gateway", "ai-service", "ingestion-worker", "workflow-workers", "analytics-consumer"]
+    },
+    "time": { "type": "string", "format": "date-time" },
+    "orgid": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Organization (tenant) ID. Mandatory on all events; consumers scope all processing to it (RULES-tenant-isolation)."
+    },
+    "actorid": {
+      "type": ["string", "null"],
+      "description": "Acting principal when applicable, prefixed by type: user:{uuid}, agent:{uuid}, visitor:{uuid}, apikey:{uuid}, system."
+    },
+    "correlationid": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Stable across an entire causal chain (request → events → workflows)."
+    },
+    "causationid": {
+      "type": ["string", "null"],
+      "format": "uuid",
+      "description": "ID of the event or command that directly caused this event."
+    },
+    "dataschema": {
+      "type": "string",
+      "format": "uri",
+      "description": "URI of the JSON Schema (with semver) that data validates against, e.g. https://contracts.mkengage.dev/events/conv.message.accepted/1.0.0.schema.json"
+    },
+    "datacontenttype": { "const": "application/json" },
+    "data": {
+      "type": "object",
+      "description": "Event payload. Must validate against dataschema. Large payloads (> 256 KB) are passed by object-storage reference, never inline (ADR-005)."
+    }
+  }
+}

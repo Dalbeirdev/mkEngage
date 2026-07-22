@@ -1,0 +1,216 @@
+asyncapi: 3.0.0
+info:
+  title: mkEngage Real-Time Gateway Protocol
+  version: 1.0.0
+  description: |
+    WebSocket protocol between chat clients (widget, dashboard, mobile SDKs) and the
+    Phoenix real-time gateway (ADR-002). Transport is Phoenix Channels framing; this
+    document is the client-facing contract — clients depend on THIS, not on Phoenix
+    internals (reversal strategy, ADR-002).
+
+    Authorization: connect with a short-lived signed token (Ed25519, JWKS published by
+    the control plane). Joins are re-authorized server-side per topic. Origins are
+    validated against the organization allow-list at upgrade time.
+
+    Ordering & dedup: see RULES-message-ordering. Render order is sequence order;
+    clients dedupe by message_id; reconnect presents last_seen_seq for replay.
+
+defaultContentType: application/json
+
+servers:
+  production:
+    host: rt.mkengage.example
+    protocol: wss
+    description: Region-local gateway endpoint (org's home region, ADR-010).
+
+channels:
+  conversation:
+    address: "org:{org_id}:conv:{conversation_id}"
+    description: Per-conversation topic. Join requires conversation access (member visitor/contact or authorized agent).
+    parameters:
+      org_id: { description: Organization UUID }
+      conversation_id: { description: Conversation UUID }
+    messages:
+      messageSend: { $ref: "#/components/messages/messageSend" }
+      messageAck: { $ref: "#/components/messages/messageAck" }
+      messageNew: { $ref: "#/components/messages/messageNew" }
+      typing: { $ref: "#/components/messages/typing" }
+      receiptUpdate: { $ref: "#/components/messages/receiptUpdate" }
+      replayRequest: { $ref: "#/components/messages/replayRequest" }
+      replayBatch: { $ref: "#/components/messages/replayBatch" }
+      streamFrame: { $ref: "#/components/messages/streamFrame" }
+      errorFrame: { $ref: "#/components/messages/errorFrame" }
+
+  agentConsole:
+    address: "org:{org_id}:agent:{agent_id}"
+    description: Per-agent topic — assignments, transfers, approval notifications, live visitor updates.
+    parameters:
+      org_id: { description: Organization UUID }
+      agent_id: { description: Agent user UUID }
+    messages:
+      assignmentUpdate: { $ref: "#/components/messages/assignmentUpdate" }
+      presenceDiff: { $ref: "#/components/messages/presenceDiff" }
+
+operations:
+  sendMessage:
+    action: send
+    channel: { $ref: "#/channels/conversation" }
+    messages: [ { $ref: "#/channels/conversation/messages/messageSend" } ]
+    description: |
+      Client sends a message. The gateway replies with messageAck ONLY after the
+      message + sequence + outbox row are committed to PostgreSQL (§27). Retries MUST
+      reuse the same idempotency_key; duplicates return the original ack.
+  receiveMessage:
+    action: receive
+    channel: { $ref: "#/channels/conversation" }
+    messages: [ { $ref: "#/channels/conversation/messages/messageNew" } ]
+
+components:
+  messages:
+    messageSend:
+      name: message.send
+      title: Send message
+      payload:
+        type: object
+        required: [idempotency_key, content_type, body]
+        additionalProperties: false
+        properties:
+          idempotency_key: { type: string, format: uuid, description: Client-generated; stable across retries of the same logical message. }
+          content_type: { type: string, enum: [text, attachment, rich] }
+          body: { type: string, maxLength: 16000 }
+          attachment_ids:
+            type: array
+            maxItems: 10
+            items: { type: string, format: uuid }
+            description: Attachments already uploaded via pre-signed URLs (ADR-006); the gateway validates ownership + quarantine state.
+          correlation_id: { type: string, format: uuid }
+
+    messageAck:
+      name: message.ack
+      title: Durable acceptance acknowledgement
+      payload:
+        type: object
+        required: [idempotency_key, message_id, sequence_number, persisted_at]
+        properties:
+          idempotency_key: { type: string, format: uuid }
+          message_id: { type: string, format: uuid }
+          sequence_number: { type: integer, minimum: 1 }
+          persisted_at: { type: string, format: date-time }
+
+    messageNew:
+      name: message.new
+      title: Fan-out of an accepted message
+      payload:
+        type: object
+        required: [message_id, conversation_id, sender_type, sender_id, sequence_number, content_type, body, sent_at]
+        properties:
+          message_id: { type: string, format: uuid }
+          conversation_id: { type: string, format: uuid }
+          sender_type: { type: string, enum: [visitor, contact, agent, chatbot, system] }
+          sender_id: { type: string, format: uuid }
+          sequence_number: { type: integer, minimum: 1 }
+          content_type: { type: string, enum: [text, attachment, rich, system_note] }
+          body: { type: string }
+          attachments:
+            type: array
+            items:
+              type: object
+              required: [attachment_id, file_name, content_type_header, size_bytes]
+              properties:
+                attachment_id: { type: string, format: uuid }
+                file_name: { type: string }
+                content_type_header: { type: string }
+                size_bytes: { type: integer }
+          sent_at: { type: string, format: date-time }
+
+    typing:
+      name: typing
+      title: Typing indicator (ephemeral, never persisted)
+      payload:
+        type: object
+        required: [sender_type, sender_id, is_typing]
+        properties:
+          sender_type: { type: string, enum: [visitor, contact, agent] }
+          sender_id: { type: string, format: uuid }
+          is_typing: { type: boolean }
+
+    receiptUpdate:
+      name: receipt.update
+      title: Cumulative delivery/read high-water mark (RULES-message-ordering §14)
+      payload:
+        type: object
+        required: [principal_type, principal_id, receipt_type, up_to_sequence]
+        properties:
+          principal_type: { type: string, enum: [visitor, contact, agent] }
+          principal_id: { type: string, format: uuid }
+          receipt_type: { type: string, enum: [delivered, read] }
+          up_to_sequence: { type: integer, minimum: 1 }
+
+    replayRequest:
+      name: replay.request
+      title: Reconnect replay from last seen sequence
+      payload:
+        type: object
+        required: [last_seen_seq]
+        properties:
+          last_seen_seq: { type: integer, minimum: 0, description: 0 = full window replay. }
+
+    replayBatch:
+      name: replay.batch
+      title: Replay batch (persisted messages > last_seen_seq, sequence-ordered)
+      payload:
+        type: object
+        required: [messages, has_more, live_resumes_after]
+        properties:
+          messages:
+            type: array
+            items: { $ref: "#/components/messages/messageNew/payload" }
+          has_more: { type: boolean, description: True ⇒ client must fetch the remainder via REST (window exceeded). }
+          live_resumes_after: { type: integer, description: Sequence after which live fan-out resumes. }
+
+    streamFrame:
+      name: ai.stream
+      title: Streaming AI response frame
+      payload:
+        type: object
+        required: [message_id, frame_type]
+        properties:
+          message_id: { type: string, format: uuid, description: Provisional message ID; final messageNew carries the same ID. }
+          frame_type: { type: string, enum: [delta, done, error] }
+          delta: { type: string, description: Token(s) appended; present when frame_type=delta. }
+          error_reason: { type: string, description: Present when frame_type=error; client renders partial + error (RULES-failure-retry). }
+
+    errorFrame:
+      name: error
+      title: Channel-level error
+      payload:
+        type: object
+        required: [code, correlation_id]
+        properties:
+          code:
+            type: string
+            enum: [unauthorized, forbidden, rate_limited, payload_too_large, conversation_closed, resync_required, internal]
+          detail: { type: string, description: Safe human-readable detail; never internals. }
+          retry_after_ms: { type: integer, description: Present with rate_limited. }
+          correlation_id: { type: string, format: uuid }
+
+    assignmentUpdate:
+      name: assignment.update
+      title: Agent console assignment notification
+      payload:
+        type: object
+        required: [conversation_id, update_type]
+        properties:
+          conversation_id: { type: string, format: uuid }
+          update_type: { type: string, enum: [assigned, transferred_in, transferred_out, closed, approval_requested] }
+          approval_id: { type: string, format: uuid, description: Present with approval_requested. }
+
+    presenceDiff:
+      name: presence.diff
+      title: Presence join/leave diff (Phoenix Presence semantics)
+      payload:
+        type: object
+        required: [joins, leaves]
+        properties:
+          joins: { type: object, additionalProperties: true }
+          leaves: { type: object, additionalProperties: true }

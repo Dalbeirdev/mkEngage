@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+vendor/
+.venv/
+__pycache__/
+deps/
+_build/
+
+# Builds
+dist/
+build/
+.next/
+out/
+*.pyc
+
+# Environment & secrets — never commit (directive §18)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Test & tool output
+coverage/
+.phpunit.cache/
+.pytest_cache/
+.ruff_cache/
+playwright-report/
+test-results/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*

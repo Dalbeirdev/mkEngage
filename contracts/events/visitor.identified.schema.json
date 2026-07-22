@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.mkengage.dev/events/visitor.identified/1.0.0.schema.json",
+  "title": "visitor.identified.v1 payload",
+  "description": "An anonymous visitor was linked to a contact — via signed identity (HMAC, ADR-009), form capture, or agent action. Consumers merge visitor history into the contact (ASSUMPTIONS A4).",
+  "type": "object",
+  "required": ["visitor_id", "contact_id", "identification_method", "identified_at"],
+  "additionalProperties": false,
+  "properties": {
+    "visitor_id": { "type": "string", "format": "uuid" },
+    "contact_id": { "type": "string", "format": "uuid" },
+    "identification_method": { "type": "string", "enum": ["signed_identity", "email_capture", "form_submission", "agent_manual", "api"] },
+    "contact_created": { "type": "boolean", "description": "True if the contact record was created by this identification (vs matched to existing)." },
+    "consent_state": {
+      "type": "string",
+      "enum": ["granted", "denied", "unknown"],
+      "description": "Visitor-tracking consent at identification time. Consumers must honor it for analytics processing (§29)."
+    },
+    "identified_at": { "type": "string", "format": "date-time" }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.mkengage.dev/events/visitor.event.recorded/1.0.0.schema.json",
+  "title": "visitor.event.recorded.v1 payload",
+  "description": "High-volume behavioral event from the widget or an e-commerce integration, streamed to ClickHouse via the analytics consumer (ADR-006). Consent-gated at the source (§4).",
+  "type": "object",
+  "required": ["visitor_id", "session_id", "event_name", "occurred_at"],
+  "additionalProperties": false,
+  "properties": {
+    "visitor_id": { "type": "string", "format": "uuid" },
+    "contact_id": { "type": ["string", "null"], "format": "uuid" },
+    "session_id": { "type": "string", "format": "uuid" },
+    "event_name": {
+      "type": "string",
+      "enum": [
+        "page_view", "widget_loaded", "widget_opened", "widget_closed", "message_composed",
+        "product_viewed", "cart_updated", "checkout_started", "checkout_abandoned", "order_completed",
+        "campaign_impression", "campaign_clicked", "custom"
+      ],
+      "description": "E-commerce names per ASSUMPTIONS A6; custom events carry their name in properties.name."
+    },
+    "page_url": { "type": ["string", "null"], "format": "uri" },
+    "referrer_url": { "type": ["string", "null"], "format": "uri" },
+    "campaign_id": { "type": ["string", "null"], "format": "uuid" },
+    "properties": {
+      "type": "object",
+      "maxProperties": 30,
+      "description": "Flat key-value bag (string/number/bool values only). No PII by contract; PII detection at ingestion rejects violations (§19).",
+      "additionalProperties": { "type": ["string", "number", "boolean"] }
+    },
+    "occurred_at": { "type": "string", "format": "date-time" }
+  }
+}

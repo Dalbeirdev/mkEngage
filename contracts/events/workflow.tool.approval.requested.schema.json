@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.mkengage.dev/events/workflow.tool.approval.requested/1.0.0.schema.json",
+  "title": "workflow.tool.approval.requested.v1 payload",
+  "description": "A Temporal workflow paused awaiting human approval of an AI-proposed or workflow-embedded action (ADR-004, §7). The control plane surfaces this to authorized approvers; the decision returns as a Temporal signal.",
+  "type": "object",
+  "required": ["approval_id", "workflow_id", "tool_name", "risk_level", "conversation_id", "requested_at", "expires_at"],
+  "additionalProperties": false,
+  "properties": {
+    "approval_id": { "type": "string", "format": "uuid", "description": "PostgreSQL approvals row; the audit anchor." },
+    "workflow_id": { "type": "string", "description": "Temporal business workflow ID, e.g. refund-{org}-{orderId}." },
+    "tool_name": { "type": "string", "examples": ["shopify.refund_order", "shopify.cancel_order", "calendar.book_appointment"] },
+    "risk_level": { "type": "string", "enum": ["low", "medium", "high", "critical"], "description": "From the tool registry (ADR-009); drives approval policy." },
+    "conversation_id": { "type": ["string", "null"], "format": "uuid", "description": "Originating conversation when AI-proposed." },
+    "proposed_by": { "type": "string", "description": "Actor format; typically chatbot:{uuid} or system." },
+    "summary": { "type": "string", "maxLength": 500, "description": "Human-readable action summary for the approver. Full arguments are read from PostgreSQL under authorization — not carried on the bus." },
+    "amount": { "type": ["number", "null"], "description": "Monetary amount when applicable (refunds), in minor units." },
+    "currency": { "type": ["string", "null"], "pattern": "^[A-Z]{3}$" },
+    "required_permission": { "type": "string", "description": "Permission an approver must hold (fail closed, §16)." },
+    "requested_at": { "type": "string", "format": "date-time" },
+    "expires_at": { "type": "string", "format": "date-time", "description": "After this, the workflow's timer fails the approval closed (RULES-failure-retry)." }
+  }
+}

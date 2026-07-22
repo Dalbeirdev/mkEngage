@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.mkengage.dev/events/conv.created/1.0.0.schema.json",
+  "title": "conv.created.v1 payload",
+  "description": "A conversation came into existence (visitor opened chat, campaign triggered, API created).",
+  "type": "object",
+  "required": ["conversation_id", "channel_id", "initiator_type", "created_at"],
+  "additionalProperties": false,
+  "properties": {
+    "conversation_id": { "type": "string", "format": "uuid" },
+    "channel_id": { "type": "string", "format": "uuid" },
+    "initiator_type": { "type": "string", "enum": ["visitor", "contact", "agent", "chatbot", "campaign", "api"] },
+    "initiator_id": { "type": ["string", "null"], "format": "uuid" },
+    "visitor_id": { "type": ["string", "null"], "format": "uuid" },
+    "contact_id": { "type": ["string", "null"], "format": "uuid" },
+    "department_id": { "type": ["string", "null"], "format": "uuid", "description": "Initial routing target if resolved at creation (ASSUMPTIONS A5)." },
+    "chatbot_id": { "type": ["string", "null"], "format": "uuid", "description": "Chatbot handling the conversation initially, if any." },
+    "source_url": { "type": ["string", "null"], "format": "uri", "description": "Page the widget conversation started on." },
+    "created_at": { "type": "string", "format": "date-time" }
+  }
+}

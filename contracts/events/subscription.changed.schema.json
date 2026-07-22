@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.mkengage.dev/events/subscription.changed/1.0.0.schema.json",
+  "title": "subscription.changed.v1 payload",
+  "description": "An organization's subscription or entitlements changed. Consumers adjust feature gates, limits, and AI budgets (ADR-003). Emitted by the control plane via outbox after the billing transaction commits.",
+  "type": "object",
+  "required": ["subscription_id", "change_type", "plan_key", "status", "effective_at"],
+  "additionalProperties": false,
+  "properties": {
+    "subscription_id": { "type": "string", "format": "uuid" },
+    "change_type": { "type": "string", "enum": ["created", "upgraded", "downgraded", "renewed", "trial_started", "trial_ended", "past_due", "cancelled", "reactivated"] },
+    "plan_key": { "type": "string", "examples": ["free", "starter", "growth", "enterprise"] },
+    "previous_plan_key": { "type": ["string", "null"] },
+    "status": { "type": "string", "enum": ["active", "trialing", "past_due", "cancelled", "paused"] },
+    "seats": { "type": ["integer", "null"], "minimum": 0 },
+    "entitlements": {
+      "type": "object",
+      "description": "Effective feature flags/limits snapshot (key → bool or numeric limit). Consumers treat this as authoritative until the next event.",
+      "additionalProperties": { "type": ["boolean", "number"] }
+    },
+    "ai_monthly_budget": { "type": ["number", "null"], "description": "Monthly AI spend cap in minor units; null = plan default (ADR-003)." },
+    "effective_at": { "type": "string", "format": "date-time" }
+  }
+}

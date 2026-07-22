@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.mkengage.dev/events/knowledge.ingestion.completed/1.0.0.schema.json",
+  "title": "knowledge.ingestion.completed.v1 payload",
+  "description": "An ingestion job (crawl, upload, sync) finished. Emitted by ingestion-worker via its Temporal workflow (ADR-003/004). Failure details for failed documents are queryable in PostgreSQL; this event carries aggregates.",
+  "type": "object",
+  "required": ["ingestion_job_id", "source_id", "status", "completed_at", "documents_processed", "chunks_written"],
+  "additionalProperties": false,
+  "properties": {
+    "ingestion_job_id": { "type": "string", "format": "uuid" },
+    "source_id": { "type": "string", "format": "uuid", "description": "Knowledge source (site, sitemap, file set, integration)." },
+    "status": { "type": "string", "enum": ["succeeded", "partial", "failed", "cancelled"] },
+    "trigger": { "type": "string", "enum": ["manual", "scheduled", "webhook", "initial"] },
+    "documents_processed": { "type": "integer", "minimum": 0 },
+    "documents_failed": { "type": "integer", "minimum": 0, "default": 0 },
+    "documents_skipped_unchanged": { "type": "integer", "minimum": 0, "default": 0, "description": "Skipped via content checksum match (§10)." },
+    "chunks_written": { "type": "integer", "minimum": 0 },
+    "chunks_deleted": { "type": "integer", "minimum": 0, "default": 0, "description": "Stale chunks removed for updated/expired documents." },
+    "embedding_tokens_used": { "type": "integer", "minimum": 0 },
+    "pii_detections": { "type": "integer", "minimum": 0, "default": 0 },
+    "injection_detections": { "type": "integer", "minimum": 0, "default": 0, "description": "Prompt-injection scanner hits quarantined during this job (§19)." },
+    "started_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": "string", "format": "date-time" }
+  }
+}
