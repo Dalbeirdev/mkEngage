@@ -277,6 +277,7 @@ export class MkEngageWidget extends LitElement {
       this.api.setToken(stored.token);
       this.conversationId = stored.conversationId;
       this.messages.lastSeenSequence = 0; // full replay fills the cacheless store
+      await this.applyIdentity(stored);
       return;
     }
 
@@ -285,12 +286,32 @@ export class MkEngageWidget extends LitElement {
       this.config.consentState ?? "unknown",
     );
 
-    await this.sessionStore.save({
+    const fresh = {
       visitorId: session.visitor_id,
       token: session.token,
       conversationId: null,
       lastSeenSequence: 0,
-    });
+    };
+    await this.sessionStore.save(fresh);
+    await this.applyIdentity(fresh);
+  }
+
+  /**
+   * Send the host page's signed identity once per external id (§4 signed
+   * authenticated identity). Verification failures leave the visitor
+   * anonymous — never fatal for the chat itself.
+   */
+  private async applyIdentity(stored: import("./storage.js").StoredSession): Promise<void> {
+    const identity = this.config.identity;
+    if (identity === undefined) return;
+    if (stored.identifiedExternalId === identity.externalId) return;
+
+    try {
+      await this.api.identify(identity);
+      await this.sessionStore.save({ ...stored, identifiedExternalId: identity.externalId });
+    } catch {
+      // Invalid signature or unconfigured identity: chat continues anonymously.
+    }
   }
 
   private async ensureConversation(): Promise<string> {

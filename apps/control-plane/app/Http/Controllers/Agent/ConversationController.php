@@ -28,7 +28,7 @@ final class ConversationController extends Controller
 
         $conversations = Conversation::query()
             ->when($status !== 'all', fn ($query) => $query->where('status', $status))
-            ->with('visitor')
+            ->with(['visitor', 'contact'])
             ->orderByDesc('updated_at')
             ->limit($validated['limit'] ?? 50)
             ->get();
@@ -42,7 +42,7 @@ final class ConversationController extends Controller
 
     public function show(string $conversationId): JsonResponse
     {
-        $conversation = Conversation::query()->with('visitor')->find($conversationId);
+        $conversation = Conversation::query()->with(['visitor', 'contact'])->find($conversationId);
         abort_if($conversation === null, 404);
 
         return response()->json($this->toContract($conversation));
@@ -69,7 +69,7 @@ final class ConversationController extends Controller
 
         $conversation->save();
 
-        return response()->json($this->toContract($conversation->load('visitor')));
+        return response()->json($this->toContract($conversation->load(['visitor', 'contact'])));
     }
 
     /** @return array<string, mixed> */
@@ -80,6 +80,9 @@ final class ConversationController extends Controller
             'status' => $conversation->status,
             'visitor_id' => $conversation->visitor_id,
             'visitor_name' => $conversation->visitor?->display_name,
+            'contact_id' => $conversation->contact_id,
+            'contact_name' => $conversation->contact?->name,
+            'contact_email' => $conversation->contact?->email,
             'assigned_agent_id' => $conversation->assigned_agent_id,
             'last_sequence' => $conversation->last_sequence,
             'source_url' => $conversation->source_url,

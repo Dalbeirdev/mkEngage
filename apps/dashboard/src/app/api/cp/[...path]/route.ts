@@ -10,7 +10,10 @@ import { getSessionToken } from "@/lib/auth/session";
  * Path allowlist: only the agent conversation surface is proxied — this is
  * NOT a general-purpose relay.
  */
-const ALLOWED = [/^conversations(\/[0-9a-f-]{36})?(\/messages)?$/];
+const ALLOWED = [
+  /^conversations(\/[0-9a-f-]{36})?(\/messages)?$/,
+  /^contacts(\/[0-9a-f-]{36})?$/,
+];
 
 const API_URL = process.env.CONTROL_PLANE_API_URL ?? "http://127.0.0.1:8000";
 

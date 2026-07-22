@@ -17,6 +17,7 @@ export default async function AppLayout({
   const navigation = [
     { href: "/", label: t("dashboard") },
     { href: "/conversations", label: t("conversations") },
+    { href: "/contacts", label: t("contacts") },
     { href: "/settings/profile", label: t("profile") },
   ];
 

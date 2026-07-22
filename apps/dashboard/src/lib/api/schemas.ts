@@ -29,6 +29,9 @@ export const conversationSchema = z.object({
   status: z.enum(["open", "pending", "closed"]),
   visitor_id: z.uuid().nullable(),
   visitor_name: z.string().nullable(),
+  contact_id: z.uuid().nullable(),
+  contact_name: z.string().nullable(),
+  contact_email: z.string().nullable(),
   assigned_agent_id: z.uuid().nullable(),
   last_sequence: z.number().int().nonnegative(),
   source_url: z.string().nullable(),
@@ -60,6 +63,23 @@ export type ChatMessage = z.infer<typeof chatMessageSchema>;
 export const messageListSchema = z.object({
   data: z.array(chatMessageSchema),
   last_sequence: z.number().int().nonnegative(),
+});
+
+export const contactSchema = z.object({
+  contact_id: z.uuid(),
+  organization_id: z.uuid(),
+  external_id: z.string().nullable(),
+  email: z.string().nullable(),
+  name: z.string().nullable(),
+  phone: z.string().nullable(),
+  attributes: z.record(z.string(), z.unknown()),
+  created_at: z.string().nullable(),
+});
+
+export type Contact = z.infer<typeof contactSchema>;
+
+export const contactListSchema = z.object({
+  data: z.array(contactSchema),
 });
 
 /** RFC 9457 Problem Details (§15) as emitted by the control plane. */

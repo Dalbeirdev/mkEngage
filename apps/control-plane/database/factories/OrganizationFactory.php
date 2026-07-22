@@ -26,6 +26,7 @@ final class OrganizationFactory extends Factory
             'white_label' => false,
             'settings' => [],
             'widget_site_key' => 'sk_'.Str::lower(Str::random(24)),
+            'widget_signing_secret' => 'whsec_'.Str::random(32),
         ];
     }
 }

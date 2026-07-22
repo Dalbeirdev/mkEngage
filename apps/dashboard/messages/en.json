@@ -13,7 +13,8 @@
     "settings": "Settings",
     "profile": "Profile",
     "signOut": "Sign out",
-    "toggleTheme": "Toggle theme"
+    "toggleTheme": "Toggle theme",
+    "contacts": "Contacts"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -47,5 +48,16 @@
     "send": "Send",
     "sending": "Sending…",
     "sendError": "Reply could not be sent."
+  },
+  "contacts": {
+    "title": "Contacts",
+    "loading": "Loading…",
+    "error": "Could not load contacts.",
+    "empty": "No contacts yet. Identified visitors appear here.",
+    "colName": "Name",
+    "colEmail": "Email",
+    "colExternalId": "External ID",
+    "colCreated": "Created",
+    "unnamed": "(unnamed)"
   }
 }

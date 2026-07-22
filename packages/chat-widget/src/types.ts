@@ -1,5 +1,14 @@
 /** Contract-shaped types mirroring the widget REST API (control plane). */
 
+export interface WidgetIdentity {
+  /** Customer-system user id (signed identity subject). */
+  externalId: string;
+  /** HMAC-SHA256(externalId, org signing secret) — computed by the CUSTOMER'S BACKEND (§4: never in the widget). */
+  signature: string;
+  email?: string;
+  name?: string;
+}
+
 export interface WidgetConfig {
   /** Public site key — NOT a secret (§4). */
   siteKey: string;
@@ -11,6 +20,8 @@ export interface WidgetConfig {
   consentState?: "granted" | "denied" | "unknown";
   /** Widget title shown in the panel header. */
   title?: string;
+  /** Verified identity payload from the host page (optional). */
+  identity?: WidgetIdentity;
 }
 
 export interface WidgetSession {

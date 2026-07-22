@@ -59,7 +59,7 @@ export default function ConversationsPage() {
               >
                 <span className="min-w-0">
                   <span className="block truncate font-medium">
-                    {conversation.visitor_name ?? t("anonymousVisitor")}
+                    {conversation.contact_name ?? conversation.visitor_name ?? t("anonymousVisitor")}
                   </span>
                   <span className="block truncate text-xs text-zinc-500">
                     {conversation.source_url ?? conversation.conversation_id}

@@ -33,6 +33,11 @@ final class Organization extends Model
         'parent_organization_id',
         'settings',
         'widget_site_key',
+        'widget_signing_secret',
+    ];
+
+    protected $hidden = [
+        'widget_signing_secret',
     ];
 
     protected function casts(): array
@@ -40,6 +45,9 @@ final class Organization extends Model
         return [
             'white_label' => 'boolean',
             'settings' => 'array',
+            // Encrypted at rest (§18); KMS envelope encryption replaces the
+            // app-key cipher in the production hardening pass.
+            'widget_signing_secret' => 'encrypted',
         ];
     }
 

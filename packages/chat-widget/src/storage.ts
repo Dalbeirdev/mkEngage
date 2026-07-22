@@ -15,6 +15,8 @@ export interface StoredSession {
   token: string;
   conversationId: string | null;
   lastSeenSequence: number;
+  /** external_id already linked to this visitor (skip repeat identify calls). */
+  identifiedExternalId?: string | null;
 }
 
 function openDb(): Promise<IDBDatabase> {

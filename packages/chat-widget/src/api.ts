@@ -1,4 +1,4 @@
-import type { ChatMessage, ConversationSummary, WidgetSession } from "./types.js";
+import type { ChatMessage, ConversationSummary, WidgetIdentity, WidgetSession } from "./types.js";
 
 /**
  * REST transport to the control-plane widget API (§4 REST fallback — the
@@ -25,6 +25,15 @@ export class WidgetApi {
     })) as WidgetSession;
     this.token = session.token;
     return session;
+  }
+
+  async identify(identity: WidgetIdentity): Promise<{ contact_id: string; display_name: string | null }> {
+    return (await this.request("POST", "/api/widget/identify", {
+      external_id: identity.externalId,
+      signature: identity.signature,
+      email: identity.email ?? null,
+      name: identity.name ?? null,
+    })) as { contact_id: string; display_name: string | null };
   }
 
   async createConversation(sourceUrl: string | null): Promise<ConversationSummary> {

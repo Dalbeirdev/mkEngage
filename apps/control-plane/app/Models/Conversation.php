@@ -43,6 +43,12 @@ final class Conversation extends Model
         return $this->belongsTo(Visitor::class);
     }
 
+    /** @return BelongsTo<Contact, $this> */
+    public function contact(): BelongsTo
+    {
+        return $this->belongsTo(Contact::class);
+    }
+
     /** @return HasMany<Message, $this> */
     public function messages(): HasMany
     {

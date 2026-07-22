@@ -26,10 +26,27 @@
     <script type="module">
       import { mount } from "../src/index.ts";
 
+      // In a real integration the host backend renders external_id + signature
+      // into the page (HMAC computed server-side, ADR-009). The demo takes
+      // them from the URL so any backend-generated signature can be tested.
+      const params = new URLSearchParams(location.search);
+      const externalId = params.get("external_id");
+      const signature = params.get("sig");
+
       mount({
-        siteKey: new URLSearchParams(location.search).get("site_key") ?? "sk_demo",
+        siteKey: params.get("site_key") ?? "sk_demo",
         apiUrl: "http://127.0.0.1:8000",
         title: "Acme Support",
+        ...(externalId !== null && signature !== null
+          ? {
+              identity: {
+                externalId,
+                signature,
+                name: params.get("name") ?? undefined,
+                email: params.get("email") ?? undefined,
+              },
+            }
+          : {}),
       });
     </script>
   </body>
