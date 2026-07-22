@@ -24,6 +24,44 @@ export const tokenResponseSchema = z.object({
   token: z.string().min(1),
 });
 
+export const conversationSchema = z.object({
+  conversation_id: z.uuid(),
+  status: z.enum(["open", "pending", "closed"]),
+  visitor_id: z.uuid().nullable(),
+  visitor_name: z.string().nullable(),
+  assigned_agent_id: z.uuid().nullable(),
+  last_sequence: z.number().int().nonnegative(),
+  source_url: z.string().nullable(),
+  created_at: z.string().nullable(),
+  updated_at: z.string().nullable(),
+});
+
+export type Conversation = z.infer<typeof conversationSchema>;
+
+export const conversationListSchema = z.object({
+  data: z.array(conversationSchema),
+});
+
+export const chatMessageSchema = z.object({
+  message_id: z.uuid(),
+  conversation_id: z.uuid(),
+  channel_id: z.uuid().nullable(),
+  sender_type: z.enum(["visitor", "contact", "agent", "chatbot", "system"]),
+  sender_id: z.uuid(),
+  sequence_number: z.number().int().positive(),
+  content_type: z.string(),
+  body: z.string(),
+  lifecycle_state: z.string(),
+  sent_at: z.string().nullable(),
+});
+
+export type ChatMessage = z.infer<typeof chatMessageSchema>;
+
+export const messageListSchema = z.object({
+  data: z.array(chatMessageSchema),
+  last_sequence: z.number().int().nonnegative(),
+});
+
 /** RFC 9457 Problem Details (§15) as emitted by the control plane. */
 export const problemSchema = z.object({
   title: z.string().optional(),

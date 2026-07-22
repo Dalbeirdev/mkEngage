@@ -25,5 +25,27 @@
     "email": "Email",
     "organizationId": "Organization",
     "status": "Status"
+  },
+  "conversations": {
+    "title": "Conversations",
+    "threadTitle": "Conversation",
+    "loading": "Loading…",
+    "error": "Could not load conversations.",
+    "empty": "No conversations yet. Widget chats land here.",
+    "anonymousVisitor": "Anonymous visitor",
+    "messageCount": "{count} msgs",
+    "status_open": "Open",
+    "status_pending": "Pending",
+    "status_closed": "Closed",
+    "sender_visitor": "Visitor",
+    "sender_contact": "Contact",
+    "sender_agent": "Agent",
+    "sender_chatbot": "Bot",
+    "sender_system": "System",
+    "replyLabel": "Reply",
+    "replyPlaceholder": "Type a reply…",
+    "send": "Send",
+    "sending": "Sending…",
+    "sendError": "Reply could not be sent."
   }
 }

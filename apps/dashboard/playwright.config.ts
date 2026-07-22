@@ -20,7 +20,9 @@ export default defineConfig({
     : {
         command: "node node_modules/next/dist/bin/next dev -p 3100",
         url: "http://127.0.0.1:3100/login",
-        reuseExistingServer: false,
+        // 3100 is this project's dedicated port (3000 may host foreign
+        // servers); anything already on 3100 is our own dev server.
+        reuseExistingServer: true,
         timeout: 120_000,
       },
 });

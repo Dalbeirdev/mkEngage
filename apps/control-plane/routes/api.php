@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Agent\AgentMessageController;
+use App\Http\Controllers\Agent\ConversationController;
 use App\Http\Controllers\Auth\IssueApiTokenController;
 use App\Http\Controllers\Widget\WidgetConversationController;
 use App\Http\Controllers\Widget\WidgetMessageController;
@@ -19,6 +21,13 @@ Route::post('/widget/session', WidgetSessionController::class);
 Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-api'])
     ->group(function (): void {
         Route::get('/user', fn (Request $request) => $request->user());
+
+        // Agent conversation surface (OpenAPI /conversations).
+        Route::get('/conversations', [ConversationController::class, 'index']);
+        Route::get('/conversations/{conversation}', [ConversationController::class, 'show']);
+        Route::patch('/conversations/{conversation}', [ConversationController::class, 'update']);
+        Route::get('/conversations/{conversation}/messages', [AgentMessageController::class, 'index']);
+        Route::post('/conversations/{conversation}/messages', [AgentMessageController::class, 'store']);
     });
 
 // Visitor-facing widget API: the `widget` guard authenticates ONLY Visitor

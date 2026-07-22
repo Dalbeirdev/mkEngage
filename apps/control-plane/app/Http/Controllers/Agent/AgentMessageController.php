@@ -2,31 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Http\Controllers\Widget;
+namespace App\Http\Controllers\Agent;
 
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\Message;
-use App\Models\Visitor;
+use App\Models\User;
 use App\Services\ConversationMessenger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-/**
- * REST message path (§4 REST fallback; the Phoenix gateway later owns the
- * WebSocket hot path against the same tables, ADR-002).
- *
- * Persist-before-confirm (§27) holds trivially here: the 201 IS the durable
- * ack — sequence assigned under row lock, message row committed by the
- * request transaction (EstablishTenantContext) before the response leaves.
- * Duplicate idempotency keys return the ORIGINAL message with 200
- * (RULES-message-ordering #8).
- */
-final class WidgetMessageController extends Controller
+/** Agent message history + reply (same mechanics as the widget path — §27). */
+final class AgentMessageController extends Controller
 {
     public function index(Request $request, string $conversationId): JsonResponse
     {
-        $conversation = $this->ownedConversation($request, $conversationId);
+        $conversation = $this->conversation($conversationId);
 
         $validated = $request->validate([
             'after_sequence' => ['sometimes', 'integer', 'min:0'],
@@ -37,7 +28,7 @@ final class WidgetMessageController extends Controller
             ->where('conversation_id', $conversation->id)
             ->where('sequence_number', '>', $validated['after_sequence'] ?? 0)
             ->orderBy('sequence_number')
-            ->limit($validated['limit'] ?? 50)
+            ->limit($validated['limit'] ?? 100)
             ->get();
 
         return response()->json([
@@ -51,24 +42,25 @@ final class WidgetMessageController extends Controller
         ConversationMessenger $messenger,
         string $conversationId,
     ): JsonResponse {
-        $conversation = $this->ownedConversation($request, $conversationId);
+        $conversation = $this->conversation($conversationId);
         abort_if($conversation->status === 'closed', 409, 'Conversation is closed.');
 
         $validated = $request->validate([
             'idempotency_key' => ['required', 'uuid'],
             'content_type' => ['required', 'in:text'],
             'body' => ['required', 'string', 'max:16000'],
-            'correlation_id' => ['sometimes', 'nullable', 'uuid'],
         ]);
+
+        $agent = $request->user();
+        abort_unless($agent instanceof User, 403);
 
         $result = $messenger->send(
             conversation: $conversation,
-            senderType: 'visitor',
-            senderId: $this->visitor($request)->id,
+            senderType: 'agent',
+            senderId: $agent->id,
             body: $validated['body'],
             idempotencyKey: $validated['idempotency_key'],
             contentType: $validated['content_type'],
-            correlationId: $validated['correlation_id'] ?? null,
         );
 
         return response()->json(
@@ -77,23 +69,9 @@ final class WidgetMessageController extends Controller
         );
     }
 
-    private function visitor(Request $request): Visitor
+    private function conversation(string $conversationId): Conversation
     {
-        // The `widget` guard is provider-restricted to Visitor (config/auth.php);
-        // a null principal here means the middleware stack was misconfigured.
-        $principal = $request->user('widget');
-        abort_unless($principal instanceof Visitor, 403);
-
-        return $principal;
-    }
-
-    private function ownedConversation(Request $request, string $conversationId): Conversation
-    {
-        $conversation = Conversation::query()
-            ->whereKey($conversationId)
-            ->where('visitor_id', $this->visitor($request)->id)
-            ->first();
-
+        $conversation = Conversation::query()->find($conversationId);
         abort_if($conversation === null, 404);
 
         return $conversation;
