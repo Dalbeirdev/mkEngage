@@ -1,0 +1,71 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Models;
+
+use App\Models\Concerns\BelongsToOrganization;
+use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
+
+final class User extends Authenticatable
+{
+    use BelongsToOrganization;
+    use HasApiTokens;
+
+    /** @use HasFactory<UserFactory> */
+    use HasFactory;
+
+    use HasUuids;
+    use Notifiable;
+    use SoftDeletes;
+
+    protected $fillable = [
+        'organization_id',
+        'name',
+        'email',
+        'password',
+        'status',
+    ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'two_factor_confirmed_at' => 'datetime',
+            'password' => 'hashed',
+        ];
+    }
+
+    /** @return BelongsToMany<Role, $this> */
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class, 'user_roles');
+    }
+
+    /** @return BelongsToMany<Department, $this> */
+    public function departments(): BelongsToMany
+    {
+        return $this->belongsToMany(Department::class, 'department_user');
+    }
+
+    public function hasPermission(string $key): bool
+    {
+        return $this->roles()
+            ->whereHas('permissions', fn ($query) => $query->where('key', $key))
+            ->exists();
+    }
+}

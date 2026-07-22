@@ -1,0 +1,103 @@
+# mkEngage local development infrastructure (ADR-010: Compose local, K8s prod).
+# Application services run natively against these; `docker compose up -d`.
+#
+# Phase 1 uses: postgres, redis, mailpit.
+# Later phases:  nats, clickhouse, minio, temporal (already declared, start on demand
+#                with profiles: `docker compose --profile full up -d`).
+
+name: mkengage
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: postgres          # superuser for provisioning ONLY —
+      POSTGRES_PASSWORD: postgres      # the app connects as mkengage (non-superuser,
+      POSTGRES_DB: postgres            # created by init script; RLS applies to it)
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # UI
+
+  nats:
+    image: nats:2-alpine
+    profiles: [full]
+    command: ["-js", "-sd", "/data"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"   # monitoring
+    volumes:
+      - nats-data:/data
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    profiles: [full]
+    environment:
+      CLICKHOUSE_USER: mkengage
+      CLICKHOUSE_PASSWORD: mkengage
+      CLICKHOUSE_DB: mkengage_analytics
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    ulimits:
+      nofile: { soft: 262144, hard: 262144 }
+
+  minio:
+    image: minio/minio:latest
+    profiles: [full]
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: mkengage
+      MINIO_ROOT_PASSWORD: mkengage-local
+    ports:
+      - "9002:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+
+  temporal:
+    image: temporalio/server:latest
+    profiles: [full]
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PWD=postgres
+      - POSTGRES_SEEDS=postgres
+      - DYNAMIC_CONFIG_FILE_PATH=/etc/temporal/config/dynamicconfig/development-sql.yaml
+    ports:
+      - "7233:7233"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
+  nats-data:
+  clickhouse-data:
+  minio-data:
