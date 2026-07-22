@@ -1,0 +1,29 @@
+{
+  "login": {
+    "subtitle": "Sign in to your workspace",
+    "organization": "Organization",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "submitting": "Signing in…"
+  },
+  "shell": {
+    "dashboard": "Dashboard",
+    "conversations": "Conversations",
+    "settings": "Settings",
+    "profile": "Profile",
+    "signOut": "Sign out",
+    "toggleTheme": "Toggle theme"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "empty": "Metrics land here once mkEngage Insights is wired up."
+  },
+  "profile": {
+    "title": "Profile",
+    "name": "Name",
+    "email": "Email",
+    "organizationId": "Organization",
+    "status": "Status"
+  }
+}
