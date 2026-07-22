@@ -32,6 +32,7 @@ final class Organization extends Model
         'white_label',
         'parent_organization_id',
         'settings',
+        'widget_site_key',
     ];
 
     protected function casts(): array

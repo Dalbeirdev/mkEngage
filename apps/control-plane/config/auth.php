@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Models\Visitor;
 
 return [
 
@@ -42,6 +43,13 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // Widget visitors: Sanctum guard restricted to the Visitor tokenable —
+        // user tokens can never authenticate here and vice versa (ADR-009).
+        'widget' => [
+            'driver' => 'sanctum',
+            'provider' => 'visitors',
+        ],
     ],
 
     /*
@@ -65,6 +73,11 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', User::class),
+        ],
+
+        'visitors' => [
+            'driver' => 'eloquent',
+            'model' => Visitor::class,
         ],
 
         // 'users' => [

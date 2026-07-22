@@ -1,0 +1,31 @@
+{
+  "name": "@mkengage/chat-widget",
+  "version": "0.1.0",
+  "description": "mkEngage universal website chat widget (Lit + Web Components, framework-agnostic)",
+  "type": "module",
+  "main": "./dist/mkengage-widget.umd.cjs",
+  "module": "./dist/mkengage-widget.js",
+  "exports": {
+    ".": {
+      "import": "./dist/mkengage-widget.js",
+      "require": "./dist/mkengage-widget.umd.cjs"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "vite build && tsc --noEmit",
+    "dev": "vite dev",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "lit": "^3.3.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "vite": "^7.0.0",
+    "vitest": "^4.0.0",
+    "happy-dom": "^20.0.0",
+    "fake-indexeddb": "^6.0.0"
+  }
+}

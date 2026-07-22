@@ -25,6 +25,7 @@ final class OrganizationFactory extends Factory
             'region' => 'us',
             'white_label' => false,
             'settings' => [],
+            'widget_site_key' => 'sk_'.Str::lower(Str::random(24)),
         ];
     }
 }

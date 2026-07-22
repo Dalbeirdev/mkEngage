@@ -1,0 +1,45 @@
+/** Contract-shaped types mirroring the widget REST API (control plane). */
+
+export interface WidgetConfig {
+  /** Public site key — NOT a secret (§4). */
+  siteKey: string;
+  /** Control-plane API origin, e.g. https://api.mkengage.example */
+  apiUrl: string;
+  /** BCP-47 locale; falls back to en. */
+  locale?: string;
+  /** Visitor-tracking consent; analytics events are suppressed unless granted. */
+  consentState?: "granted" | "denied" | "unknown";
+  /** Widget title shown in the panel header. */
+  title?: string;
+}
+
+export interface WidgetSession {
+  visitor_id: string;
+  token: string;
+}
+
+export interface ConversationSummary {
+  conversation_id: string;
+  status: "open" | "pending" | "closed";
+  last_sequence: number;
+}
+
+export interface ChatMessage {
+  message_id: string;
+  conversation_id: string;
+  channel_id: string | null;
+  sender_type: "visitor" | "contact" | "agent" | "chatbot" | "system";
+  sender_id: string;
+  sequence_number: number;
+  content_type: string;
+  body: string;
+  lifecycle_state: string;
+  sent_at: string;
+}
+
+/** Local-only optimistic message awaiting durable ack (§27: rendered as pending, never confirmed). */
+export interface PendingMessage {
+  idempotency_key: string;
+  body: string;
+  created_at: number;
+}

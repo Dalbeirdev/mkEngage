@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>mkEngage Widget Demo — hostile host page</title>
+    <!-- Deliberately aggressive host styles: the widget must be immune (§4 Shadow DOM). -->
+    <style>
+      * { font-family: "Comic Sans MS", cursive !important; }
+      button { background: red !important; border: 5px dashed lime !important; }
+      ul { list-style: square !important; padding: 40px !important; }
+      body { background: #fdf6e3; margin: 0; padding: 40px; }
+      .content { max-width: 640px; margin: 0 auto; }
+    </style>
+  </head>
+  <body>
+    <div class="content">
+      <h1>Demo host page</h1>
+      <p>
+        This page has intentionally hostile global CSS (Comic Sans everywhere, red buttons,
+        square list bullets). The chat widget in the corner must be visually unaffected —
+        that is the Shadow DOM isolation requirement of directive §4.
+      </p>
+    </div>
+
+    <script type="module">
+      import { mount } from "../src/index.ts";
+
+      mount({
+        siteKey: new URLSearchParams(location.search).get("site_key") ?? "sk_demo",
+        apiUrl: "http://127.0.0.1:8000",
+        title: "Acme Support",
+      });
+    </script>
+  </body>
+</html>
