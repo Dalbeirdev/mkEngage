@@ -6,6 +6,7 @@ use App\Http\Controllers\Agent\AgentMessageController;
 use App\Http\Controllers\Agent\ChatbotController;
 use App\Http\Controllers\Agent\ContactController;
 use App\Http\Controllers\Agent\ConversationController;
+use App\Http\Controllers\Agent\WidgetSettingsController;
 use App\Http\Controllers\Auth\IssueApiTokenController;
 use App\Http\Controllers\Widget\WidgetConversationController;
 use App\Http\Controllers\Widget\WidgetIdentifyController;
@@ -36,6 +37,9 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
         Route::post('/chatbots', [ChatbotController::class, 'store']);
         Route::get('/chatbots/{chatbot}', [ChatbotController::class, 'show']);
         Route::patch('/chatbots/{chatbot}', [ChatbotController::class, 'update']);
+
+        Route::get('/organization/widget-settings', [WidgetSettingsController::class, 'show']);
+        Route::post('/organization/widget-settings/rotate-secret', [WidgetSettingsController::class, 'rotateSecret']);
 
         Route::get('/contacts', [ContactController::class, 'index']);
         Route::get('/contacts/{contact}', [ContactController::class, 'show']);

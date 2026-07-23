@@ -15,7 +15,8 @@
     "signOut": "Sign out",
     "toggleTheme": "Toggle theme",
     "contacts": "Contacts",
-    "chatbots": "Chatbots"
+    "chatbots": "Chatbots",
+    "widgetSetup": "Widget setup"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -86,5 +87,25 @@
     "activate": "Activate",
     "pause": "Pause",
     "activeNote": "Only one chatbot can be active — activating this one pauses the others."
+  },
+  "widgetSettings": {
+    "title": "Widget setup",
+    "loading": "Loading…",
+    "error": "Could not load widget settings.",
+    "siteKeyTitle": "Site key",
+    "siteKeyHelp": "Public identifier for your widget — safe to embed in any page.",
+    "embedTitle": "Embed snippet",
+    "embedHelp": "Paste before the closing body tag on any website (WordPress, Shopify, plain HTML…).",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "identityTitle": "Verified identity",
+    "identityConfigured": "Signing is configured. Your backend signs each logged-in user's ID so mkEngage can trust who they are.",
+    "identityNotConfigured": "Signing is not configured yet. Rotate to generate your first secret.",
+    "identityHelp": "Compute the signature server-side and pass it to the widget — never expose the secret in the browser:",
+    "rotate": "Rotate secret",
+    "rotating": "Rotating…",
+    "rotateConfirm": "Rotating invalidates all existing signatures immediately. Your backend must switch to the new secret. Continue?",
+    "newSecretTitle": "New signing secret — shown only once",
+    "newSecretHelp": "Store it in your backend's secret manager now. You will not be able to see it again."
   }
 }

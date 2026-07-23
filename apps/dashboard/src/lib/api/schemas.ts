@@ -99,6 +99,15 @@ export const chatbotListSchema = z.object({
   data: z.array(chatbotSchema),
 });
 
+export const widgetSettingsSchema = z.object({
+  site_key: z.string().nullable(),
+  signing_configured: z.boolean(),
+});
+
+export const rotatedSecretSchema = z.object({
+  signing_secret: z.string().min(1),
+});
+
 /** RFC 9457 Problem Details (§15) as emitted by the control plane. */
 export const problemSchema = z.object({
   title: z.string().optional(),
