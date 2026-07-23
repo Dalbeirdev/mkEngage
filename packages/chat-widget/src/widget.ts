@@ -121,7 +121,6 @@ export class MkEngageWidget extends LitElement {
       flex-direction: column;
       gap: 8px;
       margin: 0;
-      list-style: none;
     }
 
     .msg {
@@ -431,23 +430,23 @@ export class MkEngageWidget extends LitElement {
           </button>
         </header>
 
-        <ul class="log" role="log" aria-label=${t("log_label")} aria-live="polite" data-revision=${this.revision}>
+        <div class="log" role="log" aria-label=${t("log_label")} aria-live="polite" data-revision=${this.revision}>
           ${this.messages.messages.map(
             (message) => html`
-              <li class="msg ${message.sender_type === "visitor" ? "visitor" : "remote"}">
+              <div class="msg ${message.sender_type === "visitor" ? "visitor" : "remote"}">
                 ${message.body}
-              </li>
+              </div>
             `,
           )}
           ${this.messages.pendingMessages.map(
             (pending) => html`
-              <li class="msg visitor pending">
+              <div class="msg visitor pending">
                 ${pending.body}
                 <span class="meta">${t("pending")}</span>
-              </li>
+              </div>
             `,
           )}
-        </ul>
+        </div>
 
         <form @submit=${(event: Event) => void this.submit(event)}>
           <textarea

@@ -38,7 +38,7 @@ export default function ConversationThreadPage({
   const t = useTranslations("conversations");
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState("");
-  const logRef = useRef<HTMLOListElement>(null);
+  const logRef = useRef<HTMLDivElement>(null);
 
   const { data, isPending, isError } = useQuery({
     queryKey: ["conversation", id, "messages"],
@@ -85,7 +85,7 @@ export default function ConversationThreadPage({
         </p>
       )}
 
-      <ol
+      <div
         ref={logRef}
         role="log"
         aria-label={t("threadTitle")}
@@ -93,7 +93,7 @@ export default function ConversationThreadPage({
         className="flex-1 space-y-2 overflow-y-auto rounded-xl border border-zinc-200 p-4 dark:border-zinc-800"
       >
         {data?.data.map((message) => (
-          <li
+          <div
             key={message.message_id}
             className={`max-w-[70%] rounded-xl px-3 py-2 text-sm whitespace-pre-wrap ${
               message.sender_type === "agent"
@@ -105,9 +105,9 @@ export default function ConversationThreadPage({
               {t(`sender_${message.sender_type}`)} · #{message.sequence_number}
             </span>
             {message.body}
-          </li>
+          </div>
         ))}
-      </ol>
+      </div>
 
       <form onSubmit={submit} className="flex gap-2">
         <label htmlFor="reply" className="sr-only">
