@@ -110,3 +110,15 @@ if config_env() != :test do
     config :realtime_gateway, :internal_api_token, internal_token
   end
 end
+
+# Tests manage their own NATS connection (deterministic startup order).
+if config_env() != :test do
+  if nats_url = System.get_env("NATS_URL") do
+    uri = URI.parse(nats_url)
+
+    config :realtime_gateway, :nats, %{
+      host: to_charlist(uri.host || "127.0.0.1"),
+      port: uri.port || 4222
+    }
+  end
+end

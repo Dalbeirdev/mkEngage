@@ -24,7 +24,10 @@ use Illuminate\Support\Facades\DB;
  */
 final class ConversationMessenger
 {
-    public function __construct(private readonly GatewayBroadcaster $broadcaster) {}
+    public function __construct(
+        private readonly GatewayBroadcaster $broadcaster,
+        private readonly EventPublisher $events,
+    ) {}
 
     /** @return array{message: Message, duplicate: bool} */
     public function send(
@@ -67,7 +70,26 @@ final class ConversationMessenger
             'sent_at' => now(),
         ]);
 
-        // Live fan-out to WebSocket subscribers (best-effort, after commit).
+        // Transactional outbox (ADR-005): the event commits WITH the message.
+        // Data-minimized payload per contracts/events/conv.message.accepted —
+        // consumers needing the body read it from PostgreSQL under their org
+        // context.
+        $this->events->record('conv.message.accepted.v1', (string) $conversation->organization_id, [
+            'message_id' => $message->id,
+            'conversation_id' => $conversation->id,
+            'channel_id' => $message->channel_id,
+            'sender_type' => $senderType,
+            'sender_id' => $senderId,
+            'sequence_number' => (int) $message->sequence_number,
+            'persisted_at' => (string) $message->sent_at?->toIso8601String(),
+            'content_type' => $contentType,
+            'content_preview' => mb_substr($body, 0, 140),
+            'attachment_count' => 0,
+            'ai_involvement' => $senderType === 'chatbot' ? 'chatbot_reply' : 'none',
+        ], $senderType.':'.$senderId, $correlationId);
+
+        // Interim direct fan-out (used when NATS is not configured; the
+        // gateway's JetStream consumer is the primary path, ADR-005).
         $this->broadcaster->messageAccepted($message);
 
         return ['message' => $message, 'duplicate' => false];

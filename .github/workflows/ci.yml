@@ -50,6 +50,9 @@ jobs:
       - name: PHPStan (level 9)
         run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
 
+      - name: Start NATS JetStream
+        run: docker run -d --name nats -p 4222:4222 nats:2-alpine -js
+
       - name: Pest (SQLite app-layer suite)
         run: vendor/bin/pest
 
@@ -66,6 +69,7 @@ jobs:
       - name: Pest (PostgreSQL — full suite incl. generated RLS isolation proof)
         run: vendor/bin/pest
         env:
+          NATS_URL: nats://127.0.0.1:4222
           DB_CONNECTION: pgsql
           DB_HOST: 127.0.0.1
           DB_PORT: "5432"
@@ -291,6 +295,9 @@ jobs:
             services/realtime-gateway/_build
           key: mix-${{ runner.os }}-${{ hashFiles('services/realtime-gateway/mix.lock') }}
 
+      - name: Start NATS JetStream
+        run: docker run -d --name nats -p 4222:4222 nats:2-alpine -js
+
       - run: mix deps.get
       - run: mix format --check-formatted
       - run: mix compile --warnings-as-errors
@@ -298,4 +305,5 @@ jobs:
         run: mix test
         env:
           GATEWAY_DB_TESTS: "1"
+          NATS_URL: nats://127.0.0.1:4222
           MIX_ENV: test

@@ -35,6 +35,10 @@ return [
         ],
     ],
 
+    'nats' => [
+        'url' => env('NATS_URL'),
+    ],
+
     'gateway' => [
         'signing_key' => env('GATEWAY_SIGNING_KEY'),
         'url' => env('GATEWAY_WS_URL', 'ws://127.0.0.1:4000/socket'),

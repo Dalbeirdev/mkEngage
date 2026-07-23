@@ -183,6 +183,32 @@ defmodule RealtimeGateway.Messaging do
     end)
   end
 
+  @doc "Load one message by id (nil when unknown/cross-org — RLS scopes it)."
+  @spec fetch_message(String.t(), String.t()) :: message | nil
+  def fetch_message(org_id, message_id) do
+    in_org_transaction(org_id, fn ->
+      from(m in "messages",
+        where: m.id == type(^message_id, :binary_id),
+        select: %{
+          message_id: m.id,
+          conversation_id: m.conversation_id,
+          sender_type: m.sender_type,
+          sender_id: m.sender_id,
+          sequence_number: m.sequence_number,
+          content_type: m.content_type,
+          body: m.body,
+          lifecycle_state: m.lifecycle_state,
+          sent_at: m.sent_at
+        }
+      )
+      |> Repo.one()
+      |> case do
+        nil -> nil
+        row -> normalize(row)
+      end
+    end)
+  end
+
   @doc "Run fun in a transaction with RLS tenant context (ADR-007)."
   def in_org_transaction(org_id, fun) do
     {:ok, result} =

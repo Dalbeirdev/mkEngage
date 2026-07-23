@@ -7,17 +7,36 @@ defmodule RealtimeGateway.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
-      RealtimeGatewayWeb.Telemetry,
-      RealtimeGateway.Repo,
-      {DNSCluster, query: Application.get_env(:realtime_gateway, :dns_cluster_query) || :ignore},
-      {Phoenix.PubSub, name: RealtimeGateway.PubSub},
-      RealtimeGatewayWeb.Presence,
-      # Start a worker by calling: RealtimeGateway.Worker.start_link(arg)
-      # {RealtimeGateway.Worker, arg},
-      # Start to serve requests, typically the last entry
-      RealtimeGatewayWeb.Endpoint
-    ]
+    nats_children =
+      case Application.get_env(:realtime_gateway, :nats) do
+        %{host: host, port: port} ->
+          [
+            {Gnat.ConnectionSupervisor,
+             %{
+               name: :gnat_conn,
+               backoff_period: 2_000,
+               connection_settings: [%{host: host, port: port}]
+             }},
+            RealtimeGateway.Events.Consumer
+          ]
+
+        _ ->
+          []
+      end
+
+    children =
+      [
+        RealtimeGatewayWeb.Telemetry,
+        RealtimeGateway.Repo,
+        {DNSCluster,
+         query: Application.get_env(:realtime_gateway, :dns_cluster_query) || :ignore},
+        {Phoenix.PubSub, name: RealtimeGateway.PubSub},
+        RealtimeGatewayWeb.Presence,
+        # Start a worker by calling: RealtimeGateway.Worker.start_link(arg)
+        # {RealtimeGateway.Worker, arg},
+        # Start to serve requests, typically the last entry
+        RealtimeGatewayWeb.Endpoint
+      ] ++ nats_children
 
     # See https://elixir.hexdocs.pm/Supervisor.html
     # for other strategies and supported options

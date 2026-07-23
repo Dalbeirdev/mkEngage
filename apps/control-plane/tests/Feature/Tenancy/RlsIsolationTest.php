@@ -27,6 +27,7 @@ use Illuminate\Support\Str;
 /** Tables with organization_id that are deliberately NOT RLS-scoped, with the reason. */
 const RLS_EXEMPT = [
     'personal_access_tokens' => 'auth infrastructure: token lookup establishes context (see PAT migration)',
+    'outbox_events' => 'platform infrastructure: the relay reads across orgs; envelopes are data-minimized (ADR-005)',
 ];
 
 function tenantTables(): array
