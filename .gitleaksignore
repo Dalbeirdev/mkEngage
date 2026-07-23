@@ -1,0 +1,3 @@
+# False positives, pinned by fingerprint (commit:file:rule:line).
+# "funnel/cart/attribution" prose in ADR-006 trips generic-api-key.
+ac0d829764d905c6f7ec2f67c5686f89798fc4ca:docs/architecture/ADR-006-data-platform.md:generic-api-key:24

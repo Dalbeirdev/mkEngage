@@ -184,3 +184,44 @@ jobs:
               yaml.safe_load(open(f, encoding='utf-8'))
               print('YAML OK', f)
           EOF
+
+  security:
+    name: Security (Gitleaks + Semgrep + Trivy, §26)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Gitleaks scans full history
+
+      - name: Gitleaks (secret scanning — CI-blocking)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Semgrep (static security rules — CI-blocking)
+        run: |
+          pip install -q semgrep
+          semgrep scan --config p/ci --error --quiet
+
+      - name: Trivy (dependency scan — CRITICAL blocks)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          severity: CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+
+      - name: Trivy (HIGH — report only)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          severity: HIGH
+          exit-code: "0"
