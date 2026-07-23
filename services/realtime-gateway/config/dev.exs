@@ -64,3 +64,5 @@ config :phoenix, :stacktrace_depth, 20
 config :phoenix, :plug_init_mode, :runtime
 
 config :realtime_gateway, :gateway_signing_key, "local-dev-gateway-signing-key"
+
+config :realtime_gateway, :internal_api_token, "local-dev-internal-broadcast-token"

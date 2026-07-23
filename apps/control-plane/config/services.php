@@ -38,6 +38,8 @@ return [
     'gateway' => [
         'signing_key' => env('GATEWAY_SIGNING_KEY'),
         'url' => env('GATEWAY_WS_URL', 'ws://127.0.0.1:4000/socket'),
+        'internal_url' => env('GATEWAY_INTERNAL_URL'),
+        'internal_token' => env('GATEWAY_INTERNAL_TOKEN'),
     ],
 
     'ai' => [

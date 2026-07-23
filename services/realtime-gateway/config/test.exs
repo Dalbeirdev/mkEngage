@@ -32,3 +32,5 @@ config :phoenix,
   sort_verified_routes_query_params: true
 
 config :realtime_gateway, :gateway_signing_key, "test-gateway-signing-key"
+
+config :realtime_gateway, :internal_api_token, "test-internal-broadcast-token"

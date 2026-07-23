@@ -17,6 +17,7 @@ const ALLOWED = [
   /^organization\/widget-settings(\/rotate-secret)?$/,
   /^departments(\/[0-9a-f-]{36})?(\/members)?$/,
   /^users$/,
+  /^gateway-token$/,
 ];
 
 const API_URL = process.env.CONTROL_PLANE_API_URL ?? "http://127.0.0.1:8000";

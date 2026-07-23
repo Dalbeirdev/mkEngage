@@ -32,7 +32,10 @@ defmodule RealtimeGatewayWeb.ConnCase do
   end
 
   setup tags do
-    RealtimeGateway.DataCase.setup_sandbox(tags)
+    if System.get_env("GATEWAY_DB_TESTS") == "1" do
+      RealtimeGateway.DataCase.setup_sandbox(tags)
+    end
+
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 end

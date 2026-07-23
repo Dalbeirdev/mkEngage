@@ -5,7 +5,7 @@ import { ApiError, WidgetApi } from "./api.js";
 import { RTL_LOCALES, createTranslator } from "./i18n.js";
 import { SessionStorage } from "./storage.js";
 import { MessageStore } from "./store.js";
-import { PollingTransport, type Transport } from "./transport.js";
+import { GatewayTransport, PollingTransport, type Transport } from "./transport.js";
 import type { WidgetConfig } from "./types.js";
 
 /**
@@ -227,6 +227,8 @@ export class MkEngageWidget extends LitElement {
 
   private transport: Transport | null = null;
 
+  private transportKind: "none" | "poll" | "ws" = "none";
+
   private readonly messages = new MessageStore();
 
   private conversationId: string | null = null;
@@ -253,18 +255,58 @@ export class MkEngageWidget extends LitElement {
 
     if (this.open) {
       await this.ensureSession();
-      this.transport ??= new PollingTransport(
+      await this.ensureTransport();
+      await this.updateComplete;
+      this.renderRoot.querySelector("textarea")?.focus();
+    } else {
+      this.transport?.stop();
+      this.transport = null;
+      this.transportKind = "none";
+    }
+  }
+
+  /**
+   * Prefer the WebSocket gateway (ADR-002); fall back to REST polling when
+   * unavailable (§4 REST fallback). Upgrade happens once a conversation
+   * exists (the channel topic needs its id).
+   */
+  private async ensureTransport(): Promise<void> {
+    if (this.conversationId !== null && this.transportKind !== "ws") {
+      const gateway = new GatewayTransport({
+        fetchToken: () => this.api.gatewayToken(),
+        conversationId: () => this.conversationId,
+        lastSeenSequence: () => this.messages.lastSeenSequence,
+        onMessages: (incoming) => {
+          if (this.messages.ingestAll(incoming) > 0) {
+            this.revision += 1;
+            void this.updateComplete.then(() => this.scrollLogToEnd());
+          }
+        },
+        onStateChange: (connectionState) => {
+          this.connection = connectionState;
+        },
+      });
+
+      try {
+        await gateway.startAndConfirm();
+        this.transport?.stop();
+        this.transport = gateway;
+        this.transportKind = "ws";
+        return;
+      } catch {
+        gateway.stop(); // fall through to polling
+      }
+    }
+
+    if (this.transportKind === "none") {
+      this.transport = new PollingTransport(
         () => this.poll(),
         (connectionState) => {
           this.connection = connectionState;
         },
       );
       this.transport.start();
-      await this.updateComplete;
-      this.renderRoot.querySelector("textarea")?.focus();
-    } else {
-      this.transport?.stop();
-      this.transport = null;
+      this.transportKind = "poll";
     }
   }
 
@@ -370,6 +412,7 @@ export class MkEngageWidget extends LitElement {
       const message = await this.api.sendMessage(conversationId, idempotencyKey, body);
       this.messages.confirmPending(idempotencyKey, message);
       this.transport?.poke();
+      void this.ensureTransport(); // upgrade to WS once the conversation exists
     } catch {
       // Pending entry stays visible; polling backoff handles connectivity.
       this.connection = "reconnecting";

@@ -5,7 +5,9 @@ defmodule RealtimeGatewayWeb.Router do
     plug :accepts, ["json"]
   end
 
-  scope "/api", RealtimeGatewayWeb do
+  scope "/internal", RealtimeGatewayWeb do
     pipe_through :api
+
+    post "/broadcast", InternalController, :broadcast
   end
 end

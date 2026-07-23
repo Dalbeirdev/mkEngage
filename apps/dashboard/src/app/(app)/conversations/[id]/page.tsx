@@ -1,6 +1,8 @@
 "use client";
 
 import { use, useEffect, useRef, useState } from "react";
+
+import { subscribeToConversation } from "@/lib/gateway";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 
@@ -43,10 +45,22 @@ export default function ConversationThreadPage({
   const { data, isPending, isError } = useQuery({
     queryKey: ["conversation", id, "messages"],
     queryFn: () => fetchMessages(id),
-    refetchInterval: 3000,
-    // Agent console must stay current even when the tab is hidden.
+    // Live pushes arrive over the gateway WebSocket; polling stays as the
+    // slow safety net (RULES-failure-retry: realtime is best-effort).
+    refetchInterval: 15000,
     refetchIntervalInBackground: true,
   });
+
+  // Gateway subscription: instant refresh on message:new. Failure is fine —
+  // polling covers delivery; the effect retries on conversation change only.
+  useEffect(() => {
+    const subscription = subscribeToConversation(id, () => {
+      void queryClient.invalidateQueries({ queryKey: ["conversation", id, "messages"] });
+      void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    });
+
+    return () => subscription.close();
+  }, [id, queryClient]);
 
   const mutation = useMutation({
     mutationFn: (body: string) => sendReply(id, crypto.randomUUID(), body),

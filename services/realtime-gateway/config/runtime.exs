@@ -105,4 +105,8 @@ if config_env() != :test do
   if signing_key = System.get_env("GATEWAY_SIGNING_KEY") do
     config :realtime_gateway, :gateway_signing_key, signing_key
   end
+
+  if internal_token = System.get_env("GATEWAY_INTERNAL_TOKEN") do
+    config :realtime_gateway, :internal_api_token, internal_token
+  end
 end

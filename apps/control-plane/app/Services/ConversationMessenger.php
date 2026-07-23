@@ -24,6 +24,8 @@ use Illuminate\Support\Facades\DB;
  */
 final class ConversationMessenger
 {
+    public function __construct(private readonly GatewayBroadcaster $broadcaster) {}
+
     /** @return array{message: Message, duplicate: bool} */
     public function send(
         Conversation $conversation,
@@ -64,6 +66,9 @@ final class ConversationMessenger
             'correlation_id' => $correlationId,
             'sent_at' => now(),
         ]);
+
+        // Live fan-out to WebSocket subscribers (best-effort, after commit).
+        $this->broadcaster->messageAccepted($message);
 
         return ['message' => $message, 'duplicate' => false];
     }

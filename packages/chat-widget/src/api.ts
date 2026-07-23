@@ -36,6 +36,13 @@ export class WidgetApi {
     })) as { contact_id: string; display_name: string | null };
   }
 
+  async gatewayToken(): Promise<{ token: string; url: string }> {
+    return (await this.request("POST", "/api/widget/gateway-token")) as {
+      token: string;
+      url: string;
+    };
+  }
+
   async createConversation(sourceUrl: string | null): Promise<ConversationSummary> {
     return (await this.request("POST", "/api/widget/conversations", {
       source_url: sourceUrl,
