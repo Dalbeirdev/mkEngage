@@ -35,6 +35,11 @@ return [
         ],
     ],
 
+    'gateway' => [
+        'signing_key' => env('GATEWAY_SIGNING_KEY'),
+        'url' => env('GATEWAY_WS_URL', 'ws://127.0.0.1:4000/socket'),
+    ],
+
     'ai' => [
         'url' => env('AI_SERVICE_URL', 'http://127.0.0.1:8100'),
         'token' => env('AI_SERVICE_TOKEN'),

@@ -225,3 +225,75 @@ jobs:
           scanners: vuln
           severity: HIGH
           exit-code: "0"
+
+  realtime-gateway:
+    name: Gateway (mix format + compile --warnings-as-errors + ExUnit w/ PG)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/realtime-gateway
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5432"
+      DB_DATABASE: mkengage_test
+      DB_USERNAME: mkengage
+      DB_PASSWORD: mkengage
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Provision non-superuser role (RLS applies to the gateway too)
+        run: |
+          psql -h 127.0.0.1 -U postgres -c "CREATE ROLE mkengage LOGIN PASSWORD 'mkengage' NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;"
+          psql -h 127.0.0.1 -U postgres -c "CREATE DATABASE mkengage_test OWNER mkengage;"
+        env:
+          PGPASSWORD: postgres
+
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: "8.4"
+          extensions: mbstring, intl, pdo_pgsql, zip
+          coverage: none
+
+      - name: Migrate shared schema (control-plane migrations own it, ADR-002)
+        working-directory: apps/control-plane
+        run: |
+          composer install --no-interaction --prefer-dist --no-dev
+          php artisan migrate --force
+        env:
+          APP_KEY: base64:qGxmsdcHPkzszSYpqngPawWOrY/VFWst7oHXODxJyI8=
+          DB_CONNECTION: pgsql
+
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1
+        with:
+          otp-version: "28"
+          elixir-version: "1.20"
+
+      - name: Cache mix deps
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            services/realtime-gateway/deps
+            services/realtime-gateway/_build
+          key: mix-${{ runner.os }}-${{ hashFiles('services/realtime-gateway/mix.lock') }}
+
+      - run: mix deps.get
+      - run: mix format --check-formatted
+      - run: mix compile --warnings-as-errors
+      - name: ExUnit (incl. database channel tests — required, no silent skip)
+        run: mix test
+        env:
+          GATEWAY_DB_TESTS: "1"
+          MIX_ENV: test

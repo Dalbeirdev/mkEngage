@@ -15,6 +15,8 @@ use App\Http\Controllers\Widget\WidgetMessageController;
 use App\Http\Controllers\Widget\WidgetSessionController;
 use App\Http\Middleware\EstablishTenantContext;
 use App\Models\User;
+use App\Models\Visitor;
+use App\Services\GatewayTokenIssuer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -27,6 +29,17 @@ Route::post('/widget/session', WidgetSessionController::class);
 Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-api'])
     ->group(function (): void {
         Route::get('/user', fn (Request $request) => $request->user());
+
+        // Short-lived gateway socket token (ADR-002); identity only.
+        Route::post('/gateway-token', function (Request $request, GatewayTokenIssuer $issuer) {
+            $user = $request->user();
+            abort_unless($user instanceof User, 403);
+
+            return response()->json([
+                'token' => $issuer->issueForUser((string) $user->organization_id, $user->id),
+                'url' => config('services.gateway.url'),
+            ], 201);
+        });
 
         // Agent conversation surface (OpenAPI /conversations).
         Route::get('/conversations', [ConversationController::class, 'index']);
@@ -71,4 +84,13 @@ Route::middleware([EstablishTenantContext::class, 'auth:widget', 'ability:widget
         Route::get('/conversations/{conversation}/messages', [WidgetMessageController::class, 'index']);
         Route::post('/conversations/{conversation}/messages', [WidgetMessageController::class, 'store']);
         Route::post('/identify', WidgetIdentifyController::class);
+        Route::post('/gateway-token', function (Request $request, GatewayTokenIssuer $issuer) {
+            $visitor = $request->user('widget');
+            abort_unless($visitor instanceof Visitor, 403);
+
+            return response()->json([
+                'token' => $issuer->issueForVisitor((string) $visitor->organization_id, $visitor->id),
+                'url' => config('services.gateway.url'),
+            ], 201);
+        });
     });
