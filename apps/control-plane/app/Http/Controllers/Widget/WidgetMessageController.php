@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Widget;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\GenerateChatbotReply;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Visitor;
@@ -70,6 +71,14 @@ final class WidgetMessageController extends Controller
             contentType: $validated['content_type'],
             correlationId: $validated['correlation_id'] ?? null,
         );
+
+        if (! $result['duplicate'] && $conversation->chatbot_id !== null) {
+            // §2: AI runs via queued dispatch, never in this request.
+            GenerateChatbotReply::dispatch(
+                (string) $conversation->organization_id,
+                $conversation->id,
+            )->afterCommit();
+        }
 
         return response()->json(
             $result['message']->toContract(),

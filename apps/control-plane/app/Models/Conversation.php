@@ -26,6 +26,7 @@ final class Conversation extends Model
         'contact_id',
         'assigned_agent_id',
         'department_id',
+        'chatbot_id',
         'source_url',
     ];
 

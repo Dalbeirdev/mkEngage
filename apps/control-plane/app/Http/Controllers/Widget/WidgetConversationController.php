@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Widget;
 
 use App\Http\Controllers\Controller;
+use App\Models\Chatbot;
 use App\Models\Conversation;
 use App\Models\Visitor;
 use Illuminate\Http\JsonResponse;
@@ -26,9 +27,12 @@ final class WidgetConversationController extends Controller
             'source_url' => ['sometimes', 'nullable', 'url', 'max:2048'],
         ]);
 
+        $chatbot = Chatbot::query()->where('status', 'active')->first();
+
         $conversation = Conversation::query()->create([
             'visitor_id' => $visitor->id,
             'contact_id' => $visitor->contact_id,
+            'chatbot_id' => $chatbot?->id,
             'source_url' => $validated['source_url'] ?? null,
         ]);
 

@@ -1,0 +1,28 @@
+[project]
+name = "mkengage-ai-service"
+version = "0.1.0"
+description = "mkEngage AI and RAG service (ADR-003)"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi",
+  "uvicorn[standard]",
+  "pydantic>=2",
+  "pydantic-settings",
+  "httpx",
+  "anthropic",
+  "openai",
+]
+
+[dependency-groups]
+dev = ["pytest", "ruff"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "ANN"]
+ignore = ["ANN401"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
