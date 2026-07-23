@@ -19,6 +19,7 @@ export default async function AppLayout({
     { href: "/conversations", label: t("conversations") },
     { href: "/contacts", label: t("contacts") },
     { href: "/chatbots", label: t("chatbots") },
+    { href: "/settings/departments", label: t("departments") },
     { href: "/settings/widget", label: t("widgetSetup") },
     { href: "/settings/profile", label: t("profile") },
   ];

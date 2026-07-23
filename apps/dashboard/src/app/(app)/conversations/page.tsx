@@ -4,12 +4,21 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 
-import { conversationListSchema } from "@/lib/api/schemas";
+import { useState } from "react";
 
-async function fetchConversations() {
-  const response = await fetch("/api/cp/conversations?status=all", { cache: "no-store" });
+import { conversationListSchema, departmentListSchema } from "@/lib/api/schemas";
+
+async function fetchConversations(departmentId: string) {
+  const query = departmentId === "all" ? "" : `&department_id=${departmentId}`;
+  const response = await fetch(`/api/cp/conversations?status=all${query}`, { cache: "no-store" });
   if (!response.ok) throw new Error(`Failed to load conversations (${response.status})`);
   return conversationListSchema.parse(await response.json()).data;
+}
+
+async function fetchDepartments() {
+  const response = await fetch("/api/cp/departments", { cache: "no-store" });
+  if (!response.ok) throw new Error(`Failed to load departments (${response.status})`);
+  return departmentListSchema.parse(await response.json()).data;
 }
 
 /**
@@ -19,18 +28,43 @@ async function fetchConversations() {
  */
 export default function ConversationsPage() {
   const t = useTranslations("conversations");
+  const [departmentId, setDepartmentId] = useState("all");
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["conversations"],
-    queryFn: fetchConversations,
+    queryKey: ["conversations", departmentId],
+    queryFn: () => fetchConversations(departmentId),
     refetchInterval: 5000,
     // Agent console must stay current even when the tab is hidden.
     refetchIntervalInBackground: true,
   });
 
+  const departments = useQuery({ queryKey: ["departments"], queryFn: fetchDepartments });
+
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
+        {departments.data !== undefined && departments.data.length > 0 && (
+          <div>
+            <label htmlFor="dept-filter" className="sr-only">
+              {t("filterLabel")}
+            </label>
+            <select
+              id="dept-filter"
+              value={departmentId}
+              onChange={(event) => setDepartmentId(event.target.value)}
+              className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-900"
+            >
+              <option value="all">{t("allDepartments")}</option>
+              {departments.data.map((department) => (
+                <option key={department.department_id} value={department.department_id}>
+                  {department.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
 
       {isPending && (
         <p className="text-sm text-zinc-500" role="status">
@@ -62,6 +96,11 @@ export default function ConversationsPage() {
                     {conversation.contact_name ?? conversation.visitor_name ?? t("anonymousVisitor")}
                   </span>
                   <span className="block truncate text-xs text-zinc-500">
+                    {conversation.department_name !== null && (
+                      <span className="me-2 rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                        {conversation.department_name}
+                      </span>
+                    )}
                     {conversation.source_url ?? conversation.conversation_id}
                   </span>
                 </span>

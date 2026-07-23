@@ -6,6 +6,7 @@ use App\Http\Controllers\Agent\AgentMessageController;
 use App\Http\Controllers\Agent\ChatbotController;
 use App\Http\Controllers\Agent\ContactController;
 use App\Http\Controllers\Agent\ConversationController;
+use App\Http\Controllers\Agent\DepartmentController;
 use App\Http\Controllers\Agent\WidgetSettingsController;
 use App\Http\Controllers\Auth\IssueApiTokenController;
 use App\Http\Controllers\Widget\WidgetConversationController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\Widget\WidgetIdentifyController;
 use App\Http\Controllers\Widget\WidgetMessageController;
 use App\Http\Controllers\Widget\WidgetSessionController;
 use App\Http\Middleware\EstablishTenantContext;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -40,6 +42,19 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
 
         Route::get('/organization/widget-settings', [WidgetSettingsController::class, 'show']);
         Route::post('/organization/widget-settings/rotate-secret', [WidgetSettingsController::class, 'rotateSecret']);
+
+        Route::get('/departments', [DepartmentController::class, 'index']);
+        Route::post('/departments', [DepartmentController::class, 'store']);
+        Route::patch('/departments/{department}', [DepartmentController::class, 'update']);
+        Route::put('/departments/{department}/members', [DepartmentController::class, 'setMembers']);
+        Route::get('/users', function () {
+            return response()->json([
+                'data' => User::query()->orderBy('name')->limit(200)
+                    ->get(['id', 'name', 'email'])
+                    ->map(fn ($user) => ['user_id' => $user->id, 'name' => $user->name, 'email' => $user->email])
+                    ->all(),
+            ]);
+        });
 
         Route::get('/contacts', [ContactController::class, 'index']);
         Route::get('/contacts/{contact}', [ContactController::class, 'show']);

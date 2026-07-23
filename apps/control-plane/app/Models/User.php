@@ -56,10 +56,11 @@ final class User extends Authenticatable
         return $this->belongsToMany(Role::class, 'user_roles');
     }
 
-    /** @return BelongsToMany<Department, $this> */
+    /** @return BelongsToMany<Department, $this, DepartmentUser> */
     public function departments(): BelongsToMany
     {
-        return $this->belongsToMany(Department::class, 'department_user');
+        return $this->belongsToMany(Department::class, 'department_user')
+            ->using(DepartmentUser::class);
     }
 
     public function hasPermission(string $key): bool

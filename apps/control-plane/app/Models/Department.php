@@ -17,11 +17,20 @@ final class Department extends Model
     protected $fillable = [
         'organization_id',
         'name',
+        'is_default',
     ];
 
-    /** @return BelongsToMany<User, $this> */
+    protected function casts(): array
+    {
+        return [
+            'is_default' => 'boolean',
+        ];
+    }
+
+    /** @return BelongsToMany<User, $this, DepartmentUser> */
     public function users(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'department_user');
+        return $this->belongsToMany(User::class, 'department_user')
+            ->using(DepartmentUser::class);
     }
 }

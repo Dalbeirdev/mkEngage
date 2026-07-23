@@ -16,7 +16,8 @@
     "toggleTheme": "Toggle theme",
     "contacts": "Contacts",
     "chatbots": "Chatbots",
-    "widgetSetup": "Widget setup"
+    "widgetSetup": "Widget setup",
+    "departments": "Departments"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -49,7 +50,9 @@
     "replyPlaceholder": "Type a reply…",
     "send": "Send",
     "sending": "Sending…",
-    "sendError": "Reply could not be sent."
+    "sendError": "Reply could not be sent.",
+    "allDepartments": "All departments",
+    "filterLabel": "Filter by department"
   },
   "contacts": {
     "title": "Contacts",
@@ -107,5 +110,24 @@
     "rotateConfirm": "Rotating invalidates all existing signatures immediately. Your backend must switch to the new secret. Continue?",
     "newSecretTitle": "New signing secret — shown only once",
     "newSecretHelp": "Store it in your backend's secret manager now. You will not be able to see it again."
+  },
+  "departments": {
+    "title": "Departments",
+    "loading": "Loading…",
+    "error": "Could not load departments.",
+    "empty": "No departments yet. The first one becomes the default for new conversations.",
+    "createTitle": "New department",
+    "nameLabel": "Name",
+    "create": "Create",
+    "creating": "Creating…",
+    "default": "Default",
+    "makeDefault": "Make default",
+    "members": "{count} members",
+    "editMembers": "Members",
+    "membersOf": "Members of {name}",
+    "save": "Save members",
+    "saving": "Saving…",
+    "close": "Close",
+    "defaultNote": "New widget conversations are routed to the default department."
   }
 }

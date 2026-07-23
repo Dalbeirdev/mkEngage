@@ -32,6 +32,8 @@ export const conversationSchema = z.object({
   contact_id: z.uuid().nullable(),
   contact_name: z.string().nullable(),
   contact_email: z.string().nullable(),
+  department_id: z.uuid().nullable(),
+  department_name: z.string().nullable(),
   assigned_agent_id: z.uuid().nullable(),
   last_sequence: z.number().int().nonnegative(),
   source_url: z.string().nullable(),
@@ -106,6 +108,31 @@ export const widgetSettingsSchema = z.object({
 
 export const rotatedSecretSchema = z.object({
   signing_secret: z.string().min(1),
+});
+
+export const departmentSchema = z.object({
+  department_id: z.uuid(),
+  name: z.string(),
+  is_default: z.boolean(),
+  member_count: z.number().int().nonnegative(),
+  member_ids: z.array(z.uuid()),
+  created_at: z.string().nullable(),
+});
+
+export type Department = z.infer<typeof departmentSchema>;
+
+export const departmentListSchema = z.object({
+  data: z.array(departmentSchema),
+});
+
+export const userSummarySchema = z.object({
+  user_id: z.uuid(),
+  name: z.string(),
+  email: z.string(),
+});
+
+export const userListSchema = z.object({
+  data: z.array(userSummarySchema),
 });
 
 /** RFC 9457 Problem Details (§15) as emitted by the control plane. */

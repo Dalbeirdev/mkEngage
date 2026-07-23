@@ -50,6 +50,12 @@ final class Conversation extends Model
         return $this->belongsTo(Contact::class);
     }
 
+    /** @return BelongsTo<Department, $this> */
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class);
+    }
+
     /** @return HasMany<Message, $this> */
     public function messages(): HasMany
     {

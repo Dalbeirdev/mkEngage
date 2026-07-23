@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Widget;
 use App\Http\Controllers\Controller;
 use App\Models\Chatbot;
 use App\Models\Conversation;
+use App\Models\Department;
 use App\Models\Visitor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,11 +29,13 @@ final class WidgetConversationController extends Controller
         ]);
 
         $chatbot = Chatbot::query()->where('status', 'active')->first();
+        $defaultDepartment = Department::query()->where('is_default', true)->first();
 
         $conversation = Conversation::query()->create([
             'visitor_id' => $visitor->id,
             'contact_id' => $visitor->contact_id,
             'chatbot_id' => $chatbot?->id,
+            'department_id' => $defaultDepartment?->id, // routing v1 (A5)
             'source_url' => $validated['source_url'] ?? null,
         ]);
 

@@ -15,6 +15,8 @@ const ALLOWED = [
   /^contacts(\/[0-9a-f-]{36})?$/,
   /^chatbots(\/[0-9a-f-]{36})?$/,
   /^organization\/widget-settings(\/rotate-secret)?$/,
+  /^departments(\/[0-9a-f-]{36})?(\/members)?$/,
+  /^users$/,
 ];
 
 const API_URL = process.env.CONTROL_PLANE_API_URL ?? "http://127.0.0.1:8000";
@@ -64,6 +66,13 @@ export async function GET(
 }
 
 export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ path: string[] }> },
+): Promise<NextResponse> {
+  return proxy(request, (await context.params).path);
+}
+
+export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ path: string[] }> },
 ): Promise<NextResponse> {
