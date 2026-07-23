@@ -76,7 +76,7 @@ jobs:
         run: |
           OUTPUT=$(vendor/bin/pest --filter RlsIsolation 2>&1) || { echo "$OUTPUT"; exit 1; }
           echo "$OUTPUT" | grep -E "passed" || { echo "RLS suite did not report passes:"; echo "$OUTPUT"; exit 1; }
-          echo "$OUTPUT" | grep -qi "skipped" && { echo "RLS suite skipped — treated as FAILURE in CI:"; echo "$OUTPUT"; exit 1; }
+          if echo "$OUTPUT" | grep -qi "skipped"; then echo "RLS suite skipped — treated as FAILURE in CI:"; echo "$OUTPUT"; exit 1; fi
           echo "RLS suite ran against PostgreSQL."
         env:
           DB_CONNECTION: pgsql
