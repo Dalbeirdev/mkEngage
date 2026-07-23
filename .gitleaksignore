@@ -1,3 +1,8 @@
 # False positives, pinned by fingerprint (commit:file:rule:line).
 # "funnel/cart/attribution" prose in ADR-006 trips generic-api-key.
 ac0d829764d905c6f7ec2f67c5686f89798fc4ca:docs/architecture/ADR-006-data-platform.md:generic-api-key:24
+# Phoenix-generated dev/test secret_key_base — dev/test only by design
+# (prod reads SECRET_KEY_BASE from env in runtime.exs); Phoenix convention
+# commits these.
+0792a536faeeb7824dc8d9eb8f927ce60abe2a4d:services/realtime-gateway/config/test.exs:generic-api-key:21
+0792a536faeeb7824dc8d9eb8f927ce60abe2a4d:services/realtime-gateway/config/dev.exs:generic-api-key:27
