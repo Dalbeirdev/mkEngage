@@ -82,6 +82,23 @@ export const contactListSchema = z.object({
   data: z.array(contactSchema),
 });
 
+export const chatbotSchema = z.object({
+  chatbot_id: z.uuid(),
+  name: z.string(),
+  status: z.enum(["draft", "active", "paused"]),
+  system_prompt: z.string().nullable(),
+  provider: z.enum(["fake", "openai", "anthropic"]),
+  model: z.string().nullable(),
+  created_at: z.string().nullable(),
+  updated_at: z.string().nullable(),
+});
+
+export type ChatbotConfig = z.infer<typeof chatbotSchema>;
+
+export const chatbotListSchema = z.object({
+  data: z.array(chatbotSchema),
+});
+
 /** RFC 9457 Problem Details (§15) as emitted by the control plane. */
 export const problemSchema = z.object({
   title: z.string().optional(),

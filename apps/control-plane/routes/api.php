@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Agent\AgentMessageController;
+use App\Http\Controllers\Agent\ChatbotController;
 use App\Http\Controllers\Agent\ContactController;
 use App\Http\Controllers\Agent\ConversationController;
 use App\Http\Controllers\Auth\IssueApiTokenController;
@@ -30,6 +31,11 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
         Route::patch('/conversations/{conversation}', [ConversationController::class, 'update']);
         Route::get('/conversations/{conversation}/messages', [AgentMessageController::class, 'index']);
         Route::post('/conversations/{conversation}/messages', [AgentMessageController::class, 'store']);
+
+        Route::get('/chatbots', [ChatbotController::class, 'index']);
+        Route::post('/chatbots', [ChatbotController::class, 'store']);
+        Route::get('/chatbots/{chatbot}', [ChatbotController::class, 'show']);
+        Route::patch('/chatbots/{chatbot}', [ChatbotController::class, 'update']);
 
         Route::get('/contacts', [ContactController::class, 'index']);
         Route::get('/contacts/{contact}', [ContactController::class, 'show']);

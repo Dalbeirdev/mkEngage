@@ -14,7 +14,8 @@
     "profile": "Profile",
     "signOut": "Sign out",
     "toggleTheme": "Toggle theme",
-    "contacts": "Contacts"
+    "contacts": "Contacts",
+    "chatbots": "Chatbots"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -59,5 +60,31 @@
     "colExternalId": "External ID",
     "colCreated": "Created",
     "unnamed": "(unnamed)"
+  },
+  "chatbots": {
+    "title": "Chatbots",
+    "loading": "Loading…",
+    "error": "Could not load chatbots.",
+    "empty": "No chatbots yet. Create one to auto-answer new conversations.",
+    "createTitle": "New chatbot",
+    "nameLabel": "Name",
+    "create": "Create",
+    "creating": "Creating…",
+    "status_draft": "Draft",
+    "status_active": "Active",
+    "status_paused": "Paused",
+    "editTitle": "Edit chatbot",
+    "promptLabel": "System prompt",
+    "promptPlaceholder": "You are a helpful support assistant for…",
+    "providerLabel": "Provider",
+    "modelLabel": "Model (optional)",
+    "modelPlaceholder": "provider default",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved.",
+    "saveError": "Could not save.",
+    "activate": "Activate",
+    "pause": "Pause",
+    "activeNote": "Only one chatbot can be active — activating this one pauses the others."
   }
 }
