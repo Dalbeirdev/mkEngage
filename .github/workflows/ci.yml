@@ -1,0 +1,186 @@
+# mkEngage CI (§26): fails on test failure, type failure, static-analysis
+# failure, migration failure, or production build failure.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  control-plane:
+    name: Control plane (Pest + PHPStan + Pint, SQLite & PostgreSQL/RLS)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/control-plane
+    services:
+      postgres:
+        # pgvector image: same as local compose (ADR-006)
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: mbstring, intl, pdo_sqlite, pdo_pgsql, gd, zip
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Pint (style)
+        run: vendor/bin/pint --test
+
+      - name: PHPStan (level 9)
+        run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+
+      - name: Pest (SQLite app-layer suite)
+        run: vendor/bin/pest
+
+      - name: Provision non-superuser role for RLS
+        # Superusers bypass RLS; the suite asserts the connection is NOT
+        # superuser (ADR-007). Mirrors infrastructure/docker/postgres-init.
+        run: |
+          psql -h 127.0.0.1 -U postgres -c "CREATE ROLE mkengage LOGIN PASSWORD 'mkengage' NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;"
+          psql -h 127.0.0.1 -U postgres -c "CREATE DATABASE mkengage_test OWNER mkengage;"
+        env:
+          PGPASSWORD: postgres
+
+      - name: Pest (PostgreSQL — full suite incl. generated RLS isolation proof)
+        run: vendor/bin/pest
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: "5432"
+          DB_DATABASE: mkengage_test
+          DB_USERNAME: mkengage
+          DB_PASSWORD: mkengage
+
+      - name: Assert the RLS suite actually ran (no silent skip)
+        run: |
+          OUTPUT=$(vendor/bin/pest --filter RlsIsolation 2>&1) || { echo "$OUTPUT"; exit 1; }
+          echo "$OUTPUT" | grep -E "passed" || { echo "RLS suite did not report passes:"; echo "$OUTPUT"; exit 1; }
+          echo "$OUTPUT" | grep -qi "skipped" && { echo "RLS suite skipped — treated as FAILURE in CI:"; echo "$OUTPUT"; exit 1; }
+          echo "RLS suite ran against PostgreSQL."
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: "5432"
+          DB_DATABASE: mkengage_test
+          DB_USERNAME: mkengage
+          DB_PASSWORD: mkengage
+
+  dashboard:
+    name: Dashboard (tsc + ESLint + Vitest + Playwright/Axe + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: apps/dashboard/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: node_modules/.bin/tsc --noEmit
+      - run: node_modules/.bin/eslint src e2e
+      - run: node_modules/.bin/vitest run
+      - run: node_modules/.bin/next build
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Playwright e2e + Axe
+        run: node_modules/.bin/playwright test
+
+  chat-widget:
+    name: Widget (tsc + Vitest + build + Playwright/Axe)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/chat-widget
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: packages/chat-widget/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: node_modules/.bin/tsc --noEmit
+      - run: node_modules/.bin/vitest run
+      - run: node node_modules/vite/bin/vite.js build
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Playwright e2e + Axe (mocked API)
+        run: node_modules/.bin/playwright test
+
+  ai-service:
+    name: AI service (Ruff + pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/ai-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install fastapi "uvicorn[standard]" "pydantic>=2" pydantic-settings httpx anthropic openai pytest ruff
+      - run: python -m ruff check app tests
+      - run: python -m pytest -q
+        env:
+          AI_SERVICE_TOKEN: ci-test-token
+
+  contracts:
+    name: Contracts (OpenAPI lint + JSON Schema meta-validation)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Redocly lint (OpenAPI 3.1)
+        run: npx --yes @redocly/cli@latest lint contracts/openapi/control-plane.v1.yaml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Meta-validate event schemas (Draft 2020-12)
+        run: |
+          pip install -q jsonschema pyyaml
+          python - <<'EOF'
+          import json, glob, sys
+          import yaml
+          from jsonschema.validators import Draft202012Validator as V
+          for f in glob.glob('contracts/events/*.schema.json'):
+              V.check_schema(json.load(open(f, encoding='utf-8')))
+              print('SCHEMA OK', f)
+          for f in glob.glob('contracts/asyncapi/*.yaml'):
+              yaml.safe_load(open(f, encoding='utf-8'))
+              print('YAML OK', f)
+          EOF
