@@ -1,5 +1,7 @@
 # mkEngage
 
+[![CI](https://github.com/Dalbeirdev/mkEngage/actions/workflows/ci.yml/badge.svg)](https://github.com/Dalbeirdev/mkEngage/actions/workflows/ci.yml)
+
 Multi-tenant, white-label, omnichannel chatbot and customer-engagement platform.
 
 Authoritative technology spec: **mkEngage Advanced Technology and Architecture Directive** (PDF, repo root). Architecture decisions: [docs/architecture](docs/architecture/README.md).
@@ -36,4 +38,6 @@ Authoritative technology spec: **mkEngage Advanced Technology and Architecture D
 
 ## Status
 
-Phase 0 (architecture) complete and approved. Contracts defined in `contracts/`. Service implementation phases begin with the control plane.
+Working product slice on `main`: embeddable widget chat → AI chatbot auto-replies (provider-routed) → human agent takeover → verified visitor identity → contacts — plus admin for chatbots and widget installation. Four test suites run in CI on every push, including the PostgreSQL RLS tenant-isolation proof (ADR-007) against a non-superuser role.
+
+Not yet built (per ADRs, awaiting infrastructure phases): Phoenix real-time gateway (widget currently polls), NATS event backbone, Temporal workflows, ClickHouse analytics, knowledge/RAG.

@@ -27,9 +27,16 @@ return new class extends Migration
             $table->timestampTz('updated_at')->nullable();
             $table->timestampTz('deleted_at')->nullable();
 
+            $table->index('parent_organization_id');
+        });
+
+        // Self-referencing FK added AFTER create: inside the create block,
+        // PostgreSQL would execute this constraint before the implicit
+        // primary-key ALTER and fail with "no unique constraint matching
+        // given keys" (SQLite masks this by inlining everything).
+        Schema::table('organizations', function (Blueprint $table): void {
             $table->foreign('parent_organization_id')
                 ->references('id')->on('organizations')->nullOnDelete();
-            $table->index('parent_organization_id');
         });
     }
 
