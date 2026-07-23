@@ -64,7 +64,7 @@ return new class extends Migration
                 "SELECT count(*) AS c FROM pg_extension WHERE extname = 'vector'"
             );
 
-            if (is_object($vectorAvailable) && (int) $vectorAvailable->c > 0) {
+            if (is_object($vectorAvailable) && property_exists($vectorAvailable, 'c') && (int) $vectorAvailable->c > 0) {
                 DB::statement('ALTER TABLE knowledge_chunks ADD COLUMN embedding vector(1536)');
                 // HNSW per §10; created here because chunk volumes start tiny.
                 DB::statement('CREATE INDEX knowledge_chunks_embedding_idx ON knowledge_chunks USING hnsw (embedding vector_cosine_ops)');
