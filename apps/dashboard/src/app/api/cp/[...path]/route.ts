@@ -18,6 +18,7 @@ const ALLOWED = [
   /^departments(\/[0-9a-f-]{36})?(\/members)?$/,
   /^users$/,
   /^gateway-token$/,
+  /^knowledge\/documents(\/[0-9a-f-]{36})?$/,
 ];
 
 const API_URL = process.env.CONTROL_PLANE_API_URL ?? "http://127.0.0.1:8000";
@@ -67,6 +68,13 @@ export async function GET(
 }
 
 export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ path: string[] }> },
+): Promise<NextResponse> {
+  return proxy(request, (await context.params).path);
+}
+
+export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ path: string[] }> },
 ): Promise<NextResponse> {

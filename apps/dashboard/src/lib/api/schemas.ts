@@ -135,6 +135,20 @@ export const userListSchema = z.object({
   data: z.array(userSummarySchema),
 });
 
+export const knowledgeDocumentSchema = z.object({
+  document_id: z.uuid(),
+  title: z.string(),
+  status: z.enum(["pending", "ready", "failed"]),
+  chunk_count: z.number().int().nonnegative(),
+  created_at: z.string().nullable(),
+});
+
+export type KnowledgeDocument = z.infer<typeof knowledgeDocumentSchema>;
+
+export const knowledgeListSchema = z.object({
+  data: z.array(knowledgeDocumentSchema),
+});
+
 /** RFC 9457 Problem Details (§15) as emitted by the control plane. */
 export const problemSchema = z.object({
   title: z.string().optional(),

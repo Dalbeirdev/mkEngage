@@ -8,6 +8,7 @@ use App\Models\Chatbot;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Services\ConversationMessenger;
+use App\Services\KnowledgeRetriever;
 use App\Tenancy\Tenancy;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -34,9 +35,12 @@ final class GenerateChatbotReply implements ShouldQueue
         private readonly string $conversationId,
     ) {}
 
-    public function handle(Tenancy $tenancy, ConversationMessenger $messenger): void
-    {
-        $tenancy->run($this->organizationId, function () use ($messenger): void {
+    public function handle(
+        Tenancy $tenancy,
+        ConversationMessenger $messenger,
+        KnowledgeRetriever $retriever,
+    ): void {
+        $tenancy->run($this->organizationId, function () use ($messenger, $retriever): void {
             $conversation = Conversation::query()->find($this->conversationId);
 
             if ($conversation === null || $conversation->status === 'closed') {
@@ -78,6 +82,17 @@ final class GenerateChatbotReply implements ShouldQueue
                 return; // Nothing new to answer.
             }
 
+            // RAG (§10/ADR-003): ground the reply in org knowledge when any
+            // matches the visitor's last message. Empty on SQLite/no-knowledge.
+            $lastVisitor = '';
+            foreach (array_reverse($history) as $entry) {
+                if ($entry['sender_type'] === 'visitor') {
+                    $lastVisitor = $entry['body'];
+                    break;
+                }
+            }
+            $contextChunks = $lastVisitor === '' ? [] : $retriever->retrieve($lastVisitor);
+
             $token = config('services.ai.token');
             $timeout = config('services.ai.timeout', 25);
             $url = config('services.ai.url');
@@ -93,6 +108,7 @@ final class GenerateChatbotReply implements ShouldQueue
                         'system_prompt' => $chatbot->system_prompt
                             ?? 'You are a helpful customer support assistant.',
                         'history' => $history,
+                        'context_chunks' => $contextChunks,
                         'config' => [
                             'provider' => $chatbot->provider,
                             'model' => $chatbot->model,

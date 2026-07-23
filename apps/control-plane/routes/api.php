@@ -7,6 +7,7 @@ use App\Http\Controllers\Agent\ChatbotController;
 use App\Http\Controllers\Agent\ContactController;
 use App\Http\Controllers\Agent\ConversationController;
 use App\Http\Controllers\Agent\DepartmentController;
+use App\Http\Controllers\Agent\KnowledgeController;
 use App\Http\Controllers\Agent\WidgetSettingsController;
 use App\Http\Controllers\Auth\IssueApiTokenController;
 use App\Http\Controllers\Widget\WidgetConversationController;
@@ -55,6 +56,10 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
 
         Route::get('/organization/widget-settings', [WidgetSettingsController::class, 'show']);
         Route::post('/organization/widget-settings/rotate-secret', [WidgetSettingsController::class, 'rotateSecret']);
+
+        Route::get('/knowledge/documents', [KnowledgeController::class, 'index']);
+        Route::post('/knowledge/documents', [KnowledgeController::class, 'store']);
+        Route::delete('/knowledge/documents/{document}', [KnowledgeController::class, 'destroy']);
 
         Route::get('/departments', [DepartmentController::class, 'index']);
         Route::post('/departments', [DepartmentController::class, 'store']);

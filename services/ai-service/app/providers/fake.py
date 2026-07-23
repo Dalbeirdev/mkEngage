@@ -24,10 +24,21 @@ class FakeProvider:
             "",
         )
 
-        body = (
-            f"Thanks for your message! You said: “{last_visitor[:200]}”. "
-            "A teammate will follow up shortly — is there anything else I can help with?"
-        )
+        if "--- KNOWLEDGE EXCERPTS ---" in system_prompt:
+            excerpt = system_prompt.split("--- KNOWLEDGE EXCERPTS ---")[1]
+            first_line = next(
+                (ln for ln in excerpt.splitlines() if ln.strip() and not ln.startswith("[")),
+                "",
+            )
+            body = (
+                f"Based on our documentation: {first_line.strip()[:300]} "
+                f"(You asked: “{last_visitor[:120]}”.)"
+            )
+        else:
+            body = (
+                f"Thanks for your message! You said: “{last_visitor[:200]}”. "
+                "A teammate will follow up shortly — is there anything else I can help with?"
+            )
 
         return Completion(
             body=body[: max_output_tokens * 4],

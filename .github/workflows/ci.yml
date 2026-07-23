@@ -59,6 +59,7 @@ jobs:
         run: |
           psql -h 127.0.0.1 -U postgres -c "CREATE ROLE mkengage LOGIN PASSWORD 'mkengage' NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;"
           psql -h 127.0.0.1 -U postgres -c "CREATE DATABASE mkengage_test OWNER mkengage;"
+          psql -h 127.0.0.1 -U postgres -d mkengage_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
         env:
           PGPASSWORD: postgres
 
@@ -258,6 +259,7 @@ jobs:
         run: |
           psql -h 127.0.0.1 -U postgres -c "CREATE ROLE mkengage LOGIN PASSWORD 'mkengage' NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;"
           psql -h 127.0.0.1 -U postgres -c "CREATE DATABASE mkengage_test OWNER mkengage;"
+          psql -h 127.0.0.1 -U postgres -d mkengage_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
         env:
           PGPASSWORD: postgres
 

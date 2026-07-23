@@ -17,7 +17,8 @@
     "contacts": "Contacts",
     "chatbots": "Chatbots",
     "widgetSetup": "Widget setup",
-    "departments": "Departments"
+    "departments": "Departments",
+    "knowledge": "Knowledge"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -129,5 +130,24 @@
     "saving": "Saving…",
     "close": "Close",
     "defaultNote": "New widget conversations are routed to the default department."
+  },
+  "knowledge": {
+    "title": "Knowledge",
+    "subtitle": "Documents your chatbot uses to ground its answers.",
+    "loading": "Loading…",
+    "error": "Could not load documents.",
+    "empty": "No documents yet. Add your policies and FAQs so the bot can answer from them.",
+    "createTitle": "Add document",
+    "titleLabel": "Title",
+    "bodyLabel": "Content",
+    "bodyPlaceholder": "Paste your policy, FAQ or article text…",
+    "add": "Add",
+    "adding": "Adding…",
+    "chunks": "{count} chunks",
+    "status_pending": "Processing",
+    "status_ready": "Ready",
+    "status_failed": "Failed",
+    "delete": "Delete",
+    "deleteConfirm": "Delete this document? The chatbot will stop using it."
   }
 }

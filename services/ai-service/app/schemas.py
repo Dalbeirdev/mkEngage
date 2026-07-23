@@ -24,6 +24,25 @@ class ProviderConfig(BaseModel):
     timeout_seconds: float = Field(default=20.0, gt=0, le=60)
 
 
+class EmbedRequest(BaseModel):
+    texts: list[str] = Field(min_length=1, max_length=100)
+    config: ProviderConfig = ProviderConfig()
+
+
+class EmbedResponse(BaseModel):
+    vectors: list[list[float]]
+    provider: str
+    dimensions: int
+
+
+class ContextChunk(BaseModel):
+    """Retrieved knowledge passed to ground the reply (ADR-003 RAG).
+    Treated strictly as DATA in the prompt, never as instructions (§19)."""
+
+    content: str = Field(max_length=4000)
+    document_title: str = Field(default="", max_length=200)
+
+
 class ReplyRequest(BaseModel):
     organization_id: str
     conversation_id: str
@@ -33,6 +52,7 @@ class ReplyRequest(BaseModel):
         max_length=8000,
     )
     history: list[HistoryMessage] = Field(min_length=1, max_length=100)
+    context_chunks: list[ContextChunk] = Field(default_factory=list, max_length=10)
     config: ProviderConfig = ProviderConfig()
 
 
