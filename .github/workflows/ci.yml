@@ -113,7 +113,7 @@ jobs:
       - run: node_modules/.bin/vitest run
       - run: node_modules/.bin/next build
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium firefox webkit
       - name: Playwright e2e + Axe
         run: node_modules/.bin/playwright test
 
@@ -138,12 +138,12 @@ jobs:
       - run: node_modules/.bin/vitest run
       - run: node node_modules/vite/bin/vite.js build
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium firefox webkit
       - name: Playwright e2e + Axe (mocked API)
         run: node_modules/.bin/playwright test
 
   ai-service:
-    name: AI service (Ruff + pytest)
+    name: AI service (Ruff + mypy + pytest)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -156,8 +156,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install fastapi "uvicorn[standard]" "pydantic>=2" pydantic-settings httpx anthropic openai pytest ruff
+          pip install fastapi "uvicorn[standard]" "pydantic>=2" pydantic-settings httpx anthropic openai pytest ruff mypy
       - run: python -m ruff check app tests
+      - run: python -m mypy app
       - run: python -m pytest -q
         env:
           AI_SERVICE_TOKEN: ci-test-token
