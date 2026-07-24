@@ -13,6 +13,12 @@ export default defineConfig({
   use: {
     baseURL: "http://127.0.0.1:5175",
     trace: "on-first-retry",
+    // Deterministic a11y: the panel's entry animation fades opacity 0→1, and
+    // axe-core evaluating mid-fade sees the bubble blended with the host page
+    // (false low-contrast, intermittent on slower mobile-safari). The widget
+    // gates that animation behind prefers-reduced-motion, so emulating it
+    // removes the race and tests the true steady-state colors.
+    reducedMotion: "reduce",
   },
   // Cross-browser (DEF-002): the widget embeds on arbitrary host pages, so
   // WebKit (Safari) and Firefox coverage is load-bearing, not optional. Mobile

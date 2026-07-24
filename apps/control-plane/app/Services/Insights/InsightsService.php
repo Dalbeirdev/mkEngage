@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Insights;
 
+use App\Tenancy\TenantContext;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -21,6 +22,8 @@ use Illuminate\Support\Facades\DB;
  */
 final class InsightsService
 {
+    public function __construct(private readonly TenantContext $tenant) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -49,6 +52,7 @@ final class InsightsService
     private function conversations(Carbon $start, Carbon $end): array
     {
         $rows = DB::table('conversations')
+            ->where('organization_id', $this->tenant->organizationId())
             ->selectRaw('status, count(*) as n')
             ->whereBetween('created_at', [$start, $end])
             ->groupBy('status')
@@ -73,6 +77,7 @@ final class InsightsService
     private function messages(Carbon $start, Carbon $end): array
     {
         $bySender = DB::table('messages')
+            ->where('organization_id', $this->tenant->organizationId())
             ->selectRaw('sender_type, count(*) as n')
             ->whereBetween('created_at', [$start, $end])
             ->groupBy('sender_type')
@@ -104,6 +109,7 @@ final class InsightsService
     private function byDepartment(Carbon $start, Carbon $end): array
     {
         $rows = DB::table('conversations')
+            ->where('conversations.organization_id', $this->tenant->organizationId())
             ->leftJoin('departments', 'conversations.department_id', '=', 'departments.id')
             ->selectRaw("coalesce(departments.name, 'Unassigned') as department_name, count(*) as n")
             ->whereBetween('conversations.created_at', [$start, $end])
@@ -124,14 +130,20 @@ final class InsightsService
      */
     private function daily(Carbon $start, Carbon $end): array
     {
+        // DATE(created_at) is portable across PostgreSQL and SQLite (the CI
+        // app-layer suite), unlike the PG-only `created_at::date` cast.
+        $orgId = $this->tenant->organizationId();
+
         $convByDay = DB::table('conversations')
-            ->selectRaw('created_at::date as d, count(*) as n')
+            ->where('organization_id', $orgId)
+            ->selectRaw('DATE(created_at) as d, count(*) as n')
             ->whereBetween('created_at', [$start, $end])
             ->groupBy('d')
             ->pluck('n', 'd');
 
         $msgByDay = DB::table('messages')
-            ->selectRaw('created_at::date as d, count(*) as n')
+            ->where('organization_id', $orgId)
+            ->selectRaw('DATE(created_at) as d, count(*) as n')
             ->whereBetween('created_at', [$start, $end])
             ->groupBy('d')
             ->pluck('n', 'd');

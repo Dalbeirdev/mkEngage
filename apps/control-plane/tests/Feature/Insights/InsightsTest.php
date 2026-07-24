@@ -129,8 +129,10 @@ it('validates the date range', function (): void {
         ->assertStatus(422); // inverted range
 });
 
-it('NEVER leaks another tenant into the aggregates (RLS-scoped)', function (): void {
+it('NEVER leaks another tenant into the aggregates (two-layer scoped)', function (): void {
     // Org A: 5 open conversations. Org B: 2 open. B must only ever see its own 2.
+    // Isolation holds on BOTH databases here: an explicit organization_id
+    // filter (layer 1) plus PostgreSQL RLS in production (layer 2, ADR-007).
     [, $tokenA] = seedInsights(['open' => 5, 'agentMsgs' => 10]);
     [, $tokenB] = seedInsights(['open' => 2, 'agentMsgs' => 1]);
 
