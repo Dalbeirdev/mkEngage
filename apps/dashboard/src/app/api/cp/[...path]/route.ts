@@ -15,6 +15,7 @@ const ALLOWED = [
   /^conversations\/[0-9a-f-]{36}\/assign$/,
   /^conversations\/[0-9a-f-]{36}\/attachments(\/[0-9a-f-]{36}\/download)?$/,
   /^me\/availability$/,
+  /^insights\/overview$/,
   /^contacts(\/[0-9a-f-]{36})?$/,
   /^chatbots(\/[0-9a-f-]{36})?$/,
   /^organization\/widget-settings(\/rotate-secret)?$/,

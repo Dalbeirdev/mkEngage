@@ -31,6 +31,34 @@ export const availabilitySchema = z.object({
 
 export type Availability = z.infer<typeof availabilitySchema>;
 
+export const insightsOverviewSchema = z.object({
+  range: z.object({ from: z.string(), to: z.string() }),
+  conversations: z.object({
+    total: z.number().int(),
+    open: z.number().int(),
+    pending: z.number().int(),
+    closed: z.number().int(),
+    resolution_rate: z.number(),
+  }),
+  messages: z.object({
+    total: z.number().int(),
+    by_sender: z.record(z.string(), z.number().int()),
+    automation_rate: z.number(),
+  }),
+  by_department: z.array(
+    z.object({ department_name: z.string(), conversations: z.number().int() }),
+  ),
+  daily: z.array(
+    z.object({
+      date: z.string(),
+      conversations: z.number().int(),
+      messages: z.number().int(),
+    }),
+  ),
+});
+
+export type InsightsOverview = z.infer<typeof insightsOverviewSchema>;
+
 export const conversationSchema = z.object({
   conversation_id: z.uuid(),
   status: z.enum(["open", "pending", "closed"]),

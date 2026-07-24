@@ -24,6 +24,18 @@
     "title": "Dashboard",
     "empty": "Metrics land here once mkEngage Insights is wired up."
   },
+  "insights": {
+    "loading": "Loading metrics…",
+    "error": "Could not load insights.",
+    "range": "{from} — {to}",
+    "conversations": "Conversations",
+    "resolved": "Resolved",
+    "messages": "Messages",
+    "automation": "Bot handled",
+    "perDay": "Conversations per day",
+    "byDepartment": "By department",
+    "empty": "No data yet for this period."
+  },
   "profile": {
     "title": "Profile",
     "name": "Name",

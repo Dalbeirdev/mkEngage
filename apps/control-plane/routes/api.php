@@ -9,6 +9,7 @@ use App\Http\Controllers\Agent\ChatbotController;
 use App\Http\Controllers\Agent\ContactController;
 use App\Http\Controllers\Agent\ConversationController;
 use App\Http\Controllers\Agent\DepartmentController;
+use App\Http\Controllers\Agent\InsightsController;
 use App\Http\Controllers\Agent\KnowledgeController;
 use App\Http\Controllers\Agent\WidgetSettingsController;
 use App\Http\Controllers\AttachmentStreamController;
@@ -93,6 +94,9 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
         // Agent availability (routing v2): the caller's own available/away state.
         Route::get('/me/availability', [AvailabilityController::class, 'show']);
         Route::patch('/me/availability', [AvailabilityController::class, 'update']);
+
+        // mkEngage Insights (tenant-scoped analytics overview).
+        Route::get('/insights/overview', [InsightsController::class, 'overview']);
     });
 
 // Visitor-facing widget API: the `widget` guard authenticates ONLY Visitor
