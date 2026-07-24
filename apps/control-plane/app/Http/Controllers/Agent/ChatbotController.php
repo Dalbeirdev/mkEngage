@@ -20,7 +20,7 @@ use Illuminate\Http\Request;
  */
 final class ChatbotController extends Controller
 {
-    private const PROVIDERS = ['fake', 'openai', 'anthropic'];
+    private const PROVIDERS = ['fake', 'openai', 'anthropic', 'gemini'];
 
     public function index(): JsonResponse
     {

@@ -14,6 +14,7 @@ class Settings(BaseSettings):
 
     anthropic_api_key: str | None = None
     openai_api_key: str | None = None
+    google_api_key: str | None = None  # Google Gemini (chat + embeddings)
 
 
 def load_settings() -> Settings:

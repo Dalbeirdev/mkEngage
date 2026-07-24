@@ -18,7 +18,7 @@ class ProviderConfig(BaseModel):
     """Per-tenant provider routing (ADR-003 §6). Extended per phase; the
     fallback chain and budgets land with real provider usage."""
 
-    provider: Literal["fake", "openai", "anthropic"] = "fake"
+    provider: Literal["fake", "openai", "anthropic", "gemini"] = "fake"
     model: str | None = None
     max_output_tokens: int = Field(default=512, ge=1, le=4096)
     timeout_seconds: float = Field(default=20.0, gt=0, le=60)

@@ -136,7 +136,7 @@ export const chatbotSchema = z.object({
   name: z.string(),
   status: z.enum(["draft", "active", "paused"]),
   system_prompt: z.string().nullable(),
-  provider: z.enum(["fake", "openai", "anthropic"]),
+  provider: z.enum(["fake", "openai", "anthropic", "gemini"]),
   model: z.string().nullable(),
   created_at: z.string().nullable(),
   updated_at: z.string().nullable(),

@@ -173,6 +173,7 @@ function ChatbotForm({
               className={inputClass}
             >
               <option value="fake">fake (demo)</option>
+              <option value="gemini">gemini</option>
               <option value="anthropic">anthropic</option>
               <option value="openai">openai</option>
             </select>

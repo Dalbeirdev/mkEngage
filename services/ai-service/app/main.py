@@ -54,6 +54,12 @@ def resolve_provider(name: str, settings: Settings) -> ModelProvider:
         from app.providers.openai_provider import OpenAIProvider
 
         return OpenAIProvider(settings.openai_api_key)
+    if name == "gemini":
+        if settings.google_api_key is None:
+            raise HTTPException(status_code=422, detail="Gemini is not configured")
+        from app.providers.gemini_provider import GeminiProvider
+
+        return GeminiProvider(settings.google_api_key)
     raise HTTPException(status_code=422, detail=f"Unknown provider: {name}")
 
 
@@ -71,6 +77,7 @@ async def embed(
         DIMENSIONS,
         Embedder,
         FakeEmbedder,
+        GeminiEmbedder,
         OpenAIEmbedder,
     )
 
@@ -79,6 +86,10 @@ async def embed(
         if settings.openai_api_key is None:
             raise HTTPException(status_code=422, detail="OpenAI is not configured")
         embedder = OpenAIEmbedder(settings.openai_api_key)
+    elif payload.config.provider == "gemini":
+        if settings.google_api_key is None:
+            raise HTTPException(status_code=422, detail="Gemini is not configured")
+        embedder = GeminiEmbedder(settings.google_api_key)
     else:
         # fake is the default; anthropic has no embeddings API — route to fake.
         embedder = FakeEmbedder()
