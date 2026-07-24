@@ -67,8 +67,14 @@ async def embed(
     payload: EmbedRequest,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> EmbedResponse:
-    from app.providers.embeddings import DIMENSIONS, FakeEmbedder, OpenAIEmbedder
+    from app.providers.embeddings import (
+        DIMENSIONS,
+        Embedder,
+        FakeEmbedder,
+        OpenAIEmbedder,
+    )
 
+    embedder: Embedder
     if payload.config.provider == "openai":
         if settings.openai_api_key is None:
             raise HTTPException(status_code=422, detail="OpenAI is not configured")
