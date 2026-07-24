@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 
 import { chatMessageSchema, messageListSchema } from "@/lib/api/schemas";
+import { createTypingNotifier, type TypingNotifier } from "@/lib/typing";
 
 async function fetchMessages(conversationId: string) {
   const response = await fetch(`/api/cp/conversations/${conversationId}/messages`, {
@@ -40,7 +41,11 @@ export default function ConversationThreadPage({
   const t = useTranslations("conversations");
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState("");
+  const [visitorTyping, setVisitorTyping] = useState(false);
+  const [visitorOnline, setVisitorOnline] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
+  const typingNotifierRef = useRef<TypingNotifier | null>(null);
+  const typingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data, isPending, isError } = useQuery({
     queryKey: ["conversation", id, "messages"],
@@ -51,15 +56,42 @@ export default function ConversationThreadPage({
     refetchIntervalInBackground: true,
   });
 
-  // Gateway subscription: instant refresh on message:new. Failure is fine —
-  // polling covers delivery; the effect retries on conversation change only.
+  // Gateway subscription: instant refresh on message:new, plus ephemeral
+  // typing + presence. Failure is fine — polling covers delivery; the effect
+  // retries on conversation change only.
   useEffect(() => {
-    const subscription = subscribeToConversation(id, () => {
-      void queryClient.invalidateQueries({ queryKey: ["conversation", id, "messages"] });
-      void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    const subscription = subscribeToConversation(id, {
+      onMessage: () => {
+        setVisitorTyping(false);
+        void queryClient.invalidateQueries({ queryKey: ["conversation", id, "messages"] });
+        void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      },
+      onTyping: (event) => {
+        if (event.sender_type === "agent") return;
+        if (typingClearRef.current !== null) clearTimeout(typingClearRef.current);
+        setVisitorTyping(event.is_typing);
+        if (event.is_typing) {
+          // Safety: a lost "stopped" frame self-heals after 6 s.
+          typingClearRef.current = setTimeout(() => setVisitorTyping(false), 6000);
+        }
+      },
+      onPresence: (subs) => {
+        setVisitorOnline(subs.some((sub) => sub.startsWith("visitor:")));
+      },
     });
 
-    return () => subscription.close();
+    // Throttled outgoing typing signal, bound to this subscription's lifetime.
+    const notifier = createTypingNotifier((isTyping) => subscription.sendTyping(isTyping));
+    typingNotifierRef.current = notifier;
+
+    return () => {
+      notifier.stop();
+      typingNotifierRef.current = null;
+      if (typingClearRef.current !== null) clearTimeout(typingClearRef.current);
+      subscription.close();
+      setVisitorTyping(false);
+      setVisitorOnline(false);
+    };
   }, [id, queryClient]);
 
   const mutation = useMutation({
@@ -81,12 +113,21 @@ export default function ConversationThreadPage({
     const body = draft.trim();
     if (body.length === 0 || mutation.isPending) return;
     setDraft("");
+    typingNotifierRef.current?.stop();
     mutation.mutate(body);
   };
 
   return (
     <div className="flex h-[calc(100dvh-7rem)] flex-col space-y-4">
-      <h1 className="text-2xl font-bold tracking-tight">{t("threadTitle")}</h1>
+      <div className="flex items-center gap-3">
+        <h1 className="text-2xl font-bold tracking-tight">{t("threadTitle")}</h1>
+        {visitorOnline && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/40 dark:text-green-300">
+            <span aria-hidden className="size-1.5 rounded-full bg-green-500" />
+            {t("visitorOnline")}
+          </span>
+        )}
+      </div>
 
       {isPending && (
         <p className="text-sm text-zinc-500" role="status">
@@ -123,6 +164,10 @@ export default function ConversationThreadPage({
         ))}
       </div>
 
+      <div aria-hidden className="h-5 text-xs text-zinc-500 italic">
+        {visitorTyping ? t("visitorTyping") : null}
+      </div>
+
       <form onSubmit={submit} className="flex gap-2">
         <label htmlFor="reply" className="sr-only">
           {t("replyLabel")}
@@ -131,7 +176,10 @@ export default function ConversationThreadPage({
           id="reply"
           rows={1}
           value={draft}
-          onChange={(event) => setDraft(event.target.value)}
+          onChange={(event) => {
+            setDraft(event.target.value);
+            typingNotifierRef.current?.input();
+          }}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();

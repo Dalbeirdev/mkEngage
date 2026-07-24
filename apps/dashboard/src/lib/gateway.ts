@@ -29,6 +29,21 @@ export function orgFromGatewayToken(token: string): string | null {
 
 export interface GatewaySubscription {
   close(): void;
+  /** Ephemeral typing signal to the conversation topic (no-op while down). */
+  sendTyping(isTyping: boolean): void;
+}
+
+export interface TypingEvent {
+  sender_type: "visitor" | "contact" | "agent";
+  sender_id: string;
+  is_typing: boolean;
+}
+
+export interface ConversationHandlers {
+  onMessage: () => void;
+  onTyping?: (event: TypingEvent) => void;
+  /** Current participants as subs ("visitor:{id}" / "user:{id}"). */
+  onPresence?: (subs: string[]) => void;
 }
 
 /**
@@ -37,7 +52,7 @@ export interface GatewaySubscription {
  */
 export function subscribeToConversation(
   conversationId: string,
-  onMessage: () => void,
+  handlers: ConversationHandlers,
 ): GatewaySubscription {
   let closed = false;
   let current: GatewaySubscription | null = null;
@@ -45,9 +60,11 @@ export function subscribeToConversation(
 
   const connect = () => {
     if (closed) return;
-    void openConversationSocket(conversationId, onMessage, () => {
-      // onDrop: schedule a reconnect.
+    void openConversationSocket(conversationId, handlers, () => {
+      // onDrop: presence is stale while down; schedule a reconnect.
       if (closed) return;
+      current = null;
+      handlers.onPresence?.([]);
       attempts += 1;
       setTimeout(connect, Math.min(1000 * 2 ** attempts, 30_000));
     })
@@ -70,12 +87,17 @@ export function subscribeToConversation(
       closed = true;
       current?.close();
     },
+    sendTyping(isTyping: boolean) {
+      current?.sendTyping(isTyping);
+    },
   };
 }
 
+type PresencePayload = Record<string, { metas?: unknown[] }>;
+
 async function openConversationSocket(
   conversationId: string,
-  onMessage: () => void,
+  handlers: ConversationHandlers,
   onDrop: () => void,
 ): Promise<GatewaySubscription> {
   const response = await fetch("/api/cp/gateway-token", { method: "POST" });
@@ -110,10 +132,40 @@ async function openConversationSocket(
     ws.onerror = () => reject(new Error("gateway socket error"));
   });
 
+  // Simplified Phoenix Presence sync: sub → live meta count.
+  const presence = new Map<string, number>();
+  const emitPresence = () => handlers.onPresence?.([...presence.keys()]);
+
   ws.onmessage = (event) => {
     try {
       const frame = JSON.parse(String(event.data)) as PhoenixFrame;
-      if (frame.event === "message:new") onMessage();
+
+      if (frame.event === "message:new") handlers.onMessage();
+
+      if (frame.event === "typing") {
+        handlers.onTyping?.(frame.payload as TypingEvent);
+      }
+
+      if (frame.event === "presence_state") {
+        presence.clear();
+        for (const [sub, entry] of Object.entries(frame.payload as PresencePayload)) {
+          presence.set(sub, entry.metas?.length ?? 1);
+        }
+        emitPresence();
+      }
+
+      if (frame.event === "presence_diff") {
+        const diff = frame.payload as { joins?: PresencePayload; leaves?: PresencePayload };
+        for (const [sub, entry] of Object.entries(diff.joins ?? {})) {
+          presence.set(sub, (presence.get(sub) ?? 0) + (entry.metas?.length ?? 1));
+        }
+        for (const [sub, entry] of Object.entries(diff.leaves ?? {})) {
+          const remaining = (presence.get(sub) ?? 0) - (entry.metas?.length ?? 1);
+          if (remaining <= 0) presence.delete(sub);
+          else presence.set(sub, remaining);
+        }
+        emitPresence();
+      }
     } catch {
       // ignore malformed frames
     }
@@ -131,6 +183,9 @@ async function openConversationSocket(
       if (heartbeat !== null) clearInterval(heartbeat);
       ws.onmessage = null;
       ws.close();
+    },
+    sendTyping(isTyping: boolean) {
+      send(topic, "typing", { is_typing: isTyping });
     },
   };
 }

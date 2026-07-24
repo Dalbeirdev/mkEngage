@@ -77,7 +77,15 @@ defmodule RealtimeGatewayWeb.ConversationChannel do
   end
 
   def handle_in("typing", %{"is_typing" => is_typing}, socket) when is_boolean(is_typing) do
-    broadcast_from!(socket, "typing", %{sub: socket.assigns.sub, is_typing: is_typing})
+    [sub_type, sub_id] = String.split(socket.assigns.sub, ":", parts: 2)
+
+    broadcast_from!(socket, "typing", %{
+      # Contract enum is visitor|contact|agent; internal subs say "user".
+      sender_type: if(sub_type == "user", do: "agent", else: sub_type),
+      sender_id: sub_id,
+      is_typing: is_typing
+    })
+
     {:noreply, socket}
   end
 

@@ -109,6 +109,11 @@ export class PhoenixSocket {
     return this.push(topic, "phx_join", {});
   }
 
+  /** Fire-and-forget push for events the channel never replies to (typing). */
+  fire(topic: string, event: string, payload: unknown): void {
+    this.rawSend({ topic, event, payload, ref: this.nextRef() });
+  }
+
   /** Register a broadcast listener (one per event name — widget-sized). */
   on(event: string, callback: (payload: unknown) => void): void {
     this.listeners.set(event, callback);

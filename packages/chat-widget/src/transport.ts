@@ -12,6 +12,8 @@ export interface Transport {
   stop(): void;
   /** Nudge an immediate poll (after sending a message). */
   poke(): void;
+  /** Ephemeral typing signal — push transports only; polling has no channel. */
+  sendTyping?(isTyping: boolean): void;
 }
 
 export interface PollingOptions {
@@ -103,12 +105,22 @@ export function orgFromGatewayToken(token: string): string | null {
   }
 }
 
+export interface TypingEvent {
+  sender_type: "visitor" | "contact" | "agent";
+  sender_id: string;
+  is_typing: boolean;
+}
+
 export interface GatewayDeps {
   fetchToken(): Promise<{ token: string; url: string }>;
   conversationId(): string | null;
   lastSeenSequence(): number;
   onMessages(messages: ChatMessage[]): void;
   onStateChange(state: "connected" | "reconnecting" | "offline"): void;
+  /** Remote participant started/stopped typing (ephemeral, contract-shaped). */
+  onTyping?(event: TypingEvent): void;
+  /** Current channel participants (subs like "visitor:{id}" / "user:{id}"). */
+  onPresence?(subs: string[]): void;
   socketFactory?: SocketFactory;
 }
 
@@ -119,12 +131,19 @@ export interface GatewayDeps {
  * when to give up and fall back to polling (start() rejects on first
  * connect failure so the caller can fall back immediately).
  */
+type PresencePayload = Record<string, { metas?: unknown[] }>;
+
 export class GatewayTransport implements Transport {
   private socket: PhoenixSocket | null = null;
 
   private stopped = true;
 
   private retries = 0;
+
+  private topic: string | null = null;
+
+  /** sub → live meta count (simplified Phoenix Presence sync). */
+  private readonly presence = new Map<string, number>();
 
   constructor(private readonly deps: GatewayDeps) {}
 
@@ -149,6 +168,36 @@ export class GatewayTransport implements Transport {
     // Push transport: nothing to poke. (REST sends fan back in via broadcast.)
   }
 
+  sendTyping(isTyping: boolean): void {
+    if (this.socket !== null && this.topic !== null) {
+      this.socket.fire(this.topic, "typing", { is_typing: isTyping });
+    }
+  }
+
+  private emitPresence(): void {
+    this.deps.onPresence?.([...this.presence.keys()]);
+  }
+
+  private applyPresenceState(payload: PresencePayload): void {
+    this.presence.clear();
+    for (const [sub, entry] of Object.entries(payload)) {
+      this.presence.set(sub, entry.metas?.length ?? 1);
+    }
+    this.emitPresence();
+  }
+
+  private applyPresenceDiff(joins: PresencePayload, leaves: PresencePayload): void {
+    for (const [sub, entry] of Object.entries(joins)) {
+      this.presence.set(sub, (this.presence.get(sub) ?? 0) + (entry.metas?.length ?? 1));
+    }
+    for (const [sub, entry] of Object.entries(leaves)) {
+      const remaining = (this.presence.get(sub) ?? 0) - (entry.metas?.length ?? 1);
+      if (remaining <= 0) this.presence.delete(sub);
+      else this.presence.set(sub, remaining);
+    }
+    this.emitPresence();
+  }
+
   private async connect(): Promise<void> {
     const conversationId = this.deps.conversationId();
     if (this.stopped || conversationId === null) throw new Error("no conversation");
@@ -169,8 +218,23 @@ export class GatewayTransport implements Transport {
       this.deps.onMessages([payload as ChatMessage]);
     });
 
+    socket.on("typing", (payload) => {
+      this.deps.onTyping?.(payload as TypingEvent);
+    });
+
+    socket.on("presence_state", (payload) => {
+      this.applyPresenceState(payload as PresencePayload);
+    });
+
+    socket.on("presence_diff", (payload) => {
+      const diff = payload as { joins?: PresencePayload; leaves?: PresencePayload };
+      this.applyPresenceDiff(diff.joins ?? {}, diff.leaves ?? {});
+    });
+
     socket.onClose = () => {
       if (this.stopped) return;
+      this.presence.clear();
+      this.emitPresence();
       this.deps.onStateChange("reconnecting");
       this.retries += 1;
       const delay = Math.min(1000 * 2 ** this.retries, 30_000);
@@ -181,7 +245,8 @@ export class GatewayTransport implements Transport {
       }, delay);
     };
 
-    await socket.join(`conv:${org}:${conversationId}`);
+    this.topic = `conv:${org}:${conversationId}`;
+    await socket.join(this.topic);
 
     // Replay the reconnect gap, sequence-ordered.
     const replay = (await socket.push(`conv:${org}:${conversationId}`, "replay:request", {

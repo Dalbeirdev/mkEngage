@@ -195,6 +195,35 @@ export class MkEngageWidget extends LitElement {
       cursor: default;
     }
 
+    .status.online {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .online-dot {
+      inline-size: 7px;
+      block-size: 7px;
+      border-radius: 50%;
+      background: #4ade80;
+      box-shadow: 0 0 0 2px rgb(255 255 255 / 0.25);
+    }
+
+    .typing-bubble {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding-block: 12px;
+    }
+
+    .typing-dot {
+      inline-size: 6px;
+      block-size: 6px;
+      border-radius: 50%;
+      background: var(--mk-muted);
+      opacity: 0.5;
+    }
+
     @media (prefers-reduced-motion: no-preference) {
       .panel {
         animation: mk-pop 0.16s ease-out;
@@ -204,6 +233,31 @@ export class MkEngageWidget extends LitElement {
         from {
           transform: translateY(8px);
           opacity: 0;
+        }
+      }
+
+      .typing-dot {
+        animation: mk-typing 1.1s ease-in-out infinite;
+      }
+
+      .typing-dot:nth-child(2) {
+        animation-delay: 0.15s;
+      }
+
+      .typing-dot:nth-child(3) {
+        animation-delay: 0.3s;
+      }
+
+      @keyframes mk-typing {
+        0%,
+        60%,
+        100% {
+          opacity: 0.35;
+          transform: translateY(0);
+        }
+        30% {
+          opacity: 1;
+          transform: translateY(-3px);
         }
       }
     }
@@ -218,6 +272,10 @@ export class MkEngageWidget extends LitElement {
   @state() private connection: "connected" | "reconnecting" | "offline" = "connected";
 
   @state() private revision = 0;
+
+  @state() private remoteTyping = false;
+
+  @state() private agentPresent = false;
 
   private config!: WidgetConfig;
 
@@ -235,6 +293,13 @@ export class MkEngageWidget extends LitElement {
 
   private t: (key: string) => string = createTranslator("en");
 
+  /** Throttled outgoing typing signal + safety timers for the incoming one. */
+  private lastTypingSentAt = 0;
+
+  private typingIdleTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private remoteTypingClearTimer: ReturnType<typeof setTimeout> | null = null;
+
   configure(config: WidgetConfig): void {
     this.config = config;
     this.t = createTranslator(config.locale);
@@ -247,6 +312,8 @@ export class MkEngageWidget extends LitElement {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    if (this.typingIdleTimer !== null) clearTimeout(this.typingIdleTimer);
+    if (this.remoteTypingClearTimer !== null) clearTimeout(this.remoteTypingClearTimer);
     this.transport?.stop();
   }
 
@@ -259,6 +326,9 @@ export class MkEngageWidget extends LitElement {
       await this.updateComplete;
       this.renderRoot.querySelector("textarea")?.focus();
     } else {
+      this.stopTypingSignal();
+      this.setRemoteTyping(false);
+      this.agentPresent = false;
       this.transport?.stop();
       this.transport = null;
       this.transportKind = "none";
@@ -284,6 +354,13 @@ export class MkEngageWidget extends LitElement {
         },
         onStateChange: (connectionState) => {
           this.connection = connectionState;
+        },
+        onTyping: (event) => {
+          if (event.sender_type === "visitor") return;
+          this.setRemoteTyping(event.is_typing);
+        },
+        onPresence: (subs) => {
+          this.agentPresent = subs.some((sub) => sub.startsWith("user:"));
         },
       });
 
@@ -403,6 +480,7 @@ export class MkEngageWidget extends LitElement {
 
     this.sending = true;
     this.draft = "";
+    this.stopTypingSignal();
     const idempotencyKey = crypto.randomUUID();
     this.messages.addPending(idempotencyKey, body);
     this.revision += 1;
@@ -422,6 +500,48 @@ export class MkEngageWidget extends LitElement {
       await this.updateComplete;
       this.scrollLogToEnd();
       this.renderRoot.querySelector("textarea")?.focus();
+    }
+  }
+
+  /** Show/hide the remote typing bubble; a lost "false" self-heals in 6 s. */
+  private setRemoteTyping(isTyping: boolean): void {
+    if (this.remoteTypingClearTimer !== null) {
+      clearTimeout(this.remoteTypingClearTimer);
+      this.remoteTypingClearTimer = null;
+    }
+
+    this.remoteTyping = isTyping;
+
+    if (isTyping) {
+      this.remoteTypingClearTimer = setTimeout(() => {
+        this.remoteTyping = false;
+      }, 6000);
+      void this.updateComplete.then(() => this.scrollLogToEnd());
+    }
+  }
+
+  /** Throttle: "typing" at most every 3 s, "stopped" after 2.5 s idle. */
+  private notifyTyping(): void {
+    if (this.transport?.sendTyping === undefined) return;
+
+    const now = Date.now();
+    if (now - this.lastTypingSentAt > 3000) {
+      this.transport.sendTyping(true);
+      this.lastTypingSentAt = now;
+    }
+
+    if (this.typingIdleTimer !== null) clearTimeout(this.typingIdleTimer);
+    this.typingIdleTimer = setTimeout(() => this.stopTypingSignal(), 2500);
+  }
+
+  private stopTypingSignal(): void {
+    if (this.typingIdleTimer !== null) {
+      clearTimeout(this.typingIdleTimer);
+      this.typingIdleTimer = null;
+    }
+    if (this.lastTypingSentAt !== 0) {
+      this.transport?.sendTyping?.(false);
+      this.lastTypingSentAt = 0;
     }
   }
 
@@ -466,7 +586,11 @@ export class MkEngageWidget extends LitElement {
               ? html`<span class="status" role="status">
                   ${t(this.connection === "offline" ? "offline" : "reconnecting")}
                 </span>`
-              : nothing}
+              : this.agentPresent
+                ? html`<span class="status online" role="status">
+                    <span class="online-dot"></span>${t("online")}
+                  </span>`
+                : nothing}
           </div>
           <button class="close" aria-label=${t("close_label")} @click=${() => void this.toggle()}>
             ✕
@@ -489,6 +613,15 @@ export class MkEngageWidget extends LitElement {
               </div>
             `,
           )}
+          ${this.remoteTyping
+            ? html`
+                <div class="msg remote typing-bubble" aria-hidden="true">
+                  <span class="typing-dot"></span><span class="typing-dot"></span><span
+                    class="typing-dot"
+                  ></span>
+                </div>
+              `
+            : nothing}
         </div>
 
         <form @submit=${(event: Event) => void this.submit(event)}>
@@ -500,6 +633,7 @@ export class MkEngageWidget extends LitElement {
             .value=${this.draft}
             @input=${(event: Event) => {
               this.draft = (event.target as HTMLTextAreaElement).value;
+              this.notifyTyping();
             }}
             @keydown=${(event: KeyboardEvent) => {
               if (event.key === "Enter" && !event.shiftKey) {

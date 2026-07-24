@@ -52,6 +52,8 @@
     "send": "Send",
     "sending": "Sending…",
     "sendError": "Reply could not be sent.",
+    "visitorOnline": "Visitor online",
+    "visitorTyping": "Visitor is typing…",
     "allDepartments": "All departments",
     "filterLabel": "Filter by department"
   },

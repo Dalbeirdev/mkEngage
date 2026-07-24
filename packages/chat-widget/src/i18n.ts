@@ -20,6 +20,7 @@ const dictionaries: Record<string, Messages> = {
     offline: "You appear to be offline. Messages will send when you reconnect.",
     error_send: "Message could not be sent. It will retry automatically.",
     log_label: "Conversation",
+    online: "Online",
   },
 };
 
