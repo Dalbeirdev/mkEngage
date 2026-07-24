@@ -192,6 +192,60 @@ paths:
         "4XX": { $ref: "#/components/responses/Problem" }
         default: { $ref: "#/components/responses/Problem" }
 
+  /conversations/{conversation_id}/assign:
+    parameters: [ { $ref: "#/components/parameters/conversationId" } ]
+    post:
+      tags: [conversations]
+      operationId: assignConversation
+      summary: Assign a conversation (routing v2, §16) — "me" self-assigns the caller, "auto" runs the department strategy, or a specific agent uuid (must be an active department member)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [assignee]
+              properties:
+                assignee: { type: string, maxLength: 64, description: '"me" | "auto" | agent uuid' }
+      responses:
+        "200":
+          description: Updated conversation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Conversation" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+        default: { $ref: "#/components/responses/Problem" }
+
+  /me/availability:
+    get:
+      tags: [conversations]
+      operationId: getAvailability
+      summary: The caller agent's own availability (routing v2)
+      responses:
+        "200":
+          description: Availability
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Availability" }
+        default: { $ref: "#/components/responses/Problem" }
+    patch:
+      tags: [conversations]
+      operationId: setAvailability
+      summary: Set the caller agent's availability / concurrency cap. Only `available` agents receive auto-assignments.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Availability" }
+      responses:
+        "200":
+          description: Updated availability
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Availability" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+        default: { $ref: "#/components/responses/Problem" }
+
   /conversations/{conversation_id}/attachments:
     parameters: [ { $ref: "#/components/parameters/conversationId" } ]
     post:
@@ -591,6 +645,7 @@ components:
         visitor_id: { type: [string, "null"], format: uuid }
         contact_id: { type: [string, "null"], format: uuid }
         assigned_agent_id: { type: [string, "null"], format: uuid }
+        assigned_agent_name: { type: [string, "null"], description: Display name of the assigned agent (routing v2). }
         department_id: { type: [string, "null"], format: uuid }
         chatbot_id: { type: [string, "null"], format: uuid }
         last_sequence: { type: integer, minimum: 0, description: Highest assigned sequence number. }
@@ -628,6 +683,14 @@ components:
           type: string
           enum: [pending, clean, quarantined]
           description: Quarantine-first (§14) — files are born pending; only clean files are downloadable.
+
+    Availability:
+      type: object
+      description: Agent availability + concurrency cap (routing v2, §16). Only `available` agents receive auto-assignments.
+      required: [availability]
+      properties:
+        availability: { type: string, enum: [available, away] }
+        max_open_conversations: { type: [integer, "null"], minimum: 1, description: "Null = unlimited; otherwise the agent is skipped once this many open conversations are assigned." }
 
     Contact:
       type: object

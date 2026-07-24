@@ -60,6 +60,10 @@
     "attachmentRemove": "Remove attachment",
     "attachmentScanning": "Scanning…",
     "attachmentBlocked": "Blocked",
+    "assignedTo": "Assigned to {name}",
+    "unassigned": "Unassigned",
+    "assignToMe": "Assign to me",
+    "assignAuto": "Auto-assign",
     "allDepartments": "All departments",
     "filterLabel": "Filter by department"
   },
@@ -137,7 +141,11 @@
     "save": "Save members",
     "saving": "Saving…",
     "close": "Close",
-    "defaultNote": "New widget conversations are routed to the default department."
+    "defaultNote": "New widget conversations are routed to the default department.",
+    "strategyLabel": "Assignment strategy",
+    "strategyLeastBusy": "Least busy",
+    "strategyRoundRobin": "Round robin",
+    "strategyManual": "Manual"
   },
   "knowledge": {
     "title": "Knowledge",
@@ -157,5 +165,9 @@
     "status_failed": "Failed",
     "delete": "Delete",
     "deleteConfirm": "Delete this document? The chatbot will stop using it."
+  },
+  "availability": {
+    "available": "Available",
+    "away": "Away"
   }
 }

@@ -14,10 +14,13 @@ final class Department extends Model
     use BelongsToOrganization;
     use HasUuids;
 
+    public const STRATEGIES = ['round_robin', 'least_busy', 'manual'];
+
     protected $fillable = [
         'organization_id',
         'name',
         'is_default',
+        'assignment_strategy',
     ];
 
     protected function casts(): array
@@ -31,6 +34,7 @@ final class Department extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'department_user')
-            ->using(DepartmentUser::class);
+            ->using(DepartmentUser::class)
+            ->withPivot('last_assigned_at');
     }
 }

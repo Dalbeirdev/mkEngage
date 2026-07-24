@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
+import { AvailabilityToggle } from "@/components/availability-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 import { logout } from "../login/actions";
@@ -54,6 +55,7 @@ export default async function AppLayout({
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-end gap-2 border-b border-zinc-200 px-4 py-2 dark:border-zinc-800">
+          <AvailabilityToggle />
           <ThemeToggle />
           <form action={logout}>
             <button

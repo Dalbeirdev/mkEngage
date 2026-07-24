@@ -62,6 +62,18 @@ export default function DepartmentsPage() {
     onSuccess: invalidate,
   });
 
+  const setStrategy = useMutation({
+    mutationFn: async (vars: { id: string; strategy: string }) => {
+      const response = await fetch(`/api/cp/departments/${vars.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assignment_strategy: vars.strategy }),
+      });
+      if (!response.ok) throw new Error(`Update failed (${response.status})`);
+    },
+    onSuccess: invalidate,
+  });
+
   return (
     <div className="max-w-2xl space-y-6">
       <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
@@ -133,7 +145,23 @@ export default function DepartmentsPage() {
                   {t("members", { count: department.member_count })}
                 </span>
               </span>
-              <span className="flex shrink-0 gap-2">
+              <span className="flex shrink-0 items-center gap-2">
+                <label className="sr-only" htmlFor={`strategy-${department.department_id}`}>
+                  {t("strategyLabel")}
+                </label>
+                <select
+                  id={`strategy-${department.department_id}`}
+                  value={department.assignment_strategy}
+                  disabled={setStrategy.isPending}
+                  onChange={(event) =>
+                    setStrategy.mutate({ id: department.department_id, strategy: event.target.value })
+                  }
+                  className="rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-900"
+                >
+                  <option value="least_busy">{t("strategyLeastBusy")}</option>
+                  <option value="round_robin">{t("strategyRoundRobin")}</option>
+                  <option value="manual">{t("strategyManual")}</option>
+                </select>
                 {!department.is_default && (
                   <button
                     type="button"

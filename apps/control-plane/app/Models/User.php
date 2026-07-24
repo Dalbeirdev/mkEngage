@@ -32,6 +32,8 @@ final class User extends Authenticatable
         'email',
         'password',
         'status',
+        'availability',
+        'max_open_conversations',
     ];
 
     protected $hidden = [

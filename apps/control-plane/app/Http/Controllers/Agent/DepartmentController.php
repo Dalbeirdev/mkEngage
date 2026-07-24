@@ -39,6 +39,7 @@ final class DepartmentController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'is_default' => ['sometimes', 'boolean'],
+            'assignment_strategy' => ['sometimes', 'in:'.implode(',', Department::STRATEGIES)],
         ]);
 
         $isDefault = (bool) ($validated['is_default'] ?? false);
@@ -56,6 +57,7 @@ final class DepartmentController extends Controller
         $department = Department::query()->create([
             'name' => $validated['name'],
             'is_default' => $isDefault,
+            'assignment_strategy' => $validated['assignment_strategy'] ?? 'least_busy',
         ]);
 
         $this->audit($request, 'department.created', $department);
@@ -70,6 +72,7 @@ final class DepartmentController extends Controller
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:100'],
             'is_default' => ['sometimes', 'boolean'],
+            'assignment_strategy' => ['sometimes', 'in:'.implode(',', Department::STRATEGIES)],
         ]);
 
         if (($validated['is_default'] ?? false) === true) {
@@ -143,6 +146,7 @@ final class DepartmentController extends Controller
             'department_id' => $department->id,
             'name' => $department->name,
             'is_default' => (bool) $department->is_default,
+            'assignment_strategy' => $department->assignment_strategy,
             'member_count' => (int) ($department->users_count ?? 0),
             'member_ids' => $department->relationLoaded('users')
                 ? $department->users->pluck('id')->all()

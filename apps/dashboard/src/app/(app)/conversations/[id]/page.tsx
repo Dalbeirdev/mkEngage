@@ -9,6 +9,7 @@ import { useTranslations } from "next-intl";
 import {
   attachmentSchema,
   chatMessageSchema,
+  conversationSchema,
   messageListSchema,
   type Attachment,
 } from "@/lib/api/schemas";
@@ -54,6 +55,16 @@ async function uploadAttachment(conversationId: string, file: File): Promise<Att
   return attachmentSchema.parse(await response.json());
 }
 
+async function assignConversation(conversationId: string, assignee: "me" | "auto") {
+  const response = await fetch(`/api/cp/conversations/${conversationId}/assign`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ assignee }),
+  });
+  if (!response.ok) throw new Error(`Assign failed (${response.status})`);
+  return conversationSchema.parse(await response.json());
+}
+
 async function openAttachment(conversationId: string, attachment: Attachment): Promise<void> {
   if (attachment.scan_status !== "clean") return;
 
@@ -94,6 +105,23 @@ export default function ConversationThreadPage({
     // slow safety net (RULES-failure-retry: realtime is best-effort).
     refetchInterval: 15000,
     refetchIntervalInBackground: true,
+  });
+
+  const { data: conversation } = useQuery({
+    queryKey: ["conversation", id, "meta"],
+    queryFn: async () => {
+      const res = await fetch(`/api/cp/conversations/${id}`, { cache: "no-store" });
+      if (!res.ok) throw new Error(`meta ${res.status}`);
+      return conversationSchema.parse(await res.json());
+    },
+  });
+
+  const assignMutation = useMutation({
+    mutationFn: (assignee: "me" | "auto") => assignConversation(id, assignee),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["conversation", id, "meta"] });
+      void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    },
   });
 
   // Gateway subscription: instant refresh on message:new, plus ephemeral
@@ -186,6 +214,21 @@ export default function ConversationThreadPage({
             {t("visitorOnline")}
           </span>
         )}
+        <div className="ms-auto flex items-center gap-2 text-sm">
+          <span className="text-zinc-500">
+            {conversation?.assigned_agent_name
+              ? t("assignedTo", { name: conversation.assigned_agent_name })
+              : t("unassigned")}
+          </span>
+          <button
+            type="button"
+            disabled={assignMutation.isPending}
+            onClick={() => assignMutation.mutate("me")}
+            className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-medium hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          >
+            {t("assignToMe")}
+          </button>
+        </div>
       </div>
 
       {isPending && (

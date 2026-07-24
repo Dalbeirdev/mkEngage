@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Agent\AgentAttachmentController;
 use App\Http\Controllers\Agent\AgentMessageController;
+use App\Http\Controllers\Agent\AvailabilityController;
 use App\Http\Controllers\Agent\ChatbotController;
 use App\Http\Controllers\Agent\ContactController;
 use App\Http\Controllers\Agent\ConversationController;
@@ -57,6 +58,7 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
         Route::patch('/conversations/{conversation}', [ConversationController::class, 'update']);
         Route::get('/conversations/{conversation}/messages', [AgentMessageController::class, 'index']);
         Route::post('/conversations/{conversation}/messages', [AgentMessageController::class, 'store']);
+        Route::post('/conversations/{conversation}/assign', [ConversationController::class, 'assign']);
         Route::post('/conversations/{conversation}/attachments', [AgentAttachmentController::class, 'store']);
         Route::get('/conversations/{conversation}/attachments/{attachment}/download', [AgentAttachmentController::class, 'download']);
 
@@ -87,6 +89,10 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
 
         Route::get('/contacts', [ContactController::class, 'index']);
         Route::get('/contacts/{contact}', [ContactController::class, 'show']);
+
+        // Agent availability (routing v2): the caller's own available/away state.
+        Route::get('/me/availability', [AvailabilityController::class, 'show']);
+        Route::patch('/me/availability', [AvailabilityController::class, 'update']);
     });
 
 // Visitor-facing widget API: the `widget` guard authenticates ONLY Visitor

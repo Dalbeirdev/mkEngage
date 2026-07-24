@@ -56,6 +56,12 @@ final class Conversation extends Model
         return $this->belongsTo(Department::class);
     }
 
+    /** @return BelongsTo<User, $this> */
+    public function assignedAgent(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_agent_id');
+    }
+
     /** @return HasMany<Message, $this> */
     public function messages(): HasMany
     {

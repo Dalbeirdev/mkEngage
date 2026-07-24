@@ -24,6 +24,13 @@ export const tokenResponseSchema = z.object({
   token: z.string().min(1),
 });
 
+export const availabilitySchema = z.object({
+  availability: z.enum(["available", "away"]),
+  max_open_conversations: z.number().int().positive().nullable(),
+});
+
+export type Availability = z.infer<typeof availabilitySchema>;
+
 export const conversationSchema = z.object({
   conversation_id: z.uuid(),
   status: z.enum(["open", "pending", "closed"]),
@@ -35,6 +42,7 @@ export const conversationSchema = z.object({
   department_id: z.uuid().nullable(),
   department_name: z.string().nullable(),
   assigned_agent_id: z.uuid().nullable(),
+  assigned_agent_name: z.string().nullable().optional(),
   last_sequence: z.number().int().nonnegative(),
   source_url: z.string().nullable(),
   created_at: z.string().nullable(),
@@ -125,6 +133,7 @@ export const departmentSchema = z.object({
   department_id: z.uuid(),
   name: z.string(),
   is_default: z.boolean(),
+  assignment_strategy: z.enum(["round_robin", "least_busy", "manual"]).default("least_busy"),
   member_count: z.number().int().nonnegative(),
   member_ids: z.array(z.uuid()),
   created_at: z.string().nullable(),

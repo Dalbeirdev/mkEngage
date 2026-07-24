@@ -17,4 +17,11 @@ final class DepartmentUser extends Pivot
     public $incrementing = false;
 
     protected $keyType = 'string';
+
+    protected function casts(): array
+    {
+        return [
+            'last_assigned_at' => 'datetime',
+        ];
+    }
 }

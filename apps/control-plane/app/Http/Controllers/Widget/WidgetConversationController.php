@@ -9,6 +9,7 @@ use App\Models\Chatbot;
 use App\Models\Conversation;
 use App\Models\Department;
 use App\Models\Visitor;
+use App\Services\AssignmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -20,7 +21,7 @@ use Illuminate\Http\Request;
  */
 final class WidgetConversationController extends Controller
 {
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, AssignmentService $assignments): JsonResponse
     {
         $visitor = $this->visitor($request);
 
@@ -38,6 +39,11 @@ final class WidgetConversationController extends Controller
             'department_id' => $defaultDepartment?->id, // routing v1 (A5)
             'source_url' => $validated['source_url'] ?? null,
         ]);
+
+        // Routing v2 (§16): give the conversation an owner per the department's
+        // strategy. No-op for a manual department or when no agent is available
+        // (it waits in the department queue).
+        $assignments->autoAssign($conversation);
 
         return response()->json($this->toContract($conversation), 201);
     }
