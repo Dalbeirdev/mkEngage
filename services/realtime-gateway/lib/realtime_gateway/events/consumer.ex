@@ -67,7 +67,8 @@ defmodule RealtimeGateway.Events.Consumer do
           sequence_number: message.sequence_number,
           content_type: message.content_type,
           body: message.body,
-          sent_at: message.sent_at
+          sent_at: message.sent_at,
+          attachments: Map.get(message, :attachments, [])
         })
     end
   end

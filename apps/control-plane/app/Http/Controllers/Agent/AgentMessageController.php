@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Agent;
 
 use App\Http\Controllers\Controller;
+use App\Models\Attachment;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
@@ -25,6 +26,7 @@ final class AgentMessageController extends Controller
         ]);
 
         $messages = Message::query()
+            ->with('attachments')
             ->where('conversation_id', $conversation->id)
             ->where('sequence_number', '>', $validated['after_sequence'] ?? 0)
             ->orderBy('sequence_number')
@@ -49,10 +51,16 @@ final class AgentMessageController extends Controller
             'idempotency_key' => ['required', 'uuid'],
             'content_type' => ['required', 'in:text'],
             'body' => ['required', 'string', 'max:16000'],
+            'attachment_ids' => ['sometimes', 'array', 'max:'.config()->integer('attachments.max_per_message')],
+            'attachment_ids.*' => ['uuid', 'distinct'],
         ]);
 
         $agent = $request->user();
         abort_unless($agent instanceof User, 403);
+
+        /** @var list<string> $attachmentIds */
+        $attachmentIds = array_values($validated['attachment_ids'] ?? []);
+        $this->assertLinkable($conversation, 'user', $agent->id, $attachmentIds);
 
         $result = $messenger->send(
             conversation: $conversation,
@@ -61,6 +69,7 @@ final class AgentMessageController extends Controller
             body: $validated['body'],
             idempotencyKey: $validated['idempotency_key'],
             contentType: $validated['content_type'],
+            attachmentIds: $attachmentIds,
         );
 
         return response()->json(
@@ -75,5 +84,33 @@ final class AgentMessageController extends Controller
         abort_if($conversation === null, 404);
 
         return $conversation;
+    }
+
+    /**
+     * Only the uploader may link their own unlinked, non-quarantined
+     * attachments from this conversation (§14 tenant-aware authorization).
+     *
+     * @param  list<string>  $attachmentIds
+     */
+    private function assertLinkable(
+        Conversation $conversation,
+        string $uploaderType,
+        string $uploaderId,
+        array $attachmentIds,
+    ): void {
+        if ($attachmentIds === []) {
+            return;
+        }
+
+        $linkable = Attachment::query()
+            ->whereIn('id', $attachmentIds)
+            ->where('conversation_id', $conversation->id)
+            ->where('uploader_type', $uploaderType)
+            ->where('uploader_id', $uploaderId)
+            ->whereNull('message_id')
+            ->where('scan_status', '!=', Attachment::STATUS_QUARANTINED)
+            ->count();
+
+        abort_if($linkable !== count($attachmentIds), 422, 'One or more attachments are not linkable.');
     }
 }

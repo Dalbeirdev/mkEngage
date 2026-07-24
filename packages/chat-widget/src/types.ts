@@ -35,6 +35,14 @@ export interface ConversationSummary {
   last_sequence: number;
 }
 
+export interface AttachmentMeta {
+  attachment_id: string;
+  file_name: string;
+  content_type_header: string;
+  size_bytes: number;
+  scan_status: "pending" | "clean" | "quarantined";
+}
+
 export interface ChatMessage {
   message_id: string;
   conversation_id: string;
@@ -46,6 +54,7 @@ export interface ChatMessage {
   body: string;
   lifecycle_state: string;
   sent_at: string;
+  attachments?: AttachmentMeta[];
 }
 
 /** Local-only optimistic message awaiting durable ack (§27: rendered as pending, never confirmed). */

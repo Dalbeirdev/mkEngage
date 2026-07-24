@@ -6,7 +6,7 @@ import { RTL_LOCALES, createTranslator } from "./i18n.js";
 import { SessionStorage } from "./storage.js";
 import { MessageStore } from "./store.js";
 import { GatewayTransport, PollingTransport, type Transport } from "./transport.js";
-import type { WidgetConfig } from "./types.js";
+import type { AttachmentMeta, WidgetConfig } from "./types.js";
 
 /**
  * <mkengage-widget> — universal chat widget (§4).
@@ -195,6 +195,78 @@ export class MkEngageWidget extends LitElement {
       cursor: default;
     }
 
+    .att {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-block-start: 6px;
+      padding: 6px 8px;
+      border: 1px solid rgb(0 0 0 / 0.15);
+      border-radius: 8px;
+      background: rgb(255 255 255 / 0.35);
+      color: inherit;
+      font: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      max-inline-size: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .att:disabled {
+      cursor: default;
+      opacity: 0.7;
+    }
+
+    .att .meta {
+      display: inline;
+      margin: 0;
+    }
+
+    .chip-row {
+      padding: 6px 10px 0;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--mk-border);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      background: #f4f4f5;
+      color: var(--mk-text);
+    }
+
+    .chip-remove {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--mk-muted);
+      padding: 0 2px;
+    }
+
+    .file-input {
+      display: none;
+    }
+
+    .attach {
+      border: 1px solid var(--mk-border);
+      border-radius: 8px;
+      background: var(--mk-surface);
+      cursor: pointer;
+      padding: 0 10px;
+      font-size: 16px;
+    }
+
+    .attach:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
     .status.online {
       display: inline-flex;
       align-items: center;
@@ -276,6 +348,12 @@ export class MkEngageWidget extends LitElement {
   @state() private remoteTyping = false;
 
   @state() private agentPresent = false;
+
+  @state() private pendingAttachment: AttachmentMeta | null = null;
+
+  @state() private uploading = false;
+
+  @state() private attachmentError = false;
 
   private config!: WidgetConfig;
 
@@ -473,21 +551,60 @@ export class MkEngageWidget extends LitElement {
     }
   }
 
+  /** Upload immediately on pick; the id is linked at send time (§14). */
+  private async onFilePicked(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = ""; // allow re-picking the same file
+    if (file === undefined || this.uploading) return;
+
+    this.uploading = true;
+    this.attachmentError = false;
+
+    try {
+      const conversationId = await this.ensureConversation();
+      this.pendingAttachment = await this.api.uploadAttachment(conversationId, file);
+      void this.ensureTransport(); // the upload may have just created the conversation
+    } catch {
+      this.attachmentError = true;
+    } finally {
+      this.uploading = false;
+    }
+  }
+
+  private async openAttachment(attachment: AttachmentMeta): Promise<void> {
+    if (attachment.scan_status !== "clean" || this.conversationId === null) return;
+
+    try {
+      const url = await this.api.attachmentDownloadUrl(this.conversationId, attachment.attachment_id);
+      window.open(url, "_blank", "noopener");
+    } catch {
+      // Expired/pending: the next poll or replay refreshes scan status.
+    }
+  }
+
   private async submit(event: Event): Promise<void> {
     event.preventDefault();
-    const body = this.draft.trim();
+    const body = this.draft.trim() || this.pendingAttachment?.file_name.trim() || "";
     if (body.length === 0 || this.sending) return;
 
     this.sending = true;
     this.draft = "";
     this.stopTypingSignal();
+    const attachment = this.pendingAttachment;
+    this.pendingAttachment = null;
     const idempotencyKey = crypto.randomUUID();
     this.messages.addPending(idempotencyKey, body);
     this.revision += 1;
 
     try {
       const conversationId = await this.ensureConversation();
-      const message = await this.api.sendMessage(conversationId, idempotencyKey, body);
+      const message = await this.api.sendMessage(
+        conversationId,
+        idempotencyKey,
+        body,
+        attachment === null ? [] : [attachment.attachment_id],
+      );
       this.messages.confirmPending(idempotencyKey, message);
       this.transport?.poke();
       void this.ensureTransport(); // upgrade to WS once the conversation exists
@@ -550,6 +667,12 @@ export class MkEngageWidget extends LitElement {
     if (log !== null) log.scrollTop = log.scrollHeight;
   }
 
+  private formatSize(bytes: number): string {
+    if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
+    return `${bytes} B`;
+  }
+
   private onKeydown(event: KeyboardEvent): void {
     if (event.key === "Escape" && this.open) {
       void this.toggle();
@@ -602,6 +725,27 @@ export class MkEngageWidget extends LitElement {
             (message) => html`
               <div class="msg ${message.sender_type === "visitor" ? "visitor" : "remote"}">
                 ${message.body}
+                ${(message.attachments ?? []).map(
+                  (attachment) => html`
+                    <button
+                      class="att"
+                      ?disabled=${attachment.scan_status !== "clean"}
+                      title=${attachment.file_name}
+                      @click=${() => void this.openAttachment(attachment)}
+                    >
+                      📄 ${attachment.file_name}
+                      <span class="meta">
+                        ${attachment.scan_status === "clean"
+                          ? this.formatSize(attachment.size_bytes)
+                          : t(
+                              attachment.scan_status === "pending"
+                                ? "attachment_scanning"
+                                : "attachment_blocked",
+                            )}
+                      </span>
+                    </button>
+                  `,
+                )}
               </div>
             `,
           )}
@@ -624,7 +768,50 @@ export class MkEngageWidget extends LitElement {
             : nothing}
         </div>
 
+        ${this.pendingAttachment !== null || this.uploading || this.attachmentError
+          ? html`
+              <div class="chip-row">
+                ${this.uploading
+                  ? html`<span class="notice">${t("uploading")}</span>`
+                  : this.attachmentError
+                    ? html`<span class="notice" role="alert">${t("attachment_error")}</span>`
+                    : html`
+                        <span class="chip">
+                          📎 ${this.pendingAttachment?.file_name}
+                          <button
+                            class="chip-remove"
+                            aria-label=${t("attachment_remove")}
+                            @click=${() => {
+                              this.pendingAttachment = null;
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      `}
+              </div>
+            `
+          : nothing}
+
         <form @submit=${(event: Event) => void this.submit(event)}>
+          <input
+            type="file"
+            class="file-input"
+            aria-hidden="true"
+            tabindex="-1"
+            @change=${(event: Event) => void this.onFilePicked(event)}
+          />
+          <button
+            class="attach"
+            type="button"
+            aria-label=${t("attach_label")}
+            ?disabled=${this.uploading}
+            @click=${() => {
+              this.renderRoot.querySelector<HTMLInputElement>(".file-input")?.click();
+            }}
+          >
+            📎
+          </button>
           <textarea
             rows="1"
             aria-label=${t("input_label")}

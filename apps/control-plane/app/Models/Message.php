@@ -8,6 +8,7 @@ use App\Models\Concerns\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -51,6 +52,12 @@ final class Message extends Model
         return $this->belongsTo(Conversation::class);
     }
 
+    /** @return HasMany<Attachment, $this> */
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(Attachment::class);
+    }
+
     /** @return array<string, mixed> Contract-shaped payload (OpenAPI Message schema). */
     public function toContract(): array
     {
@@ -65,6 +72,11 @@ final class Message extends Model
             'body' => $this->body,
             'lifecycle_state' => $this->lifecycle_state,
             'sent_at' => $this->sent_at?->toIso8601String(),
+            // Eager-load `attachments` in list endpoints; single-message
+            // paths may lazy-load (one extra query).
+            'attachments' => $this->attachments->map(
+                fn (Attachment $attachment): array => $attachment->toContract(),
+            )->values()->all(),
         ];
     }
 }

@@ -54,6 +54,12 @@
     "sendError": "Reply could not be sent.",
     "visitorOnline": "Visitor online",
     "visitorTyping": "Visitor is typing…",
+    "attachLabel": "Attach a file",
+    "uploading": "Uploading…",
+    "uploadError": "File could not be attached.",
+    "attachmentRemove": "Remove attachment",
+    "attachmentScanning": "Scanning…",
+    "attachmentBlocked": "Blocked",
     "allDepartments": "All departments",
     "filterLabel": "Filter by department"
   },

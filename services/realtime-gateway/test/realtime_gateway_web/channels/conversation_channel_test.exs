@@ -189,6 +189,43 @@ defmodule RealtimeGatewayWeb.ConversationChannelTest do
     assert_broadcast "presence_diff", %{joins: %{^agent_sub => _}}
   end
 
+  test "replayed messages carry contract-shaped attachment metadata" do
+    ctx = seed!()
+    {:ok, _reply, socket} = join_as("visitor:#{ctx.visitor_id}", ctx)
+
+    ref =
+      push(socket, "message:send", %{"body" => "see file", "idempotency_key" => Uniq.UUID.uuid7()})
+
+    assert_reply ref, :ok, %{message_id: message_id}
+
+    attachment_id = Uniq.UUID.uuid7()
+
+    Repo.query!(
+      "INSERT INTO attachments (id, organization_id, conversation_id, message_id, uploader_type, uploader_id, file_name, content_type, size_bytes, checksum_sha256, storage_path, scan_status, created_at, updated_at) VALUES ($1, $2, $3, $4, 'visitor', $5, 'report.pdf', 'application/pdf', 123, $6, 'org/x/conv/y/z', 'clean', now(), now())",
+      [
+        dump(attachment_id),
+        dump(ctx.org_id),
+        dump(ctx.conversation_id),
+        dump(message_id),
+        dump(ctx.visitor_id),
+        String.duplicate("a", 64)
+      ]
+    )
+
+    ref = push(socket, "replay:request", %{"last_seen_seq" => 0})
+    assert_reply ref, :ok, %{messages: [message]}
+
+    assert [
+             %{
+               attachment_id: ^attachment_id,
+               file_name: "report.pdf",
+               content_type_header: "application/pdf",
+               size_bytes: 123,
+               scan_status: "clean"
+             }
+           ] = message.attachments
+  end
+
   test "oversized and empty bodies are rejected" do
     ctx = seed!()
     {:ok, _reply, socket} = join_as("visitor:#{ctx.visitor_id}", ctx)

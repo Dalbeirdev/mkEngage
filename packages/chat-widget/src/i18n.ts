@@ -21,6 +21,12 @@ const dictionaries: Record<string, Messages> = {
     error_send: "Message could not be sent. It will retry automatically.",
     log_label: "Conversation",
     online: "Online",
+    attach_label: "Attach a file",
+    uploading: "Uploading…",
+    attachment_error: "File could not be attached.",
+    attachment_remove: "Remove attachment",
+    attachment_scanning: "Scanning…",
+    attachment_blocked: "Blocked",
   },
 };
 

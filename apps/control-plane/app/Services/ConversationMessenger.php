@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\Attachment;
 use App\Models\Conversation;
 use App\Models\Message;
 use Illuminate\Support\Facades\DB;
@@ -29,7 +30,10 @@ final class ConversationMessenger
         private readonly EventPublisher $events,
     ) {}
 
-    /** @return array{message: Message, duplicate: bool} */
+    /**
+     * @param  list<string>  $attachmentIds  pre-validated (owned, unlinked, not quarantined)
+     * @return array{message: Message, duplicate: bool}
+     */
     public function send(
         Conversation $conversation,
         string $senderType,
@@ -38,6 +42,7 @@ final class ConversationMessenger
         string $idempotencyKey,
         string $contentType = 'text',
         ?string $correlationId = null,
+        array $attachmentIds = [],
     ): array {
         $existing = Message::query()
             ->where('conversation_id', $conversation->id)
@@ -45,7 +50,9 @@ final class ConversationMessenger
             ->first();
 
         if ($existing !== null) {
-            return ['message' => $existing, 'duplicate' => true];
+            // Retry of an already-persisted send: the original message (and
+            // its original attachment links) wins — new ids are ignored.
+            return ['message' => $existing->load('attachments'), 'duplicate' => true];
         }
 
         DB::table('conversations')
@@ -70,6 +77,21 @@ final class ConversationMessenger
             'sent_at' => now(),
         ]);
 
+        $attachmentCount = 0;
+        if ($attachmentIds !== []) {
+            // Link inside the same transaction as the message; the WHERE
+            // clauses re-assert what the controller validated (unlinked,
+            // same conversation, not quarantined) against races.
+            $attachmentCount = Attachment::query()
+                ->whereIn('id', $attachmentIds)
+                ->where('conversation_id', $conversation->id)
+                ->whereNull('message_id')
+                ->where('scan_status', '!=', Attachment::STATUS_QUARANTINED)
+                ->update(['message_id' => $message->id]);
+
+            abort_if($attachmentCount !== count($attachmentIds), 422, 'One or more attachments are not linkable.');
+        }
+
         // Transactional outbox (ADR-005): the event commits WITH the message.
         // Data-minimized payload per contracts/events/conv.message.accepted —
         // consumers needing the body read it from PostgreSQL under their org
@@ -84,7 +106,7 @@ final class ConversationMessenger
             'persisted_at' => (string) $message->sent_at?->toIso8601String(),
             'content_type' => $contentType,
             'content_preview' => mb_substr($body, 0, 140),
-            'attachment_count' => 0,
+            'attachment_count' => $attachmentCount,
             'ai_involvement' => $senderType === 'chatbot' ? 'chatbot_reply' : 'none',
         ], $senderType.':'.$senderId, $correlationId);
 
@@ -92,6 +114,6 @@ final class ConversationMessenger
         // gateway's JetStream consumer is the primary path, ADR-005).
         $this->broadcaster->messageAccepted($message);
 
-        return ['message' => $message, 'duplicate' => false];
+        return ['message' => $message->load('attachments'), 'duplicate' => false];
     }
 }

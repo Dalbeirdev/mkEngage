@@ -192,6 +192,54 @@ paths:
         "4XX": { $ref: "#/components/responses/Problem" }
         default: { $ref: "#/components/responses/Problem" }
 
+  /conversations/{conversation_id}/attachments:
+    parameters: [ { $ref: "#/components/parameters/conversationId" } ]
+    post:
+      tags: [messages]
+      operationId: uploadAttachment
+      summary: Upload a chat attachment (§14 — size/type validated, checksummed, scanned async; link it to a message via attachment_ids at send time)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        "201":
+          description: Stored with scan_status=pending; scanning runs asynchronously
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Attachment" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+        default: { $ref: "#/components/responses/Problem" }
+
+  /conversations/{conversation_id}/attachments/{attachment_id}/download:
+    parameters:
+      - { $ref: "#/components/parameters/conversationId" }
+      - name: attachment_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [messages]
+      operationId: attachmentDownloadUrl
+      summary: Mint a short-lived download URL (§14 pre-signed; clean files only — 409 while pending, 410 when quarantined)
+      responses:
+        "200":
+          description: Pre-signed (S3) or signed-route (local) URL, short expiry
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url]
+                properties:
+                  url: { type: string, format: uri }
+        "4XX": { $ref: "#/components/responses/Problem" }
+        default: { $ref: "#/components/responses/Problem" }
+
   /contacts:
     get:
       tags: [contacts]
@@ -564,15 +612,22 @@ components:
         lifecycle_state: { type: string, enum: [persisted, delivered, read, failed, redacted, deleted], description: "§27 lifecycle; created/accepted are pre-persistence and never visible via REST." }
         attachments:
           type: array
-          items:
-            type: object
-            required: [attachment_id, file_name, size_bytes]
-            properties:
-              attachment_id: { type: string, format: uuid }
-              file_name: { type: string }
-              size_bytes: { type: integer }
-              download_url: { type: [string, "null"], format: uri, description: Short-lived pre-signed URL (ADR-006); null until malware scan clears quarantine. }
+          items: { $ref: "#/components/schemas/Attachment" }
         sent_at: { type: string, format: date-time }
+
+    Attachment:
+      type: object
+      description: Attachment metadata (§14). Download URLs are minted on demand by the download endpoint — never inlined here, so their short expiry (§14) is measured from the click, not from a cached list response.
+      required: [attachment_id, file_name, content_type_header, size_bytes, scan_status]
+      properties:
+        attachment_id: { type: string, format: uuid }
+        file_name: { type: string, maxLength: 255 }
+        content_type_header: { type: string, description: "Server-side detected content type (finfo), never the client-supplied header." }
+        size_bytes: { type: integer, minimum: 0 }
+        scan_status:
+          type: string
+          enum: [pending, clean, quarantined]
+          description: Quarantine-first (§14) — files are born pending; only clean files are downloadable.
 
     Contact:
       type: object

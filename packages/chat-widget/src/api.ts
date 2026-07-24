@@ -1,4 +1,10 @@
-import type { ChatMessage, ConversationSummary, WidgetIdentity, WidgetSession } from "./types.js";
+import type {
+  AttachmentMeta,
+  ChatMessage,
+  ConversationSummary,
+  WidgetIdentity,
+  WidgetSession,
+} from "./types.js";
 
 /**
  * REST transport to the control-plane widget API (§4 REST fallback — the
@@ -63,6 +69,7 @@ export class WidgetApi {
     conversationId: string,
     idempotencyKey: string,
     body: string,
+    attachmentIds: string[] = [],
   ): Promise<ChatMessage> {
     return (await this.request(
       "POST",
@@ -71,8 +78,36 @@ export class WidgetApi {
         idempotency_key: idempotencyKey,
         content_type: "text",
         body,
+        ...(attachmentIds.length > 0 ? { attachment_ids: attachmentIds } : {}),
       },
     )) as ChatMessage;
+  }
+
+  /** Multipart upload (§14): the file is scanned async — starts `pending`. */
+  async uploadAttachment(conversationId: string, file: File): Promise<AttachmentMeta> {
+    const form = new FormData();
+    form.append("file", file, file.name);
+
+    const headers: Record<string, string> = { Accept: "application/json" };
+    if (this.token !== null) headers["Authorization"] = `Bearer ${this.token}`;
+
+    const response = await fetch(
+      `${this.apiUrl}/api/widget/conversations/${conversationId}/attachments`,
+      { method: "POST", headers, body: form },
+    );
+
+    if (!response.ok) throw new ApiError(response.status);
+    return (await response.json()) as AttachmentMeta;
+  }
+
+  /** Short-lived download URL for a clean attachment (§14 pre-signed). */
+  async attachmentDownloadUrl(conversationId: string, attachmentId: string): Promise<string> {
+    const result = (await this.request(
+      "GET",
+      `/api/widget/conversations/${conversationId}/attachments/${attachmentId}/download`,
+    )) as { url: string };
+
+    return result.url;
   }
 
   private async request(method: string, path: string, body?: unknown): Promise<unknown> {

@@ -47,6 +47,18 @@ return [
             'report' => false,
         ],
 
+        // Chat attachments (§14): private disk, tenant-scoped paths. In
+        // production this becomes an S3-compatible bucket (set
+        // ATTACHMENTS_DISK=s3 or an adapter disk) — the app code only ever
+        // talks to the Storage facade.
+        'attachments' => [
+            'driver' => 'local',
+            'root' => storage_path('app/attachments'),
+            'serve' => false,
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

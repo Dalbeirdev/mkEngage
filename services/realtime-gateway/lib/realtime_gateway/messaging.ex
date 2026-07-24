@@ -180,6 +180,7 @@ defmodule RealtimeGateway.Messaging do
       )
       |> Repo.all()
       |> Enum.map(&normalize/1)
+      |> with_attachments()
     end)
   end
 
@@ -204,8 +205,44 @@ defmodule RealtimeGateway.Messaging do
       |> Repo.one()
       |> case do
         nil -> nil
-        row -> normalize(row)
+        row -> row |> normalize() |> then(&hd(with_attachments([&1])))
       end
+    end)
+  end
+
+  # Contract-shaped attachment lists (AsyncAPI messageNew.attachments),
+  # batched in one query. Must run inside the caller's org transaction.
+  defp with_attachments([]), do: []
+
+  defp with_attachments(messages) do
+    ids = Enum.map(messages, &Ecto.UUID.dump!(&1.message_id))
+
+    grouped =
+      from(a in "attachments",
+        where: a.message_id in ^ids,
+        select: %{
+          message_id: a.message_id,
+          attachment_id: a.id,
+          file_name: a.file_name,
+          content_type_header: a.content_type,
+          size_bytes: a.size_bytes,
+          scan_status: a.scan_status
+        }
+      )
+      |> Repo.all()
+      |> Enum.group_by(& &1.message_id)
+
+    Enum.map(messages, fn message ->
+      attachments =
+        grouped
+        |> Map.get(Ecto.UUID.dump!(message.message_id), [])
+        |> Enum.map(fn attachment ->
+          attachment
+          |> Map.delete(:message_id)
+          |> Map.update!(:attachment_id, &Ecto.UUID.load!/1)
+        end)
+
+      Map.put(message, :attachments, attachments)
     end)
   end
 

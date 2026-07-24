@@ -12,6 +12,7 @@ import { getSessionToken } from "@/lib/auth/session";
  */
 const ALLOWED = [
   /^conversations(\/[0-9a-f-]{36})?(\/messages)?$/,
+  /^conversations\/[0-9a-f-]{36}\/attachments(\/[0-9a-f-]{36}\/download)?$/,
   /^contacts(\/[0-9a-f-]{36})?$/,
   /^chatbots(\/[0-9a-f-]{36})?$/,
   /^organization\/widget-settings(\/rotate-secret)?$/,
@@ -40,10 +41,17 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
     Authorization: `Bearer ${token}`,
   };
 
-  let body: string | null = null;
+  let body: BodyInit | null = null;
   if (request.method !== "GET" && request.method !== "HEAD") {
-    body = await request.text();
-    headers["Content-Type"] = "application/json";
+    const contentType = request.headers.get("content-type") ?? "";
+    if (contentType.startsWith("multipart/form-data")) {
+      // File uploads: forward the raw bytes with the original boundary.
+      body = Buffer.from(await request.arrayBuffer());
+      headers["Content-Type"] = contentType;
+    } else {
+      body = await request.text();
+      headers["Content-Type"] = "application/json";
+    }
   }
 
   const upstream = await fetch(`${API_URL}/api/${joined}${request.nextUrl.search}`, {

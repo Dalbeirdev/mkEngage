@@ -47,6 +47,16 @@ export const conversationListSchema = z.object({
   data: z.array(conversationSchema),
 });
 
+export const attachmentSchema = z.object({
+  attachment_id: z.uuid(),
+  file_name: z.string(),
+  content_type_header: z.string(),
+  size_bytes: z.number().int().nonnegative(),
+  scan_status: z.enum(["pending", "clean", "quarantined"]),
+});
+
+export type Attachment = z.infer<typeof attachmentSchema>;
+
 export const chatMessageSchema = z.object({
   message_id: z.uuid(),
   conversation_id: z.uuid(),
@@ -58,6 +68,7 @@ export const chatMessageSchema = z.object({
   body: z.string(),
   lifecycle_state: z.string(),
   sent_at: z.string().nullable(),
+  attachments: z.array(attachmentSchema).default([]),
 });
 
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
