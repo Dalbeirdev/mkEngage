@@ -247,7 +247,12 @@ test.describe("widget on a hostile host page", () => {
     await textarea(page).press("Enter");
     await expect(widget(page).locator(".msg")).toHaveCount(1);
 
+    // Scope to the widget (axe pierces its shadow tree). The demo is a
+    // DELIBERATELY hostile host page — scanning the whole document would
+    // audit that fixture's intentional low-contrast decoration, not the
+    // widget. This test asserts the WIDGET panel's a11y (§4).
     const results = await new AxeBuilder({ page })
+      .include("mkengage-widget")
       .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
       .analyze();
 

@@ -103,10 +103,9 @@ final class AssignmentService
             return null;
         }
 
-        $memberIds = $members->pluck('id')
-            ->filter(static fn ($id): bool => is_string($id))
-            ->values()
-            ->all();
+        $memberIds = array_values(
+            $members->pluck('id')->filter(static fn ($id): bool => is_string($id))->all()
+        );
         $openCounts = $this->openConversationCounts($memberIds);
 
         $eligible = $members->filter(function (User $agent) use ($openCounts): bool {
