@@ -196,7 +196,11 @@ test.describe("widget on a hostile host page", () => {
     });
 
     state.failLists = false;
-    await expect(widget(page).locator(".status")).toHaveCount(0, { timeout: 15_000 });
+    // The header status line is always present now (it shows the subtitle when
+    // connected); recovery means it no longer reads "Reconnecting".
+    await expect(widget(page).locator(".status")).not.toContainText("Reconnecting", {
+      timeout: 15_000,
+    });
   });
 
   test("keeps failed sends visible as pending (retry-safe optimistic UI)", async ({ page }) => {
@@ -288,6 +292,37 @@ test.describe("widget on a hostile host page", () => {
     const value = await textarea(page).inputValue();
     expect(value).toContain("👋");
     expect(value).toContain("\u{1F3FD}"); // medium skin tone modifier
+  });
+
+  test("shows the configured greeting, quick replies, avatar, and branding", async ({ page }) => {
+    await mockApi(page);
+    await openWidget(page);
+
+    // Header: avatar + title + subtitle.
+    await expect(widget(page).locator(".avatar")).toBeVisible();
+    await expect(widget(page).locator("header h2")).toHaveText("Acme Support");
+    await expect(widget(page).locator("header .status")).toContainText(/replies/i);
+
+    // Greeting bubble (with a bot avatar beside it) + welcome quick replies.
+    await expect(widget(page).locator(".row.remote .msg").first()).toContainText("Welcome to Acme");
+    const chips = widget(page).locator(".quick-reply");
+    await expect(chips).toHaveCount(4);
+
+    // Circular send button carries a paper-plane icon.
+    await expect(widget(page).locator(".send svg")).toBeVisible();
+    // Branding footer.
+    await expect(widget(page).locator(".branding")).toContainText("mkEngage");
+  });
+
+  test("clicking a quick reply sends it and hides the welcome chips", async ({ page }) => {
+    await mockApi(page);
+    await openWidget(page);
+
+    await widget(page).locator(".quick-reply", { hasText: "Shipping info" }).click();
+
+    // It becomes the visitor's message; the welcome chips disappear.
+    await expect(widget(page).locator(".msg.visitor").first()).toContainText("Shipping info");
+    await expect(widget(page).locator(".quick-reply")).toHaveCount(0);
   });
 
   test("emoji picker: recently-used row remembers picks across reopen (§12)", async ({ page }) => {

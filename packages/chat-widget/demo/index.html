@@ -37,6 +37,9 @@
         siteKey: params.get("site_key") ?? "sk_demo",
         apiUrl: "http://127.0.0.1:8000",
         title: "Acme Support",
+        subtitle: "Typically replies in a few minutes",
+        greeting: "Hi there! 👋 Welcome to Acme. How can we help you today?",
+        quickReplies: ["Track my order", "Shipping info", "Returns", "Talk to a human"],
         ...(externalId !== null && signature !== null
           ? {
               identity: {

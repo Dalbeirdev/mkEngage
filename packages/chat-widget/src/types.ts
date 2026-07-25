@@ -20,6 +20,16 @@ export interface WidgetConfig {
   consentState?: "granted" | "denied" | "unknown";
   /** Widget title shown in the panel header. */
   title?: string;
+  /** Subtitle under the title (e.g. "We're online!"). */
+  subtitle?: string;
+  /** Avatar image URL shown in the header + beside bot/agent messages. */
+  avatarUrl?: string;
+  /** Opening bot greeting shown before the visitor writes anything. */
+  greeting?: string;
+  /** Welcome quick-reply chips shown under the greeting. */
+  quickReplies?: string[];
+  /** Hide the "powered by mkEngage" footer (paid plans). */
+  hideBranding?: boolean;
   /** Verified identity payload from the host page (optional). */
   identity?: WidgetIdentity;
 }

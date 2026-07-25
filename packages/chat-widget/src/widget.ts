@@ -27,6 +27,7 @@ export class MkEngageWidget extends LitElement {
   static override styles = css`
     :host {
       --mk-accent: #4f46e5;
+      --mk-accent-2: #6366f1;
       --mk-accent-contrast: #ffffff;
       --mk-surface: #ffffff;
       --mk-text: #18181b;
@@ -90,24 +91,65 @@ export class MkEngageWidget extends LitElement {
     }
 
     header {
-      background: var(--mk-accent);
+      background: linear-gradient(135deg, var(--mk-accent), var(--mk-accent-2));
       color: var(--mk-accent-contrast);
-      padding: 12px 16px;
+      padding: 14px 14px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 8px;
+      gap: 10px;
+    }
+
+    .avatar {
+      position: relative;
+      inline-size: 40px;
+      block-size: 40px;
+      border-radius: 50%;
+      background: rgb(255 255 255 / 0.2);
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      overflow: visible;
+    }
+
+    .avatar img {
+      inline-size: 100%;
+      block-size: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .avatar-fallback {
+      font-size: 20px;
+    }
+
+    .avatar-dot {
+      position: absolute;
+      inset-block-end: 0;
+      inset-inline-end: 0;
+      inline-size: 11px;
+      block-size: 11px;
+      border-radius: 50%;
+      background: #4ade80;
+      border: 2px solid var(--mk-accent);
+    }
+
+    .header-text {
+      flex: 1;
+      min-inline-size: 0;
     }
 
     header h2 {
       margin: 0;
       font-size: 15px;
-      font-weight: 600;
+      font-weight: 700;
     }
 
     header .status {
-      font-size: 11px;
-      opacity: 0.9;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      opacity: 0.92;
     }
 
     .close {
@@ -117,39 +159,112 @@ export class MkEngageWidget extends LitElement {
       font-size: 18px;
       cursor: pointer;
       padding: 4px 8px;
-      border-radius: 6px;
+      border-radius: 8px;
+      opacity: 0.85;
+    }
+
+    .close:hover {
+      opacity: 1;
+      background: rgb(255 255 255 / 0.15);
     }
 
     .log {
       flex: 1;
       overflow-y: auto;
-      padding: 12px;
+      padding: 14px 12px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
       margin: 0;
     }
 
+    .row {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .row.visitor {
+      justify-content: flex-end;
+    }
+
+    .msg-avatar {
+      inline-size: 26px;
+      block-size: 26px;
+      border-radius: 50%;
+      background: var(--mk-accent);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+      flex: 0 0 auto;
+      overflow: hidden;
+    }
+
+    .msg-avatar img {
+      inline-size: 100%;
+      block-size: 100%;
+      object-fit: cover;
+    }
+
+    .quick-replies {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding-inline-start: 34px;
+      margin-block-start: 2px;
+    }
+
+    .quick-reply {
+      border: 1.5px solid var(--mk-accent);
+      background: var(--mk-surface);
+      color: var(--mk-accent);
+      border-radius: 999px;
+      padding: 7px 14px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition:
+        background-color 0.15s ease,
+        color 0.15s ease;
+    }
+
+    .quick-reply:hover {
+      background: var(--mk-accent);
+      color: var(--mk-accent-contrast);
+    }
+
     .msg {
-      max-inline-size: 82%;
-      padding: 8px 12px;
-      border-radius: 12px;
+      max-inline-size: 78%;
+      padding: 9px 13px;
+      border-radius: 16px;
       overflow-wrap: anywhere;
       white-space: pre-wrap;
     }
 
     .msg.visitor {
-      align-self: flex-end;
       background: var(--mk-accent);
       color: var(--mk-accent-contrast);
-      border-end-end-radius: 4px;
+      border-end-end-radius: 5px;
     }
 
     .msg.remote {
-      align-self: flex-start;
-      background: #f4f4f5;
+      background: #f1f2f6;
       color: var(--mk-text);
-      border-end-start-radius: 4px;
+      border-end-start-radius: 5px;
+    }
+
+    .branding {
+      text-align: center;
+      font-size: 11px;
+      color: var(--mk-muted);
+      padding: 6px 0 9px;
+    }
+
+    .branding strong {
+      color: var(--mk-accent);
+      font-weight: 600;
     }
 
     .msg.pending {
@@ -201,22 +316,29 @@ export class MkEngageWidget extends LitElement {
     .send {
       flex: 0 0 auto;
       border: none;
-      border-radius: 12px;
+      border-radius: 50%;
       background: var(--mk-accent);
       color: var(--mk-accent-contrast);
+      inline-size: 40px;
       block-size: 40px;
-      padding-inline: 16px;
-      font-weight: 600;
+      display: grid;
+      place-items: center;
       cursor: pointer;
-      transition: background-color 0.15s ease;
+      transition:
+        filter 0.15s ease,
+        transform 0.1s ease;
     }
 
     .send:hover:not(:disabled) {
-      filter: brightness(1.08);
+      filter: brightness(1.1);
+    }
+
+    .send:active:not(:disabled) {
+      transform: scale(0.94);
     }
 
     .send:disabled {
-      opacity: 0.6;
+      opacity: 0.5;
       cursor: default;
     }
 
@@ -775,6 +897,18 @@ export class MkEngageWidget extends LitElement {
     }
   }
 
+  /** Send a welcome quick-reply chip as the visitor's message. */
+  private sendQuickReply(text: string): void {
+    if (this.sending) return;
+    this.draft = text;
+    void this.submit(new Event("submit"));
+  }
+
+  /** True while the greeting + quick replies should show (nothing sent yet). */
+  private get showWelcome(): boolean {
+    return this.messages.messages.length === 0 && this.messages.pendingMessages.length === 0;
+  }
+
   private async submit(event: Event): Promise<void> {
     event.preventDefault();
     this.emojiOpen = false;
@@ -896,17 +1030,23 @@ export class MkEngageWidget extends LitElement {
     return html`
       <section class="panel" role="dialog" aria-label=${this.config?.title ?? t("title")}>
         <header>
-          <div>
+          <span class="avatar" aria-hidden>
+            ${this.config?.avatarUrl
+              ? html`<img src=${this.config.avatarUrl} alt="" />`
+              : html`<span class="avatar-fallback">💬</span>`}
+            ${this.agentPresent || this.connection === "connected"
+              ? html`<span class="avatar-dot"></span>`
+              : nothing}
+          </span>
+          <div class="header-text">
             <h2>${this.config?.title ?? t("title")}</h2>
-            ${this.connection !== "connected"
-              ? html`<span class="status" role="status">
-                  ${t(this.connection === "offline" ? "offline" : "reconnecting")}
-                </span>`
-              : this.agentPresent
-                ? html`<span class="status online" role="status">
-                    <span class="online-dot"></span>${t("online")}
-                  </span>`
-                : nothing}
+            <span class="status" role="status">
+              ${this.connection !== "connected"
+                ? t(this.connection === "offline" ? "offline" : "reconnecting")
+                : this.agentPresent
+                  ? html`<span class="online-dot"></span>${t("online")}`
+                  : (this.config?.subtitle ?? t("subtitle_default"))}
+            </span>
           </div>
           <button class="close" aria-label=${t("close_label")} @click=${() => void this.toggle()}>
             ✕
@@ -914,9 +1054,35 @@ export class MkEngageWidget extends LitElement {
         </header>
 
         <div class="log" role="log" aria-label=${t("log_label")} aria-live="polite" data-revision=${this.revision}>
-          ${this.messages.messages.map(
-            (message) => html`
-              <div class="msg ${message.sender_type === "visitor" ? "visitor" : "remote"}">
+          ${this.showWelcome && (this.config?.greeting || (this.config?.quickReplies?.length ?? 0) > 0)
+            ? html`
+                ${this.config?.greeting
+                  ? html`<div class="row remote">
+                      ${this.renderMsgAvatar()}
+                      <div class="msg remote">${this.config.greeting}</div>
+                    </div>`
+                  : nothing}
+                ${(this.config?.quickReplies?.length ?? 0) > 0
+                  ? html`<div class="quick-replies">
+                      ${this.config?.quickReplies?.map(
+                        (reply) => html`
+                          <button
+                            type="button"
+                            class="quick-reply"
+                            @click=${() => this.sendQuickReply(reply)}
+                          >
+                            ${reply}
+                          </button>
+                        `,
+                      )}
+                    </div>`
+                  : nothing}
+              `
+            : nothing}
+          ${this.messages.messages.map((message) => {
+            const isVisitor = message.sender_type === "visitor";
+            const bubble = html`
+              <div class="msg ${isVisitor ? "visitor" : "remote"}">
                 ${message.body}
                 ${(message.attachments ?? []).map(
                   (attachment) => html`
@@ -940,22 +1106,29 @@ export class MkEngageWidget extends LitElement {
                   `,
                 )}
               </div>
-            `,
-          )}
+            `;
+            return isVisitor
+              ? html`<div class="row visitor">${bubble}</div>`
+              : html`<div class="row remote">${this.renderMsgAvatar()}${bubble}</div>`;
+          })}
           ${this.messages.pendingMessages.map(
             (pending) => html`
-              <div class="msg visitor pending">
-                ${pending.body}
-                <span class="meta">${t("pending")}</span>
+              <div class="row visitor">
+                <div class="msg visitor pending">
+                  ${pending.body}
+                  <span class="meta">${t("pending")}</span>
+                </div>
               </div>
             `,
           )}
           ${this.remoteTyping
             ? html`
-                <div class="msg remote typing-bubble" aria-hidden="true">
-                  <span class="typing-dot"></span><span class="typing-dot"></span><span
-                    class="typing-dot"
-                  ></span>
+                <div class="row remote" aria-hidden="true">
+                  ${this.renderMsgAvatar()}
+                  <div class="msg remote typing-bubble">
+                    <span class="typing-dot"></span><span class="typing-dot"></span
+                    ><span class="typing-dot"></span>
+                  </div>
                 </div>
               `
             : nothing}
@@ -1033,12 +1206,30 @@ export class MkEngageWidget extends LitElement {
               }
             }}
           ></textarea>
-          <button class="send" type="submit" ?disabled=${this.sending}>
-            ${this.sending ? t("sending") : t("send")}
+          <button class="send" type="submit" ?disabled=${this.sending} aria-label=${t("send")}>
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path
+                fill="currentColor"
+                d="M3.4 20.4l17.45-7.48a1 1 0 0 0 0-1.84L3.4 3.6a.993.993 0 0 0-1.39.91L2 9.12c0 .5.37.93.87.99L17 12 2.87 13.88c-.5.07-.87.5-.87 1l.01 4.61c0 .71.73 1.2 1.39.91z"
+              />
+            </svg>
           </button>
         </form>
+
+        ${this.config?.hideBranding
+          ? nothing
+          : html`<div class="branding">${t("powered_by")} <strong>mkEngage</strong></div>`}
       </section>
     `;
+  }
+
+  /** Small circular bot/agent avatar shown beside remote messages. */
+  private renderMsgAvatar(): unknown {
+    return html`<span class="msg-avatar" aria-hidden>
+      ${this.config?.avatarUrl
+        ? html`<img src=${this.config.avatarUrl} alt="" />`
+        : html`<span>💬</span>`}
+    </span>`;
   }
 
   private renderEmojiPicker(): unknown {
