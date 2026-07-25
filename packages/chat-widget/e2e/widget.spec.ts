@@ -261,4 +261,50 @@ test.describe("widget on a hostile host page", () => {
     );
     expect(serious, serious.map((v) => v.id).join(", ")).toEqual([]);
   });
+
+  test("emoji picker: opens, searches, and inserts into the composer (§12)", async ({ page }) => {
+    await mockApi(page);
+    await openWidget(page);
+
+    const picker = widget(page).locator(".emoji-picker");
+    await expect(picker).toBeHidden();
+
+    // Open via the 😊 button (first .attach button).
+    await widget(page).locator(".attach").first().click();
+    await expect(picker).toBeVisible();
+
+    // Search narrows the grid; picking inserts the emoji into the textarea.
+    await widget(page).locator(".emoji-search").fill("thumbs up");
+    const firstHit = widget(page).locator(".emoji-cell").first();
+    await expect(firstHit).toContainText("👍");
+    await firstHit.click();
+    await expect(textarea(page)).toHaveValue("👍");
+
+    // Skin tone applies to skin-tone-able emoji: reopen, choose a tone, insert.
+    await widget(page).locator(".emoji-search").fill("wave");
+    await widget(page).locator(".skin-swatch").nth(3).click();
+    await widget(page).locator(".emoji-cell").first().click();
+    // Draft now contains the wave with a skin-tone modifier appended.
+    const value = await textarea(page).inputValue();
+    expect(value).toContain("👋");
+    expect(value).toContain("\u{1F3FD}"); // medium skin tone modifier
+  });
+
+  test("emoji picker: recently-used row remembers picks across reopen (§12)", async ({ page }) => {
+    await mockApi(page);
+    await openWidget(page);
+
+    await widget(page).locator(".attach").first().click();
+    await widget(page).locator(".emoji-search").fill("tada");
+    await widget(page).locator(".emoji-cell").first().click(); // 🎉
+
+    // Reopen with an empty search — the recently-used section shows the pick.
+    await widget(page).locator(".attach").first().click(); // close
+    await widget(page).locator(".attach").first().click(); // reopen
+    const recentLabel = widget(page).locator(".emoji-section-label").first();
+    await expect(recentLabel).toHaveText(/Recently used/i);
+    await expect(widget(page).locator(".emoji-grid").first().locator(".emoji-cell").first()).toContainText(
+      "🎉",
+    );
+  });
 });

@@ -27,6 +27,11 @@ const dictionaries: Record<string, Messages> = {
     attachment_remove: "Remove attachment",
     attachment_scanning: "Scanning…",
     attachment_blocked: "Blocked",
+    emoji_label: "Choose an emoji",
+    emoji_search: "Search emoji",
+    emoji_recent: "Recently used",
+    emoji_skin: "Skin tone",
+    emoji_none: "No emoji found",
   },
 };
 

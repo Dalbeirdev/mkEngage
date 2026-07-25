@@ -2,6 +2,13 @@ import { LitElement, css, html, nothing } from "lit";
 import { state } from "lit/decorators.js";
 
 import { ApiError, WidgetApi } from "./api.js";
+import {
+  EMOJI_CATEGORIES,
+  SKIN_SWATCHES,
+  searchEmoji,
+  withSkin,
+  type EmojiEntry,
+} from "./emoji-data.js";
 import { RTL_LOCALES, createTranslator } from "./i18n.js";
 import { SessionStorage } from "./storage.js";
 import { MessageStore } from "./store.js";
@@ -253,6 +260,94 @@ export class MkEngageWidget extends LitElement {
       display: none;
     }
 
+    .emoji-picker {
+      border-block-start: 1px solid var(--mk-border);
+      background: var(--mk-surface);
+      display: flex;
+      flex-direction: column;
+      max-block-size: 260px;
+    }
+
+    .emoji-top {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 10px;
+      border-block-end: 1px solid var(--mk-border);
+    }
+
+    .emoji-search {
+      flex: 1;
+      border: 1px solid var(--mk-border);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font: inherit;
+      font-size: 13px;
+      outline: none;
+      color: var(--mk-text);
+      background: var(--mk-surface);
+    }
+
+    .skin-row {
+      display: flex;
+      gap: 1px;
+    }
+
+    .skin-swatch {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 15px;
+      line-height: 1;
+      padding: 2px;
+      border-radius: 6px;
+      opacity: 0.55;
+    }
+
+    .skin-swatch.active,
+    .skin-swatch:hover {
+      opacity: 1;
+      background: rgb(0 0 0 / 0.06);
+    }
+
+    .emoji-scroll {
+      overflow-y: auto;
+      padding: 6px 8px 10px;
+    }
+
+    .emoji-section-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--mk-muted);
+      padding: 8px 4px 4px;
+      position: sticky;
+      inset-block-start: 0;
+      background: var(--mk-surface);
+    }
+
+    .emoji-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 1px;
+    }
+
+    .emoji-cell {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 20px;
+      line-height: 1;
+      padding: 5px 0;
+      border-radius: 8px;
+    }
+
+    .emoji-cell:hover,
+    .emoji-cell:focus-visible {
+      background: rgb(0 0 0 / 0.07);
+    }
+
     .attach {
       border: 1px solid var(--mk-border);
       border-radius: 8px;
@@ -349,6 +444,14 @@ export class MkEngageWidget extends LitElement {
 
   @state() private agentPresent = false;
 
+  @state() private emojiOpen = false;
+
+  @state() private emojiSearch = "";
+
+  @state() private emojiSkin = 0;
+
+  @state() private recentEmojis: string[] = [];
+
   @state() private pendingAttachment: AttachmentMeta | null = null;
 
   @state() private uploading = false;
@@ -386,6 +489,7 @@ export class MkEngageWidget extends LitElement {
     if (RTL_LOCALES.has((config.locale ?? "en").split("-")[0] ?? "")) {
       this.setAttribute("dir", "rtl");
     }
+    this.loadEmojiPrefs();
   }
 
   override disconnectedCallback(): void {
@@ -583,8 +687,64 @@ export class MkEngageWidget extends LitElement {
     }
   }
 
+  // ---- Emoji picker (§12) ----
+
+  /** Load recently-used emoji + skin-tone preference (best-effort). */
+  private loadEmojiPrefs(): void {
+    try {
+      const recent = localStorage.getItem("mk-emoji-recent");
+      if (recent !== null) this.recentEmojis = JSON.parse(recent) as string[];
+      const skin = localStorage.getItem("mk-emoji-skin");
+      if (skin !== null) this.emojiSkin = Math.min(5, Math.max(0, Number(skin) || 0));
+    } catch {
+      // storage blocked / private mode — the picker still works, just no memory
+    }
+  }
+
+  private toggleEmojiPicker(): void {
+    this.emojiOpen = !this.emojiOpen;
+    this.emojiSearch = "";
+    if (this.emojiOpen) {
+      void this.updateComplete.then(() =>
+        this.renderRoot.querySelector<HTMLInputElement>(".emoji-search")?.focus(),
+      );
+    }
+  }
+
+  private setSkinTone(tone: number): void {
+    this.emojiSkin = tone;
+    try {
+      localStorage.setItem("mk-emoji-skin", String(tone));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  private insertEmoji(char: string): void {
+    this.draft = `${this.draft}${char}`;
+    this.recordRecent(char);
+    this.notifyTyping();
+    void this.updateComplete.then(() => {
+      const ta = this.renderRoot.querySelector("textarea");
+      if (ta !== null) {
+        ta.focus();
+        ta.selectionStart = ta.selectionEnd = ta.value.length;
+      }
+    });
+  }
+
+  private recordRecent(char: string): void {
+    this.recentEmojis = [char, ...this.recentEmojis.filter((c) => c !== char)].slice(0, 24);
+    try {
+      localStorage.setItem("mk-emoji-recent", JSON.stringify(this.recentEmojis));
+    } catch {
+      /* ignore */
+    }
+  }
+
   private async submit(event: Event): Promise<void> {
     event.preventDefault();
+    this.emojiOpen = false;
     const body = this.draft.trim() || this.pendingAttachment?.file_name.trim() || "";
     if (body.length === 0 || this.sending) return;
 
@@ -793,6 +953,8 @@ export class MkEngageWidget extends LitElement {
             `
           : nothing}
 
+        ${this.emojiOpen ? this.renderEmojiPicker() : nothing}
+
         <form @submit=${(event: Event) => void this.submit(event)}>
           <input
             type="file"
@@ -801,6 +963,15 @@ export class MkEngageWidget extends LitElement {
             tabindex="-1"
             @change=${(event: Event) => void this.onFilePicked(event)}
           />
+          <button
+            class="attach"
+            type="button"
+            aria-label=${t("emoji_label")}
+            aria-expanded=${this.emojiOpen}
+            @click=${() => this.toggleEmojiPicker()}
+          >
+            😊
+          </button>
           <button
             class="attach"
             type="button"
@@ -834,6 +1005,89 @@ export class MkEngageWidget extends LitElement {
           </button>
         </form>
       </section>
+    `;
+  }
+
+  private renderEmojiPicker(): unknown {
+    const t = this.t;
+    const results = this.emojiSearch.trim() !== "" ? searchEmoji(this.emojiSearch) : null;
+
+    const cell = (entry: EmojiEntry) => {
+      const char = withSkin(entry, this.emojiSkin);
+      return html`
+        <button
+          type="button"
+          class="emoji-cell"
+          title=${entry.k.split(" ")[0] ?? ""}
+          @click=${() => this.insertEmoji(char)}
+        >
+          ${char}
+        </button>
+      `;
+    };
+
+    return html`
+      <div class="emoji-picker" role="dialog" aria-label=${t("emoji_label")}>
+        <div class="emoji-top">
+          <input
+            class="emoji-search"
+            type="text"
+            placeholder=${t("emoji_search")}
+            aria-label=${t("emoji_search")}
+            .value=${this.emojiSearch}
+            @input=${(e: Event) => {
+              this.emojiSearch = (e.target as HTMLInputElement).value;
+            }}
+          />
+          <div class="skin-row" role="group" aria-label=${t("emoji_skin")}>
+            ${SKIN_SWATCHES.map(
+              (swatch, i) => html`
+                <button
+                  type="button"
+                  class="skin-swatch ${this.emojiSkin === i ? "active" : ""}"
+                  aria-pressed=${this.emojiSkin === i}
+                  @click=${() => this.setSkinTone(i)}
+                >
+                  ${swatch}
+                </button>
+              `,
+            )}
+          </div>
+        </div>
+
+        <div class="emoji-scroll">
+          ${results !== null
+            ? results.length > 0
+              ? html`<div class="emoji-grid">${results.map(cell)}</div>`
+              : html`<p class="notice">${t("emoji_none")}</p>`
+            : html`
+                ${this.recentEmojis.length > 0
+                  ? html`
+                      <div class="emoji-section-label">${t("emoji_recent")}</div>
+                      <div class="emoji-grid">
+                        ${this.recentEmojis.map(
+                          (char) => html`
+                            <button
+                              type="button"
+                              class="emoji-cell"
+                              @click=${() => this.insertEmoji(char)}
+                            >
+                              ${char}
+                            </button>
+                          `,
+                        )}
+                      </div>
+                    `
+                  : nothing}
+                ${EMOJI_CATEGORIES.map(
+                  (category) => html`
+                    <div class="emoji-section-label">${category.label}</div>
+                    <div class="emoji-grid">${category.emojis.map(cell)}</div>
+                  `,
+                )}
+              `}
+        </div>
+      </div>
     `;
   }
 }
