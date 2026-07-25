@@ -258,7 +258,9 @@ export class MkEngageWidget extends LitElement {
     .branding {
       text-align: center;
       font-size: 11px;
-      color: var(--mk-muted);
+      /* Fixed dark slate (not --mk-muted) so "Powered by" clears WCAG AA (4.5:1)
+         on both the white panel surface and any host page bleed-through. */
+      color: #52525b;
       padding: 6px 0 9px;
     }
 
@@ -267,8 +269,11 @@ export class MkEngageWidget extends LitElement {
       font-weight: 600;
     }
 
-    .msg.pending {
-      opacity: 0.65;
+    /* Pending state is signalled by the "Sending" meta label — we must NOT dim
+       the bubble body, or the white-on-accent text drops below AA contrast
+       (Axe flagged 2.03:1 when the a11y scan caught a still-pending bubble). */
+    .msg.pending .meta {
+      opacity: 0.85;
     }
 
     .msg .meta {

@@ -250,6 +250,10 @@ test.describe("widget on a hostile host page", () => {
     await textarea(page).fill("a11y check");
     await textarea(page).press("Enter");
     await expect(widget(page).locator(".msg")).toHaveCount(1);
+    // Wait for the durable ack so Axe never scans a still-pending bubble
+    // (a pending bubble is a legitimate UI state, but its contrast is now
+    //  covered by the "no serious violations" guarantee regardless).
+    await expect(widget(page).locator(".msg.pending")).toHaveCount(0);
 
     // Scope to the widget (axe pierces its shadow tree). The demo is a
     // DELIBERATELY hostile host page — scanning the whole document would
