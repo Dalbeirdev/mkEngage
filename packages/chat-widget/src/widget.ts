@@ -179,12 +179,14 @@ export class MkEngageWidget extends LitElement {
     }
 
     textarea {
+      box-sizing: border-box;
       flex: 1;
       resize: none;
       border: 1px solid var(--mk-border);
       border-radius: 12px;
-      padding: 9px 12px;
+      padding: 10px 12px;
       font: inherit;
+      block-size: 40px;
       min-block-size: 40px;
       max-block-size: 96px;
       color: var(--mk-text);
