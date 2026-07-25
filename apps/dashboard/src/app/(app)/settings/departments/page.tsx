@@ -126,7 +126,7 @@ export default function DepartmentsPage() {
       )}
 
       {departments.data !== undefined && departments.data.length > 0 && (
-        <ul className="divide-y divide-zinc-200 rounded-xl border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+        <ul className="divide-y divide-zinc-200 rounded-2xl border border-zinc-200 bg-white shadow-sm dark:bg-zinc-900 dark:divide-zinc-800 dark:border-zinc-800">
           {departments.data.map((department) => (
             <li
               key={department.department_id}

@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { conversationListSchema, departmentListSchema } from "@/lib/api/schemas";
+import { card, emptyState, pageTitle } from "@/lib/ui";
 
 async function fetchConversations(departmentId: string) {
   const query = departmentId === "all" ? "" : `&department_id=${departmentId}`;
@@ -43,7 +44,7 @@ export default function ConversationsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
+        <h1 className={pageTitle}>{t("title")}</h1>
         {departments.data !== undefined && departments.data.length > 0 && (
           <div>
             <label htmlFor="dept-filter" className="sr-only">
@@ -77,25 +78,28 @@ export default function ConversationsPage() {
         </p>
       )}
 
-      {data !== undefined && data.length === 0 && (
-        <div className="rounded-xl border border-dashed border-zinc-300 p-10 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-          {t("empty")}
-        </div>
-      )}
+      {data !== undefined && data.length === 0 && <div className={emptyState}>{t("empty")}</div>}
 
       {data !== undefined && data.length > 0 && (
-        <ul className="divide-y divide-zinc-200 rounded-xl border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
-          {data.map((conversation) => (
-            <li key={conversation.conversation_id}>
-              <Link
-                href={`/conversations/${conversation.conversation_id}`}
-                className="flex items-center justify-between gap-4 px-4 py-3 text-sm hover:bg-zinc-50 focus-visible:ring-2 focus-visible:ring-indigo-500 dark:hover:bg-zinc-900"
-              >
-                <span className="min-w-0">
-                  <span className="block truncate font-medium">
-                    {conversation.contact_name ?? conversation.visitor_name ?? t("anonymousVisitor")}
+        <ul className={`divide-y divide-zinc-200 overflow-hidden dark:divide-zinc-800 ${card}`}>
+          {data.map((conversation) => {
+            const name =
+              conversation.contact_name ?? conversation.visitor_name ?? t("anonymousVisitor");
+            return (
+              <li key={conversation.conversation_id}>
+                <Link
+                  href={`/conversations/${conversation.conversation_id}`}
+                  className="flex items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-zinc-50 focus-visible:ring-2 focus-visible:ring-indigo-500 dark:hover:bg-zinc-800/50"
+                >
+                  <span
+                    aria-hidden
+                    className="grid size-9 shrink-0 place-items-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300"
+                  >
+                    {name.charAt(0).toUpperCase()}
                   </span>
-                  <span className="block truncate text-xs text-zinc-500">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium">{name}</span>
+                    <span className="block truncate text-xs text-zinc-500">
                     {conversation.department_name !== null && (
                       <span className="me-2 rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
                         {conversation.department_name}
@@ -121,8 +125,9 @@ export default function ConversationsPage() {
                   </span>
                 </span>
               </Link>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

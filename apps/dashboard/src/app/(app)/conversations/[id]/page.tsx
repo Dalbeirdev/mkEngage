@@ -247,7 +247,7 @@ export default function ConversationThreadPage({
         role="log"
         aria-label={t("threadTitle")}
         aria-live="polite"
-        className="flex-1 space-y-2 overflow-y-auto rounded-xl border border-zinc-200 p-4 dark:border-zinc-800"
+        className="flex-1 space-y-2 overflow-y-auto rounded-2xl border border-zinc-200 bg-white shadow-sm dark:bg-zinc-900 p-4 dark:border-zinc-800"
       >
         {data?.data.map((message) => (
           <div

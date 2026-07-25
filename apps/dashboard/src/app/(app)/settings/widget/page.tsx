@@ -90,7 +90,7 @@ export default function WidgetSettingsPage() {
   ].join("\n");
 
   const panelClass =
-    "space-y-3 rounded-xl border border-zinc-200 p-5 dark:border-zinc-800";
+    "space-y-3 rounded-2xl border border-zinc-200 bg-white shadow-sm dark:bg-zinc-900 p-5 dark:border-zinc-800";
   const preClass =
     "overflow-x-auto rounded-md bg-zinc-100 p-3 font-mono text-xs leading-relaxed dark:bg-zinc-900";
 

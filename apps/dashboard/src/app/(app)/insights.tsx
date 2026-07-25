@@ -54,21 +54,21 @@ export function Insights() {
       <p className="text-sm text-zinc-500">{t("range", { from: data.range.from, to: data.range.to })}</p>
 
       {/* Metric cards */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {cards.map((c) => (
           <div
             key={c.label}
-            className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800"
+            className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
           >
             <div className="text-xs font-medium tracking-wide text-zinc-500 uppercase">{c.label}</div>
-            <div className="mt-1 text-2xl font-bold tabular-nums">{c.value}</div>
+            <div className="mt-2 text-3xl font-bold tracking-tight tabular-nums">{c.value}</div>
           </div>
         ))}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Conversations per day */}
-        <section className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
+        <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="mb-3 text-sm font-semibold">{t("perDay")}</h2>
           <div className="flex h-32 items-end gap-0.5" role="img" aria-label={t("perDay")}>
             {data.daily.map((d) => (
@@ -87,7 +87,7 @@ export function Insights() {
         </section>
 
         {/* By department */}
-        <section className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
+        <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="mb-3 text-sm font-semibold">{t("byDepartment")}</h2>
           {data.by_department.length === 0 ? (
             <p className="text-sm text-zinc-500">{t("empty")}</p>

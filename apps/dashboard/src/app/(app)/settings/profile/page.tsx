@@ -34,7 +34,7 @@ export default async function ProfilePage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
-      <dl className="divide-y divide-zinc-200 rounded-xl border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+      <dl className="divide-y divide-zinc-200 rounded-2xl border border-zinc-200 bg-white shadow-sm dark:bg-zinc-900 dark:divide-zinc-800 dark:border-zinc-800">
         {rows.map(([label, value]) => (
           <div key={label} className="grid grid-cols-3 gap-4 px-4 py-3 text-sm">
             <dt className="font-medium text-zinc-600 dark:text-zinc-400">{label}</dt>

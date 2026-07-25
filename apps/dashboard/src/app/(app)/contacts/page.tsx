@@ -44,7 +44,7 @@ export default function ContactsPage() {
       )}
 
       {data !== undefined && data.length > 0 && (
-        <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
+        <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm dark:bg-zinc-900 dark:border-zinc-800">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-zinc-200 text-start dark:border-zinc-800">
