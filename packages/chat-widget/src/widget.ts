@@ -172,8 +172,9 @@ export class MkEngageWidget extends LitElement {
 
     form {
       display: flex;
-      gap: 8px;
-      padding: 10px;
+      align-items: flex-end;
+      gap: 4px;
+      padding: 8px 10px;
       border-block-start: 1px solid var(--mk-border);
     }
 
@@ -181,20 +182,35 @@ export class MkEngageWidget extends LitElement {
       flex: 1;
       resize: none;
       border: 1px solid var(--mk-border);
-      border-radius: 8px;
-      padding: 8px 10px;
+      border-radius: 12px;
+      padding: 9px 12px;
       font: inherit;
+      min-block-size: 40px;
       max-block-size: 96px;
+      color: var(--mk-text);
+      background: var(--mk-surface);
+    }
+
+    textarea:focus-visible {
+      border-color: var(--mk-accent);
+      outline: none;
     }
 
     .send {
+      flex: 0 0 auto;
       border: none;
-      border-radius: 8px;
+      border-radius: 12px;
       background: var(--mk-accent);
       color: var(--mk-accent-contrast);
-      padding: 0 14px;
+      block-size: 40px;
+      padding-inline: 16px;
       font-weight: 600;
       cursor: pointer;
+      transition: background-color 0.15s ease;
+    }
+
+    .send:hover:not(:disabled) {
+      filter: brightness(1.08);
     }
 
     .send:disabled {
@@ -349,16 +365,31 @@ export class MkEngageWidget extends LitElement {
     }
 
     .attach {
-      border: 1px solid var(--mk-border);
-      border-radius: 8px;
-      background: var(--mk-surface);
+      flex: 0 0 auto;
+      inline-size: 38px;
+      block-size: 40px;
+      display: grid;
+      place-items: center;
+      border: none;
+      border-radius: 10px;
+      background: transparent;
       cursor: pointer;
-      padding: 0 10px;
-      font-size: 16px;
+      font-size: 19px;
+      line-height: 1;
+      opacity: 0.75;
+      transition:
+        background-color 0.15s ease,
+        opacity 0.15s ease;
+    }
+
+    .attach:hover:not(:disabled),
+    .attach[aria-expanded="true"] {
+      opacity: 1;
+      background: rgb(0 0 0 / 0.06);
     }
 
     .attach:disabled {
-      opacity: 0.5;
+      opacity: 0.4;
       cursor: default;
     }
 
