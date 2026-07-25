@@ -76,6 +76,11 @@
     "unassigned": "Unassigned",
     "assignToMe": "Assign to me",
     "assignAuto": "Auto-assign",
+    "close": "Close",
+    "reopen": "Reopen",
+    "internalNotes": "Internal notes",
+    "notePlaceholder": "Add a private note (not sent to the visitor)…",
+    "addNote": "Add",
     "allDepartments": "All departments",
     "filterLabel": "Filter by department"
   },

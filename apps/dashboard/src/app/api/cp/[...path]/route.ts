@@ -13,6 +13,7 @@ import { getSessionToken } from "@/lib/auth/session";
 const ALLOWED = [
   /^conversations(\/[0-9a-f-]{36})?(\/messages)?$/,
   /^conversations\/[0-9a-f-]{36}\/assign$/,
+  /^conversations\/[0-9a-f-]{36}\/notes$/,
   /^conversations\/[0-9a-f-]{36}\/attachments(\/[0-9a-f-]{36}\/download)?$/,
   /^me\/availability$/,
   /^insights\/overview$/,

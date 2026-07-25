@@ -8,6 +8,7 @@ use App\Http\Controllers\Agent\AvailabilityController;
 use App\Http\Controllers\Agent\ChatbotController;
 use App\Http\Controllers\Agent\ContactController;
 use App\Http\Controllers\Agent\ConversationController;
+use App\Http\Controllers\Agent\ConversationNoteController;
 use App\Http\Controllers\Agent\DepartmentController;
 use App\Http\Controllers\Agent\InsightsController;
 use App\Http\Controllers\Agent\KnowledgeController;
@@ -60,6 +61,8 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
         Route::get('/conversations/{conversation}/messages', [AgentMessageController::class, 'index']);
         Route::post('/conversations/{conversation}/messages', [AgentMessageController::class, 'store']);
         Route::post('/conversations/{conversation}/assign', [ConversationController::class, 'assign']);
+        Route::get('/conversations/{conversation}/notes', [ConversationNoteController::class, 'index']);
+        Route::post('/conversations/{conversation}/notes', [ConversationNoteController::class, 'store']);
         Route::post('/conversations/{conversation}/attachments', [AgentAttachmentController::class, 'store']);
         Route::get('/conversations/{conversation}/attachments/{attachment}/download', [AgentAttachmentController::class, 'download']);
 

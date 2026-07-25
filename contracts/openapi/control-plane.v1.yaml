@@ -304,6 +304,46 @@ paths:
         "4XX": { $ref: "#/components/responses/Problem" }
         default: { $ref: "#/components/responses/Problem" }
 
+  /conversations/{conversation_id}/notes:
+    parameters: [ { $ref: "#/components/parameters/conversationId" } ]
+    get:
+      tags: [conversations]
+      operationId: listNotes
+      summary: Internal agent notes (private to the org; never delivered to the visitor, never part of the message sequence)
+      responses:
+        "200":
+          description: Notes, oldest first
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Note" } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+        default: { $ref: "#/components/responses/Problem" }
+    post:
+      tags: [conversations]
+      operationId: addNote
+      summary: Add an internal note to a conversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, maxLength: 8000 }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Note" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+        default: { $ref: "#/components/responses/Problem" }
+
   /conversations/{conversation_id}/attachments:
     parameters: [ { $ref: "#/components/parameters/conversationId" } ]
     post:
@@ -741,6 +781,18 @@ components:
           type: string
           enum: [pending, clean, quarantined]
           description: Quarantine-first (§14) — files are born pending; only clean files are downloadable.
+
+    Note:
+      type: object
+      description: Internal agent note — private to the org, never on the visitor surface.
+      required: [note_id, conversation_id, author_id, body, created_at]
+      properties:
+        note_id: { type: string, format: uuid }
+        conversation_id: { type: string, format: uuid }
+        author_id: { type: string, format: uuid }
+        author_name: { type: [string, "null"] }
+        body: { type: string }
+        created_at: { type: [string, "null"], format: date-time }
 
     Availability:
       type: object

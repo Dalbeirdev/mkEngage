@@ -11,9 +11,12 @@ import {
   chatMessageSchema,
   conversationSchema,
   messageListSchema,
+  noteListSchema,
+  noteSchema,
   type Attachment,
 } from "@/lib/api/schemas";
 import { createTypingNotifier, type TypingNotifier } from "@/lib/typing";
+import { btnSmall } from "@/lib/ui";
 
 async function fetchMessages(conversationId: string) {
   const response = await fetch(`/api/cp/conversations/${conversationId}/messages`, {
@@ -63,6 +66,34 @@ async function assignConversation(conversationId: string, assignee: "me" | "auto
   });
   if (!response.ok) throw new Error(`Assign failed (${response.status})`);
   return conversationSchema.parse(await response.json());
+}
+
+async function setStatus(conversationId: string, status: "open" | "closed") {
+  const response = await fetch(`/api/cp/conversations/${conversationId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+  if (!response.ok) throw new Error(`Status change failed (${response.status})`);
+  return conversationSchema.parse(await response.json());
+}
+
+async function fetchNotes(conversationId: string) {
+  const response = await fetch(`/api/cp/conversations/${conversationId}/notes`, {
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error(`Failed to load notes (${response.status})`);
+  return noteListSchema.parse(await response.json()).data;
+}
+
+async function addNote(conversationId: string, body: string) {
+  const response = await fetch(`/api/cp/conversations/${conversationId}/notes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ body }),
+  });
+  if (!response.ok) throw new Error(`Add note failed (${response.status})`);
+  return noteSchema.parse(await response.json());
 }
 
 async function openAttachment(conversationId: string, attachment: Attachment): Promise<void> {
@@ -121,6 +152,28 @@ export default function ConversationThreadPage({
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["conversation", id, "meta"] });
       void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    },
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: (status: "open" | "closed") => setStatus(id, status),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["conversation", id, "meta"] });
+      void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    },
+  });
+
+  const notes = useQuery({
+    queryKey: ["conversation", id, "notes"],
+    queryFn: () => fetchNotes(id),
+  });
+
+  const [noteDraft, setNoteDraft] = useState("");
+  const noteMutation = useMutation({
+    mutationFn: (body: string) => addNote(id, body),
+    onSuccess: () => {
+      setNoteDraft("");
+      void queryClient.invalidateQueries({ queryKey: ["conversation", id, "notes"] });
     },
   });
 
@@ -224,10 +277,29 @@ export default function ConversationThreadPage({
             type="button"
             disabled={assignMutation.isPending}
             onClick={() => assignMutation.mutate("me")}
-            className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-medium hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className={btnSmall}
           >
             {t("assignToMe")}
           </button>
+          {conversation?.status === "closed" ? (
+            <button
+              type="button"
+              disabled={statusMutation.isPending}
+              onClick={() => statusMutation.mutate("open")}
+              className={btnSmall}
+            >
+              {t("reopen")}
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={statusMutation.isPending}
+              onClick={() => statusMutation.mutate("closed")}
+              className={btnSmall}
+            >
+              {t("close")}
+            </button>
+          )}
         </div>
       </div>
 
@@ -285,6 +357,55 @@ export default function ConversationThreadPage({
           </div>
         ))}
       </div>
+
+      {/* Internal notes — private to agents, never sent to the visitor. */}
+      <section className="rounded-xl border border-amber-300/60 bg-amber-50/60 p-3 dark:border-amber-500/25 dark:bg-amber-500/5">
+        <h2 className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-amber-800 dark:text-amber-300">
+          <span aria-hidden>🔒</span>
+          {t("internalNotes")}
+        </h2>
+        {notes.data !== undefined && notes.data.length > 0 && (
+          <ul className="mb-2 max-h-28 space-y-1.5 overflow-y-auto">
+            {notes.data.map((note) => (
+              <li key={note.note_id} className="text-sm">
+                <span className="font-medium text-amber-900 dark:text-amber-200">
+                  {note.author_name ?? "Agent"}:
+                </span>{" "}
+                <span className="whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">
+                  {note.body}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            const body = noteDraft.trim();
+            if (body.length > 0 && !noteMutation.isPending) noteMutation.mutate(body);
+          }}
+          className="flex gap-2"
+        >
+          <label htmlFor="note" className="sr-only">
+            {t("internalNotes")}
+          </label>
+          <input
+            id="note"
+            value={noteDraft}
+            onChange={(event) => setNoteDraft(event.target.value)}
+            placeholder={t("notePlaceholder")}
+            maxLength={8000}
+            className="flex-1 rounded-md border border-amber-300/70 bg-white px-2.5 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:border-amber-500/30 dark:bg-zinc-900"
+          />
+          <button
+            type="submit"
+            disabled={noteMutation.isPending || noteDraft.trim().length === 0}
+            className="rounded-md bg-amber-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-amber-500 disabled:opacity-60"
+          >
+            {t("addNote")}
+          </button>
+        </form>
+      </section>
 
       <div aria-hidden className="h-5 text-xs text-zinc-500 italic">
         {visitorTyping ? t("visitorTyping") : null}

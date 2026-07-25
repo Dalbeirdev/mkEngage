@@ -31,6 +31,19 @@ export const availabilitySchema = z.object({
 
 export type Availability = z.infer<typeof availabilitySchema>;
 
+export const noteSchema = z.object({
+  note_id: z.uuid(),
+  conversation_id: z.uuid(),
+  author_id: z.uuid(),
+  author_name: z.string().nullable(),
+  body: z.string(),
+  created_at: z.string().nullable(),
+});
+
+export type Note = z.infer<typeof noteSchema>;
+
+export const noteListSchema = z.object({ data: z.array(noteSchema) });
+
 export const insightsOverviewSchema = z.object({
   range: z.object({ from: z.string(), to: z.string() }),
   conversations: z.object({
