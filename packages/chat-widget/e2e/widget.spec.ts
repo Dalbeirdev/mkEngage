@@ -432,6 +432,12 @@ test.describe("widget on a hostile host page", () => {
     await textarea(page).fill("hi");
     await textarea(page).press("Enter");
     await expect(widget(page).locator(".msg.visitor")).toContainText("hi");
+    // Wait for the DURABLE ack (not the optimistic bubble) before seeding the
+    // bot reply — otherwise the reply can win sequence 1 and the widget's
+    // after_sequence cursor skips past it forever (same race as the polling
+    // test above; it bit on slow CI runners).
+    await expect(widget(page).locator(".msg.pending")).toHaveCount(0);
+    await expect.poll(() => state.messages.length).toBe(1);
 
     // The flow bot answers with a rich options message.
     const message = makeMessage(state, "chatbot", JSON.stringify({
