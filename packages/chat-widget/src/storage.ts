@@ -19,6 +19,9 @@ export interface StoredSession {
   identifiedExternalId?: string | null;
   /** Pre-chat profile already submitted (never re-ask, Phase 23). */
   profiled?: boolean;
+  /** Cached appearance + branding for returning visitors (Phase 26). */
+  appearance?: import("./types.js").WidgetAppearance;
+  showBranding?: boolean;
 }
 
 function openDb(): Promise<IDBDatabase> {

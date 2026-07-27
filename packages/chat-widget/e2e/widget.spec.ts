@@ -37,6 +37,9 @@ interface MockState {
   triggers: Array<Record<string, unknown>>;
   adoptConversation: string | null;
   heartbeatCalls: Array<Record<string, unknown>>;
+  /** Phase 26 knobs: org-managed appearance + server branding flag. */
+  appearance: Record<string, unknown> | null;
+  showBranding: boolean;
 }
 
 function makeMessage(state: MockState, senderType: string, body: string): MockMessage {
@@ -72,6 +75,8 @@ async function mockApi(page: Page): Promise<MockState> {
     triggers: [],
     adoptConversation: null,
     heartbeatCalls: [],
+    appearance: null,
+    showBranding: true,
   };
 
   await page.route("http://127.0.0.1:8000/**", async (route) => {
@@ -104,6 +109,8 @@ async function mockApi(page: Page): Promise<MockState> {
         ...(state.prechat !== null ? { prechat: state.prechat } : {}),
         open: state.open,
         triggers: state.triggers,
+        ...(state.appearance !== null ? { appearance: state.appearance } : {}),
+        show_branding: state.showBranding,
       });
     }
 
@@ -416,6 +423,38 @@ test.describe("widget on a hostile host page", () => {
       timeout: 10_000,
     });
     expect(state.heartbeatCalls.length).toBeGreaterThanOrEqual(1);
+  });
+
+  test("org appearance restyles the widget and white-label hides branding (Phase 26)", async ({ page }) => {
+    const state = await mockApi(page);
+    state.appearance = {
+      preset: "midnight",
+      accent: "#e11d48",
+      logo_url: "https://cdn.example.test/logo.png",
+      title: "TechPIO",
+      subtitle: "We are online!",
+    };
+    state.showBranding = false; // paid plan
+
+    await openWidget(page);
+
+    // Server appearance wins over embed config: dark preset, brand color,
+    // logo, title — and NO "Powered by" for white-label orgs.
+    await expect(widget(page)).toHaveAttribute("data-theme", "dark");
+    await expect(widget(page).locator("header h2")).toHaveText("TechPIO");
+    await expect(widget(page).locator(".status")).toContainText("We are online!");
+    await expect(widget(page).locator(".avatar img")).toHaveAttribute(
+      "src",
+      "https://cdn.example.test/logo.png",
+    );
+    await expect(widget(page).locator(".send")).toHaveCSS("background-color", "rgb(225, 29, 72)");
+    await expect(widget(page).locator(".branding")).toHaveCount(0);
+  });
+
+  test("free orgs always show branding — the embed page cannot hide it (Phase 26)", async ({ page }) => {
+    await mockApi(page); // showBranding defaults to true
+    await openWidget(page);
+    await expect(widget(page).locator(".branding")).toContainText("mkEngage");
   });
 
   test("dark theme applies the premium palette and passes Axe", async ({ page }) => {

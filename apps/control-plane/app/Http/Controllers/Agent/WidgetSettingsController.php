@@ -13,6 +13,7 @@ use App\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 /**
  * Widget installation settings (§2 widget configuration).
@@ -46,7 +47,31 @@ final class WidgetSettingsController extends Controller
                 'schedule' => is_array($hours['schedule'] ?? null) ? $hours['schedule'] : (object) [],
             ],
             'triggers' => is_array($settings['triggers'] ?? null) ? $settings['triggers'] : [],
+            'appearance' => $this->appearanceContract($settings),
+            // Read-only plan flag: branding removal is a paid entitlement,
+            // toggled by billing — never by this endpoint.
+            'white_label' => $organization->white_label,
         ]);
+    }
+
+    /** @var list<string> */
+    public const APPEARANCE_PRESETS = ['classic', 'gradient', 'midnight', 'sunset', 'emerald'];
+
+    /**
+     * @param  array<mixed>  $settings
+     * @return array<string, mixed>
+     */
+    private function appearanceContract(array $settings): array
+    {
+        $appearance = is_array($settings['appearance'] ?? null) ? $settings['appearance'] : [];
+
+        return [
+            'preset' => is_string($appearance['preset'] ?? null) ? $appearance['preset'] : 'gradient',
+            'accent' => is_string($appearance['accent'] ?? null) ? $appearance['accent'] : null,
+            'logo_url' => is_string($appearance['logo_url'] ?? null) ? $appearance['logo_url'] : null,
+            'title' => is_string($appearance['title'] ?? null) ? $appearance['title'] : null,
+            'subtitle' => is_string($appearance['subtitle'] ?? null) ? $appearance['subtitle'] : null,
+        ];
     }
 
     /**
@@ -76,6 +101,13 @@ final class WidgetSettingsController extends Controller
             'triggers.*.seconds' => ['required_if:triggers.*.type,time_on_page', 'integer', 'min:0', 'max:3600'],
             'triggers.*.url_pattern' => ['required_if:triggers.*.type,url_match', 'string', 'max:200'],
             'triggers.*.message' => ['required', 'string', 'max:500'],
+            // Widget appearance (Phase 26): design preset + brand overrides.
+            'appearance' => ['sometimes', 'array:preset,accent,logo_url,title,subtitle'],
+            'appearance.preset' => ['required_with:appearance', Rule::in(self::APPEARANCE_PRESETS)],
+            'appearance.accent' => ['sometimes', 'nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'appearance.logo_url' => ['sometimes', 'nullable', 'url', 'max:2048'],
+            'appearance.title' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'appearance.subtitle' => ['sometimes', 'nullable', 'string', 'max:100'],
         ]);
 
         $organization = $this->organization($context);
@@ -98,6 +130,16 @@ final class WidgetSettingsController extends Controller
 
         if (array_key_exists('triggers', $validated)) {
             $settings['triggers'] = $validated['triggers'];
+        }
+
+        if (array_key_exists('appearance', $validated)) {
+            $settings['appearance'] = [
+                'preset' => $validated['appearance']['preset'],
+                'accent' => $validated['appearance']['accent'] ?? null,
+                'logo_url' => $validated['appearance']['logo_url'] ?? null,
+                'title' => $validated['appearance']['title'] ?? null,
+                'subtitle' => $validated['appearance']['subtitle'] ?? null,
+            ];
         }
 
         $organization->settings = $settings;

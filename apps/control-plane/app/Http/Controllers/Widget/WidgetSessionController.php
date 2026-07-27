@@ -78,6 +78,19 @@ final class WidgetSessionController extends Controller
             fn (mixed $trigger): bool => is_array($trigger) && ($trigger['enabled'] ?? false) === true,
         ));
 
+        // Phase 26: org-managed appearance + SERVER-authoritative branding.
+        // Branding removal is a paid entitlement (white_label) — the embed
+        // page cannot turn it off, only this flag can.
+        $appearance = is_array($settings['appearance'] ?? null) ? $settings['appearance'] : [];
+        $session['appearance'] = [
+            'preset' => is_string($appearance['preset'] ?? null) ? $appearance['preset'] : 'gradient',
+            'accent' => is_string($appearance['accent'] ?? null) ? $appearance['accent'] : null,
+            'logo_url' => is_string($appearance['logo_url'] ?? null) ? $appearance['logo_url'] : null,
+            'title' => is_string($appearance['title'] ?? null) ? $appearance['title'] : null,
+            'subtitle' => is_string($appearance['subtitle'] ?? null) ? $appearance['subtitle'] : null,
+        ];
+        $session['show_branding'] = ! $organization->white_label;
+
         return response()->json($session, 201);
     }
 }

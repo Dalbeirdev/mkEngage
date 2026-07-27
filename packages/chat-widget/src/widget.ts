@@ -882,6 +882,12 @@ export class MkEngageWidget extends LitElement {
   /** Proactive trigger message shown as a bot bubble when a rule fires (Phase 24). */
   @state() private triggerMessage: string | null = null;
 
+  /** Org-managed appearance (Phase 26); wins over embed config. */
+  @state() private appearance: import("./types.js").WidgetAppearance | null = null;
+
+  /** Server-authoritative (Phase 26): only white-label plans hide branding. */
+  @state() private showBranding = true;
+
   private triggers: import("./types.js").TriggerConfig[] = [];
 
   private triggerTimers: Array<ReturnType<typeof setTimeout>> = [];
@@ -935,6 +941,82 @@ export class MkEngageWidget extends LitElement {
       this.removeAttribute("data-theme");
     }
     this.loadEmojiPrefs();
+  }
+
+  /** Preset palettes (Phase 26): theme + accent pair per design. */
+  private static readonly PRESETS: Record<
+    string,
+    { dark: boolean; accent: string; accent2: string; flatHeader: boolean }
+  > = {
+    gradient: { dark: false, accent: "#4f46e5", accent2: "#6366f1", flatHeader: false },
+    classic: { dark: false, accent: "#4f46e5", accent2: "#4f46e5", flatHeader: true },
+    midnight: { dark: true, accent: "#4f46e5", accent2: "#6366f1", flatHeader: true },
+    sunset: { dark: false, accent: "#ea580c", accent2: "#f97316", flatHeader: false },
+    emerald: { dark: false, accent: "#059669", accent2: "#10b981", flatHeader: false },
+  };
+
+  /** WCAG relative luminance of a #rrggbb color. */
+  private luminance(hex: string): number {
+    const channel = (index: number): number => {
+      const value = parseInt(hex.slice(index, index + 2), 16) / 255;
+      return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    };
+    return 0.2126 * channel(1) + 0.7152 * channel(3) + 0.0722 * channel(5);
+  }
+
+  /**
+   * Apply the org's appearance: preset palette, custom accent (with a
+   * contrast-safe text color for arbitrary brand colors), logo, and the
+   * server-side branding flag.
+   */
+  private applyAppearance(
+    appearance: import("./types.js").WidgetAppearance | undefined,
+    showBranding: boolean | undefined,
+  ): void {
+    this.showBranding = showBranding !== false;
+    if (appearance === undefined) return;
+    this.appearance = appearance;
+
+    const preset = MkEngageWidget.PRESETS[appearance.preset] ?? MkEngageWidget.PRESETS["gradient"]!;
+
+    if (preset.dark || this.config?.theme === "dark") {
+      this.setAttribute("data-theme", "dark");
+    } else {
+      this.removeAttribute("data-theme");
+    }
+
+    const accent = appearance.accent ?? preset.accent;
+    const accent2 = appearance.accent !== null ? accent : preset.accent2;
+    // AA-safe text on the accent: light brand colors get near-black text.
+    const contrast = this.luminance(accent) > 0.45 ? "#18181b" : "#ffffff";
+
+    this.style.setProperty("--mk-accent", accent);
+    this.style.setProperty("--mk-accent-2", accent2);
+    this.style.setProperty("--mk-accent-contrast", contrast);
+    this.style.setProperty(
+      "--mk-time",
+      contrast === "#ffffff" ? "rgb(255 255 255 / 0.85)" : "rgb(24 24 27 / 0.75)",
+    );
+    if (preset.flatHeader && !preset.dark) {
+      this.style.setProperty("--mk-header-bg", accent);
+      this.style.setProperty("--mk-header-edge", accent);
+    } else if (!preset.dark) {
+      this.style.setProperty("--mk-header-bg", `linear-gradient(135deg, ${accent}, ${accent2})`);
+      this.style.setProperty("--mk-header-edge", accent);
+    }
+  }
+
+  /** Effective branding: org appearance > embed config > i18n default. */
+  private get widgetTitle(): string {
+    return this.appearance?.title ?? this.config?.title ?? this.t("title");
+  }
+
+  private get widgetSubtitle(): string {
+    return this.appearance?.subtitle ?? this.config?.subtitle ?? this.t("subtitle_default");
+  }
+
+  private get widgetAvatarUrl(): string | undefined {
+    return this.appearance?.logo_url ?? this.config?.avatarUrl;
   }
 
   /** Grow the composer with its content (40px..96px, then inner scroll). */
@@ -1198,6 +1280,8 @@ export class MkEngageWidget extends LitElement {
       // Returning visitor: never re-ask the pre-chat form (Phase 23).
       this.profiled = stored.profiled === true;
       this.prechat = null;
+      // Cached appearance/branding keep returning visitors on-brand (Phase 26).
+      this.applyAppearance(stored.appearance, stored.showBranding);
       await this.applyIdentity(stored);
       return;
     }
@@ -1213,12 +1297,15 @@ export class MkEngageWidget extends LitElement {
         : null;
     this.orgOpen = session.open !== false;
     this.triggers = session.triggers ?? [];
+    this.applyAppearance(session.appearance, session.show_branding);
 
     const fresh = {
       visitorId: session.visitor_id,
       token: session.token,
       conversationId: null,
       lastSeenSequence: 0,
+      ...(session.appearance !== undefined ? { appearance: session.appearance } : {}),
+      ...(session.show_branding !== undefined ? { showBranding: session.show_branding } : {}),
     };
     await this.sessionStore.save(fresh);
     await this.applyIdentity(fresh);
@@ -1553,27 +1640,27 @@ export class MkEngageWidget extends LitElement {
     const t = this.t;
 
     return html`
-      <section class="panel" role="dialog" aria-label=${this.config?.title ?? t("title")}>
+      <section class="panel" role="dialog" aria-label=${this.widgetTitle}>
         <header>
           <button class="close" aria-label=${t("close_label")} @click=${() => void this.toggle()}>
             ‹
           </button>
           <span class="avatar" aria-hidden>
-            ${this.config?.avatarUrl
-              ? html`<img src=${this.config.avatarUrl} alt="" />`
+            ${this.widgetAvatarUrl
+              ? html`<img src=${this.widgetAvatarUrl} alt="" />`
               : html`<span class="avatar-fallback">💬</span>`}
             ${this.agentPresent || this.connection === "connected"
               ? html`<span class="avatar-dot"></span>`
               : nothing}
           </span>
           <div class="header-text">
-            <h2>${this.config?.title ?? t("title")}</h2>
+            <h2>${this.widgetTitle}</h2>
             <span class="status" role="status">
               ${this.connection !== "connected"
                 ? t(this.connection === "offline" ? "offline" : "reconnecting")
                 : this.agentPresent
                   ? html`<span class="online-dot"></span>${t("online")}`
-                  : (this.config?.subtitle ?? t("subtitle_default"))}
+                  : this.widgetSubtitle}
             </span>
           </div>
         </header>
@@ -1586,7 +1673,7 @@ export class MkEngageWidget extends LitElement {
             ? html`
                 ${this.config?.greeting
                   ? html`
-                      <div class="sender-label">${this.config?.title ?? t("title")}</div>
+                      <div class="sender-label">${this.widgetTitle}</div>
                       ${this.config.greeting
                         .split(/\n+/)
                         .filter((line) => line.trim() !== "")
@@ -1668,7 +1755,7 @@ export class MkEngageWidget extends LitElement {
               ? html`<div class="row visitor">${bubble}</div>`
               : html`
                   ${startsRemoteGroup
-                    ? html`<div class="sender-label">${this.config?.title ?? t("title")}</div>`
+                    ? html`<div class="sender-label">${this.widgetTitle}</div>`
                     : nothing}
                   <div class="row remote">${this.renderMsgAvatar()}${bubble}</div>
                 `;
@@ -1788,9 +1875,9 @@ export class MkEngageWidget extends LitElement {
           </button>
         </form>
 
-        ${this.config?.hideBranding
-          ? nothing
-          : html`<div class="branding">${t("powered_by")} <strong>mkEngage</strong></div>`}
+        ${this.showBranding
+          ? html`<div class="branding">${t("powered_by")} <strong>mkEngage</strong></div>`
+          : nothing}
       </section>
     `;
   }
@@ -1902,8 +1989,8 @@ export class MkEngageWidget extends LitElement {
   /** Small circular bot/agent avatar shown beside remote messages. */
   private renderMsgAvatar(): unknown {
     return html`<span class="msg-avatar" aria-hidden>
-      ${this.config?.avatarUrl
-        ? html`<img src=${this.config.avatarUrl} alt="" />`
+      ${this.widgetAvatarUrl
+        ? html`<img src=${this.widgetAvatarUrl} alt="" />`
         : html`<span>💬</span>`}
     </span>`;
   }

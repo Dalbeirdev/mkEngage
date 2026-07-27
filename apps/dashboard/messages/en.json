@@ -180,7 +180,22 @@
     "triggerMessage": "Trigger message",
     "triggerMessagePlaceholder": "Hi! Can I help you with anything?",
     "triggerRemove": "Remove",
-    "triggerAdd": "+ Add trigger"
+    "triggerAdd": "+ Add trigger",
+    "appearanceTitle": "Design & branding",
+    "appearanceHelp": "Pick a design for your website's chat widget, then customize the color and logo. Changes apply the next time the widget loads.",
+    "preset_gradient": "Gradient",
+    "preset_classic": "Classic",
+    "preset_midnight": "Midnight",
+    "preset_sunset": "Sunset",
+    "preset_emerald": "Emerald",
+    "accentColor": "Brand color",
+    "accentReset": "Reset to preset color",
+    "logoUrl": "Logo URL",
+    "widgetTitle": "Title",
+    "widgetSubtitle": "Subtitle",
+    "brandingHidden": "White-label plan: \"Powered by mkEngage\" is hidden on your widget.",
+    "brandingShown": "Free plan shows \"Powered by mkEngage\" on the widget. Upgrade to white-label to remove it.",
+    "appearanceSave": "Save design"
   },
   "departments": {
     "title": "Departments",

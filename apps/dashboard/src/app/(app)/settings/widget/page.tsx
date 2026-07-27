@@ -7,9 +7,24 @@ import { useTranslations } from "next-intl";
 import {
   rotatedSecretSchema,
   widgetSettingsSchema,
+  type Appearance,
   type Trigger,
   type WidgetSettings,
 } from "@/lib/api/schemas";
+
+/** Design gallery (Phase 26): header/surface swatches drawn per preset. */
+const PRESETS: Array<{
+  id: Appearance["preset"];
+  header: string;
+  surface: string;
+  bubble: string;
+}> = [
+  { id: "gradient", header: "linear-gradient(135deg,#4f46e5,#6366f1)", surface: "#ffffff", bubble: "#f1f2f6" },
+  { id: "classic", header: "#4f46e5", surface: "#ffffff", bubble: "#f1f2f6" },
+  { id: "midnight", header: "#27272a", surface: "#0c0c0e", bubble: "#2e2e33" },
+  { id: "sunset", header: "linear-gradient(135deg,#ea580c,#f97316)", surface: "#ffffff", bubble: "#fef3ec" },
+  { id: "emerald", header: "linear-gradient(135deg,#059669,#10b981)", surface: "#ffffff", bubble: "#ecfdf5" },
+];
 
 async function fetchSettings() {
   const response = await fetch("/api/cp/organization/widget-settings", { cache: "no-store" });
@@ -37,9 +52,10 @@ function formatRanges(ranges: Array<[string, string]> | undefined): string {
 }
 
 async function saveEngagement(payload: {
-  prechat: WidgetSettings["prechat"];
-  business_hours: WidgetSettings["business_hours"];
-  triggers: Trigger[];
+  prechat?: WidgetSettings["prechat"];
+  business_hours?: WidgetSettings["business_hours"];
+  triggers?: Trigger[];
+  appearance?: Appearance;
 }) {
   const response = await fetch("/api/cp/organization/widget-settings", {
     method: "PUT",
@@ -74,6 +90,159 @@ function CopyButton({ text, label, copied }: { text: string; label: string; copi
     >
       {done ? copied : label}
     </button>
+  );
+}
+
+function AppearanceSection({ settings }: { settings: WidgetSettings }) {
+  const t = useTranslations("widgetSettings");
+  const queryClient = useQueryClient();
+
+  const [preset, setPreset] = useState<Appearance["preset"]>(settings.appearance.preset);
+  const [accent, setAccent] = useState(settings.appearance.accent ?? "");
+  const [logoUrl, setLogoUrl] = useState(settings.appearance.logo_url ?? "");
+  const [title, setTitle] = useState(settings.appearance.title ?? "");
+  const [subtitle, setSubtitle] = useState(settings.appearance.subtitle ?? "");
+  const [saved, setSaved] = useState(false);
+
+  const save = useMutation({
+    mutationFn: saveEngagement,
+    onSuccess: () => {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+      void queryClient.invalidateQueries({ queryKey: ["widget-settings"] });
+    },
+  });
+
+  const panelClass =
+    "space-y-4 rounded-2xl border border-zinc-200 bg-white shadow-sm dark:bg-zinc-900 p-5 dark:border-zinc-800";
+  const inputClass =
+    "rounded-md border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-950";
+
+  return (
+    <section className={panelClass} aria-labelledby="appearance-h">
+      <h2 id="appearance-h" className="font-semibold">
+        {t("appearanceTitle")}
+      </h2>
+      <p className="text-sm text-zinc-500">{t("appearanceHelp")}</p>
+
+      {/* Design gallery */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5" role="radiogroup" aria-label={t("appearanceTitle")}>
+        {PRESETS.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            role="radio"
+            aria-checked={preset === option.id}
+            onClick={() => setPreset(option.id)}
+            className={`overflow-hidden rounded-xl border-2 text-start transition ${
+              preset === option.id
+                ? "border-indigo-600 ring-2 ring-indigo-200 dark:ring-indigo-900"
+                : "border-zinc-200 hover:border-zinc-400 dark:border-zinc-700"
+            }`}
+          >
+            {/* Mini widget mock */}
+            <div style={{ background: option.header }} className="flex h-7 items-center gap-1 px-2">
+              <span className="size-3 rounded-full bg-white/40" />
+              <span className="h-1.5 w-10 rounded bg-white/60" />
+            </div>
+            <div style={{ background: option.surface }} className="space-y-1 p-2">
+              <div style={{ background: option.bubble }} className="h-2.5 w-4/5 rounded-md" />
+              <div
+                style={{ background: accent !== "" ? accent : "#4f46e5" }}
+                className="ms-auto h-2.5 w-3/5 rounded-md"
+              />
+            </div>
+            <p className="px-2 py-1 text-xs font-medium capitalize">{t(`preset_${option.id}`)}</p>
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-4">
+        <label className="flex items-center gap-2 text-sm">
+          {t("accentColor")}
+          <input
+            type="color"
+            value={/^#[0-9a-fA-F]{6}$/.test(accent) ? accent : "#4f46e5"}
+            onChange={(event) => setAccent(event.target.value)}
+            aria-label={t("accentColor")}
+            className="h-8 w-12 cursor-pointer rounded border border-zinc-300 dark:border-zinc-700"
+          />
+        </label>
+        {accent !== "" && (
+          <button type="button" onClick={() => setAccent("")} className="text-xs text-zinc-500 underline">
+            {t("accentReset")}
+          </button>
+        )}
+        <label className="flex flex-1 items-center gap-2 text-sm">
+          {t("logoUrl")}
+          <input
+            type="url"
+            value={logoUrl}
+            onChange={(event) => setLogoUrl(event.target.value)}
+            placeholder="https://your-cdn.com/logo.png"
+            className={`${inputClass} min-w-0 flex-1`}
+          />
+        </label>
+      </div>
+
+      <div className="flex flex-wrap gap-4">
+        <label className="flex items-center gap-2 text-sm">
+          {t("widgetTitle")}
+          <input
+            type="text"
+            maxLength={100}
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            placeholder="Acme Support"
+            className={inputClass}
+          />
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          {t("widgetSubtitle")}
+          <input
+            type="text"
+            maxLength={100}
+            value={subtitle}
+            onChange={(event) => setSubtitle(event.target.value)}
+            placeholder="We are online!"
+            className={inputClass}
+          />
+        </label>
+      </div>
+
+      <p className="text-sm">
+        {settings.white_label ? (
+          <span className="text-green-700 dark:text-green-400">{t("brandingHidden")}</span>
+        ) : (
+          <span className="text-zinc-500">{t("brandingShown")}</span>
+        )}
+      </p>
+
+      {save.isError && (
+        <p className="text-sm text-red-600" role="alert">
+          {t("saveError")}
+        </p>
+      )}
+
+      <button
+        type="button"
+        disabled={save.isPending}
+        onClick={() =>
+          save.mutate({
+            appearance: {
+              preset,
+              accent: /^#[0-9a-fA-F]{6}$/.test(accent) ? accent : null,
+              logo_url: logoUrl.trim() === "" ? null : logoUrl.trim(),
+              title: title.trim() === "" ? null : title.trim(),
+              subtitle: subtitle.trim() === "" ? null : subtitle.trim(),
+            },
+          })
+        }
+        className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-60"
+      >
+        {save.isPending ? t("saving") : saved ? t("savedNotice") : t("appearanceSave")}
+      </button>
+    </section>
   );
 }
 
@@ -386,6 +555,8 @@ export default function WidgetSettingsPage() {
           {siteKey}
         </code>
       </section>
+
+      <AppearanceSection settings={data} />
 
       <EngagementSection settings={data} />
 

@@ -48,6 +48,15 @@ export interface TriggerConfig {
   message: string;
 }
 
+/** Org-managed widget appearance served on session bootstrap (Phase 26). */
+export interface WidgetAppearance {
+  preset: "classic" | "gradient" | "midnight" | "sunset" | "emerald";
+  accent: string | null;
+  logo_url: string | null;
+  title: string | null;
+  subtitle: string | null;
+}
+
 export interface WidgetSession {
   visitor_id: string;
   token: string;
@@ -57,6 +66,10 @@ export interface WidgetSession {
   open?: boolean;
   /** Enabled proactive triggers (Phase 24). */
   triggers?: TriggerConfig[];
+  /** Org-managed appearance (Phase 26); overrides embed config. */
+  appearance?: WidgetAppearance;
+  /** SERVER-authoritative branding flag: false only for white-label plans. */
+  show_branding?: boolean;
 }
 
 export interface ConversationSummary {

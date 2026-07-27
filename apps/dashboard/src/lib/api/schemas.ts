@@ -188,12 +188,24 @@ export const triggerSchema = z.object({
 
 export type Trigger = z.infer<typeof triggerSchema>;
 
+export const appearanceSchema = z.object({
+  preset: z.enum(["classic", "gradient", "midnight", "sunset", "emerald"]),
+  accent: z.string().nullable(),
+  logo_url: z.string().nullable(),
+  title: z.string().nullable(),
+  subtitle: z.string().nullable(),
+});
+
+export type Appearance = z.infer<typeof appearanceSchema>;
+
 export const widgetSettingsSchema = z.object({
   site_key: z.string().nullable(),
   signing_configured: z.boolean(),
   prechat: z.object({ enabled: z.boolean(), require_email: z.boolean() }),
   business_hours: businessHoursSchema,
   triggers: z.array(triggerSchema),
+  appearance: appearanceSchema,
+  white_label: z.boolean(),
 });
 
 export type WidgetSettings = z.infer<typeof widgetSettingsSchema>;
