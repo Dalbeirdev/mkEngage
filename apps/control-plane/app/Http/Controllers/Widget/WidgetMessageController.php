@@ -46,6 +46,9 @@ final class WidgetMessageController extends Controller
         return response()->json([
             'data' => $messages->map(fn (Message $message): array => $message->toContract())->all(),
             'last_sequence' => $conversation->last_sequence,
+            // Phase 23: piggyback conversation status on the poll the widget
+            // already makes, so closure (→ CSAT prompt) needs no extra request.
+            'status' => $conversation->status,
         ]);
     }
 

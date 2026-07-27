@@ -58,6 +58,10 @@ export const insightsOverviewSchema = z.object({
     by_sender: z.record(z.string(), z.number().int()),
     automation_rate: z.number(),
   }),
+  csat: z.object({
+    responses: z.number().int(),
+    average: z.number().nullable(),
+  }),
   by_department: z.array(
     z.object({ department_name: z.string(), conversations: z.number().int() }),
   ),
@@ -86,6 +90,8 @@ export const conversationSchema = z.object({
   assigned_agent_name: z.string().nullable().optional(),
   last_sequence: z.number().int().nonnegative(),
   source_url: z.string().nullable(),
+  csat_rating: z.number().int().min(1).max(5).nullable().optional(),
+  csat_comment: z.string().nullable().optional(),
   created_at: z.string().nullable(),
   updated_at: z.string().nullable(),
 });
@@ -161,10 +167,23 @@ export const chatbotListSchema = z.object({
   data: z.array(chatbotSchema),
 });
 
+export const businessHoursSchema = z.object({
+  enabled: z.boolean(),
+  timezone: z.string(),
+  // Per-day ranges: { mon: [["09:00","17:00"]], ... } — absent days = closed.
+  schedule: z.record(z.string(), z.array(z.tuple([z.string(), z.string()]))),
+});
+
+export type BusinessHours = z.infer<typeof businessHoursSchema>;
+
 export const widgetSettingsSchema = z.object({
   site_key: z.string().nullable(),
   signing_configured: z.boolean(),
+  prechat: z.object({ enabled: z.boolean(), require_email: z.boolean() }),
+  business_hours: businessHoursSchema,
 });
+
+export type WidgetSettings = z.infer<typeof widgetSettingsSchema>;
 
 export const rotatedSecretSchema = z.object({
   signing_secret: z.string().min(1),

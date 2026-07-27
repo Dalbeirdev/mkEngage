@@ -19,6 +19,8 @@ use App\Http\Controllers\Widget\WidgetAttachmentController;
 use App\Http\Controllers\Widget\WidgetConversationController;
 use App\Http\Controllers\Widget\WidgetIdentifyController;
 use App\Http\Controllers\Widget\WidgetMessageController;
+use App\Http\Controllers\Widget\WidgetProfileController;
+use App\Http\Controllers\Widget\WidgetRatingController;
 use App\Http\Controllers\Widget\WidgetSessionController;
 use App\Http\Middleware\EstablishTenantContext;
 use App\Models\User;
@@ -72,6 +74,7 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
         Route::patch('/chatbots/{chatbot}', [ChatbotController::class, 'update']);
 
         Route::get('/organization/widget-settings', [WidgetSettingsController::class, 'show']);
+        Route::put('/organization/widget-settings', [WidgetSettingsController::class, 'update']);
         Route::post('/organization/widget-settings/rotate-secret', [WidgetSettingsController::class, 'rotateSecret']);
 
         Route::get('/knowledge/documents', [KnowledgeController::class, 'index']);
@@ -115,6 +118,8 @@ Route::middleware([EstablishTenantContext::class, 'auth:widget', 'ability:widget
         Route::post('/conversations/{conversation}/attachments', [WidgetAttachmentController::class, 'store']);
         Route::get('/conversations/{conversation}/attachments/{attachment}/download', [WidgetAttachmentController::class, 'download']);
         Route::post('/identify', WidgetIdentifyController::class);
+        Route::post('/profile', WidgetProfileController::class);
+        Route::post('/conversations/{conversation}/rating', WidgetRatingController::class);
         Route::post('/gateway-token', function (Request $request, GatewayTokenIssuer $issuer) {
             $visitor = $request->user('widget');
             abort_unless($visitor instanceof Visitor, 403);

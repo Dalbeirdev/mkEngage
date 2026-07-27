@@ -255,6 +255,143 @@ export class MkEngageWidget extends LitElement {
       border-end-start-radius: 5px;
     }
 
+    .composer-hidden {
+      display: none !important;
+    }
+
+    .offline-hours {
+      background: #fef3c7;
+      color: #78350f; /* 8.3:1 on the amber tint — AA-safe */
+      border: 1px solid #fcd34d;
+      border-radius: 10px;
+      padding: 8px 12px;
+      margin-block-end: 10px;
+    }
+
+    /* Pre-chat lead form (Phase 23) */
+    .prechat {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: var(--mk-surface);
+      border: 1px solid var(--mk-border);
+      border-radius: 12px;
+      padding: 12px;
+      margin: 4px 0 8px 30px; /* aligns under the greeting bubble */
+    }
+
+    .prechat-title {
+      margin: 0 0 2px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--mk-text);
+    }
+
+    .prechat input {
+      border: 1px solid var(--mk-border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font: inherit;
+      color: var(--mk-text);
+      background: var(--mk-surface);
+    }
+
+    .prechat input::placeholder {
+      color: var(--mk-muted);
+      opacity: 1;
+    }
+
+    .prechat-start {
+      border: none;
+      border-radius: 8px;
+      background: var(--mk-accent);
+      color: var(--mk-accent-contrast);
+      font: inherit;
+      font-weight: 600;
+      padding: 9px 12px;
+      cursor: pointer;
+    }
+
+    .prechat-start:disabled {
+      opacity: 0.55;
+      cursor: default;
+    }
+
+    /* CSAT rating card (Phase 23) */
+    .csat {
+      border-block-start: 1px solid var(--mk-border);
+      padding: 10px 14px 6px;
+      text-align: center;
+    }
+
+    .csat-closed {
+      margin: 0 0 2px;
+      font-size: 12px;
+      color: var(--mk-muted);
+    }
+
+    .csat-title,
+    .csat-thanks {
+      margin: 2px 0 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--mk-text);
+    }
+
+    .stars {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .star {
+      border: none;
+      background: transparent;
+      font-size: 24px;
+      line-height: 1;
+      padding: 2px 4px;
+      cursor: pointer;
+      color: var(--mk-muted); /* 7.0:1 — AA-safe even as text glyph */
+    }
+
+    .star.active {
+      color: #b45309; /* amber-700, 4.6:1 on white */
+    }
+
+    .csat-comment {
+      inline-size: 100%;
+      box-sizing: border-box;
+      margin-block-start: 8px;
+      border: 1px solid var(--mk-border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font: inherit;
+      color: var(--mk-text);
+      resize: none;
+    }
+
+    .csat-comment::placeholder {
+      color: var(--mk-muted);
+      opacity: 1;
+    }
+
+    .csat-submit {
+      margin: 8px 0 6px;
+      border: none;
+      border-radius: 8px;
+      background: var(--mk-accent);
+      color: var(--mk-accent-contrast);
+      font: inherit;
+      font-weight: 600;
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+
+    .csat-submit:disabled {
+      opacity: 0.55;
+      cursor: default;
+    }
+
     textarea::placeholder {
       /* Explicit AA-safe placeholder (7.0:1 on white) — browser defaults
          (~#757575 in WebKit) sit borderline at 4.5:1 and flake under Axe. */
@@ -628,6 +765,30 @@ export class MkEngageWidget extends LitElement {
 
   @state() private attachmentError = false;
 
+  /** Pre-chat form config from session bootstrap (null ⇒ no form, Phase 23). */
+  @state() private prechat: { enabled: boolean; requireEmail: boolean } | null = null;
+
+  @state() private profiled = false;
+
+  @state() private prechatName = "";
+
+  @state() private prechatEmail = "";
+
+  @state() private prechatSubmitting = false;
+
+  /** Business-hours state at bootstrap: false shows the offline notice. */
+  @state() private orgOpen = true;
+
+  @state() private conversationStatus: "open" | "pending" | "closed" = "open";
+
+  @state() private csatSelected = 0;
+
+  @state() private csatComment = "";
+
+  @state() private csatDone = false;
+
+  @state() private csatSubmitting = false;
+
   private config!: WidgetConfig;
 
   private api!: WidgetApi;
@@ -666,6 +827,7 @@ export class MkEngageWidget extends LitElement {
     super.disconnectedCallback();
     if (this.typingIdleTimer !== null) clearTimeout(this.typingIdleTimer);
     if (this.remoteTypingClearTimer !== null) clearTimeout(this.remoteTypingClearTimer);
+    this.stopStatusTimer();
     this.transport?.stop();
   }
 
@@ -681,6 +843,7 @@ export class MkEngageWidget extends LitElement {
       this.stopTypingSignal();
       this.setRemoteTyping(false);
       this.agentPresent = false;
+      this.stopStatusTimer();
       this.transport?.stop();
       this.transport = null;
       this.transportKind = "none";
@@ -721,6 +884,9 @@ export class MkEngageWidget extends LitElement {
         this.transport?.stop();
         this.transport = gateway;
         this.transportKind = "ws";
+        // WS pushes messages but not closure; a slow status check fills the
+        // gap so the CSAT prompt still appears (Phase 23).
+        this.startStatusTimer();
         return;
       } catch {
         gateway.stop(); // fall through to polling
@@ -739,6 +905,30 @@ export class MkEngageWidget extends LitElement {
     }
   }
 
+  private statusTimer: ReturnType<typeof setInterval> | null = null;
+
+  private startStatusTimer(): void {
+    this.stopStatusTimer();
+    this.statusTimer = setInterval(() => {
+      if (this.conversationId === null || this.conversationStatus === "closed") return;
+      void this.api
+        .getConversation(this.conversationId)
+        .then((conversation) => {
+          this.conversationStatus = conversation.status;
+        })
+        .catch(() => {
+          /* transient; next tick retries */
+        });
+    }, 15_000);
+  }
+
+  private stopStatusTimer(): void {
+    if (this.statusTimer !== null) {
+      clearInterval(this.statusTimer);
+      this.statusTimer = null;
+    }
+  }
+
   /** Restore a persisted session or bootstrap a new one (§4 restore state). */
   private async ensureSession(): Promise<void> {
     const stored = await this.sessionStore.load();
@@ -747,6 +937,9 @@ export class MkEngageWidget extends LitElement {
       this.api.setToken(stored.token);
       this.conversationId = stored.conversationId;
       this.messages.lastSeenSequence = 0; // full replay fills the cacheless store
+      // Returning visitor: never re-ask the pre-chat form (Phase 23).
+      this.profiled = stored.profiled === true;
+      this.prechat = null;
       await this.applyIdentity(stored);
       return;
     }
@@ -755,6 +948,12 @@ export class MkEngageWidget extends LitElement {
       this.config.siteKey,
       this.config.consentState ?? "unknown",
     );
+
+    this.prechat =
+      session.prechat !== undefined
+        ? { enabled: session.prechat.enabled, requireEmail: session.prechat.require_email }
+        : null;
+    this.orgOpen = session.open !== false;
 
     const fresh = {
       visitorId: session.visitor_id,
@@ -814,6 +1013,9 @@ export class MkEngageWidget extends LitElement {
         await this.updateComplete;
         this.scrollLogToEnd();
       }
+
+      // Phase 23: closure arrives on the same poll — triggers the CSAT prompt.
+      if (result.status !== undefined) this.conversationStatus = result.status;
     } catch (error) {
       if (error instanceof ApiError && error.isAuthFailure) {
         // Token revoked/expired: reset the persisted session; next open
@@ -922,6 +1124,48 @@ export class MkEngageWidget extends LitElement {
   /** True while the greeting + quick replies should show (nothing sent yet). */
   private get showWelcome(): boolean {
     return this.messages.messages.length === 0 && this.messages.pendingMessages.length === 0;
+  }
+
+  /** Pre-chat gate (Phase 23): form first, chat after — never re-shown. */
+  private get showPrechat(): boolean {
+    return this.prechat?.enabled === true && !this.profiled && this.showWelcome;
+  }
+
+  private async submitPrechat(event: Event): Promise<void> {
+    event.preventDefault();
+    const name = this.prechatName.trim();
+    if (name === "" || this.prechatSubmitting) return;
+    const email = this.prechatEmail.trim();
+    if (this.prechat?.requireEmail === true && email === "") return;
+
+    this.prechatSubmitting = true;
+    try {
+      await this.api.submitProfile(name, email === "" ? null : email);
+      this.profiled = true;
+      const stored = await this.sessionStore.load();
+      if (stored !== null) await this.sessionStore.save({ ...stored, profiled: true });
+      await this.updateComplete;
+      this.renderRoot.querySelector("textarea")?.focus();
+    } catch {
+      // Capture is best-effort lead data: never block the chat on it.
+      this.profiled = true;
+    } finally {
+      this.prechatSubmitting = false;
+    }
+  }
+
+  private async submitCsat(): Promise<void> {
+    if (this.csatSelected < 1 || this.conversationId === null || this.csatSubmitting) return;
+
+    this.csatSubmitting = true;
+    try {
+      await this.api.submitRating(this.conversationId, this.csatSelected, this.csatComment);
+      this.csatDone = true;
+    } catch {
+      // Leave the form up; the visitor can retry.
+    } finally {
+      this.csatSubmitting = false;
+    }
   }
 
   private async submit(event: Event): Promise<void> {
@@ -1069,6 +1313,9 @@ export class MkEngageWidget extends LitElement {
         </header>
 
         <div class="log" role="log" aria-label=${t("log_label")} aria-live="polite" data-revision=${this.revision}>
+          ${!this.orgOpen
+            ? html`<div class="notice offline-hours" role="status">${t("offline_hours")}</div>`
+            : nothing}
           ${this.showWelcome && (this.config?.greeting || (this.config?.quickReplies?.length ?? 0) > 0)
             ? html`
                 ${this.config?.greeting
@@ -1077,7 +1324,7 @@ export class MkEngageWidget extends LitElement {
                       <div class="msg remote">${this.config.greeting}</div>
                     </div>`
                   : nothing}
-                ${(this.config?.quickReplies?.length ?? 0) > 0
+                ${(this.config?.quickReplies?.length ?? 0) > 0 && !this.showPrechat
                   ? html`<div class="quick-replies">
                       ${this.config?.quickReplies?.map(
                         (reply) => html`
@@ -1094,6 +1341,7 @@ export class MkEngageWidget extends LitElement {
                   : nothing}
               `
             : nothing}
+          ${this.showPrechat ? this.renderPrechat() : nothing}
           ${this.messages.messages.map((message) => {
             const isVisitor = message.sender_type === "visitor";
             const bubble = html`
@@ -1175,8 +1423,12 @@ export class MkEngageWidget extends LitElement {
           : nothing}
 
         ${this.emojiOpen ? this.renderEmojiPicker() : nothing}
+        ${this.conversationStatus === "closed" ? this.renderCsat() : nothing}
 
-        <form @submit=${(event: Event) => void this.submit(event)}>
+        <form
+          class=${this.showPrechat || this.conversationStatus === "closed" ? "composer-hidden" : ""}
+          @submit=${(event: Event) => void this.submit(event)}
+        >
           <input
             type="file"
             class="file-input"
@@ -1235,6 +1487,110 @@ export class MkEngageWidget extends LitElement {
           ? nothing
           : html`<div class="branding">${t("powered_by")} <strong>mkEngage</strong></div>`}
       </section>
+    `;
+  }
+
+  /** Pre-chat lead form rendered inside the log, BotPenguin-style (Phase 23). */
+  private renderPrechat(): unknown {
+    const t = this.t;
+    const requireEmail = this.prechat?.requireEmail === true;
+
+    return html`
+      <form class="prechat" @submit=${(event: Event) => void this.submitPrechat(event)}>
+        <p class="prechat-title">${t("prechat_title")}</p>
+        <input
+          type="text"
+          name="name"
+          autocomplete="name"
+          maxlength="100"
+          required
+          aria-label=${t("prechat_name")}
+          placeholder=${t("prechat_name")}
+          .value=${this.prechatName}
+          @input=${(event: Event) => {
+            this.prechatName = (event.target as HTMLInputElement).value;
+          }}
+        />
+        <input
+          type="email"
+          name="email"
+          autocomplete="email"
+          maxlength="255"
+          ?required=${requireEmail}
+          aria-label=${requireEmail ? t("prechat_email") : t("prechat_email_optional")}
+          placeholder=${requireEmail ? t("prechat_email") : t("prechat_email_optional")}
+          .value=${this.prechatEmail}
+          @input=${(event: Event) => {
+            this.prechatEmail = (event.target as HTMLInputElement).value;
+          }}
+        />
+        <button
+          class="prechat-start"
+          type="submit"
+          ?disabled=${this.prechatSubmitting ||
+          this.prechatName.trim() === "" ||
+          (requireEmail && this.prechatEmail.trim() === "")}
+        >
+          ${t("prechat_start")}
+        </button>
+      </form>
+    `;
+  }
+
+  /** Post-close CSAT rating card shown in place of the composer (Phase 23). */
+  private renderCsat(): unknown {
+    const t = this.t;
+
+    if (this.csatDone) {
+      return html`<div class="csat"><p class="csat-thanks" role="status">${t("csat_thanks")}</p></div>`;
+    }
+
+    return html`
+      <div class="csat">
+        <p class="csat-closed">${t("conversation_closed")}</p>
+        <p class="csat-title">${t("csat_title")}</p>
+        <div class="stars" role="radiogroup" aria-label=${t("csat_title")}>
+          ${[1, 2, 3, 4, 5].map(
+            (value) => html`
+              <button
+                type="button"
+                class="star ${value <= this.csatSelected ? "active" : ""}"
+                role="radio"
+                aria-checked=${value === this.csatSelected}
+                aria-label="${value} / 5"
+                @click=${() => {
+                  this.csatSelected = value;
+                }}
+              >
+                ${value <= this.csatSelected ? "★" : "☆"}
+              </button>
+            `,
+          )}
+        </div>
+        ${this.csatSelected > 0
+          ? html`
+              <textarea
+                class="csat-comment"
+                rows="2"
+                maxlength="1000"
+                placeholder=${t("csat_comment_placeholder")}
+                aria-label=${t("csat_comment_placeholder")}
+                .value=${this.csatComment}
+                @input=${(event: Event) => {
+                  this.csatComment = (event.target as HTMLTextAreaElement).value;
+                }}
+              ></textarea>
+              <button
+                class="csat-submit"
+                type="button"
+                ?disabled=${this.csatSubmitting}
+                @click=${() => void this.submitCsat()}
+              >
+                ${t("csat_submit")}
+              </button>
+            `
+          : nothing}
+      </div>
     `;
   }
 

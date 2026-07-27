@@ -34,7 +34,9 @@
     "automation": "Bot handled",
     "perDay": "Conversations per day",
     "byDepartment": "By department",
-    "empty": "No data yet for this period."
+    "empty": "No data yet for this period.",
+    "csat": "CSAT",
+    "csatNone": "No ratings yet"
   },
   "profile": {
     "title": "Profile",
@@ -82,7 +84,8 @@
     "notePlaceholder": "Add a private note (not sent to the visitor)…",
     "addNote": "Add",
     "allDepartments": "All departments",
-    "filterLabel": "Filter by department"
+    "filterLabel": "Filter by department",
+    "csatBadge": "{rating}/5"
   },
   "contacts": {
     "title": "Contacts",
@@ -139,7 +142,28 @@
     "rotating": "Rotating…",
     "rotateConfirm": "Rotating invalidates all existing signatures immediately. Your backend must switch to the new secret. Continue?",
     "newSecretTitle": "New signing secret — shown only once",
-    "newSecretHelp": "Store it in your backend's secret manager now. You will not be able to see it again."
+    "newSecretHelp": "Store it in your backend's secret manager now. You will not be able to see it again.",
+    "engagementTitle": "Engagement",
+    "prechatTitle": "Pre-chat form",
+    "prechatEnable": "Ask visitors for their name before the chat starts",
+    "prechatRequireEmail": "Also require an email address",
+    "hoursTitle": "Business hours",
+    "hoursEnable": "Show an away notice outside business hours",
+    "hoursTimezone": "Timezone",
+    "hoursHelp": "Time ranges per day, e.g. 09:00-17:00. Separate multiple ranges with commas; leave empty for closed.",
+    "hoursClosed": "Closed",
+    "hoursInvalid": "Invalid time range for {day}. Use 09:00-17:00.",
+    "day_mon": "Mon",
+    "day_tue": "Tue",
+    "day_wed": "Wed",
+    "day_thu": "Thu",
+    "day_fri": "Fri",
+    "day_sat": "Sat",
+    "day_sun": "Sun",
+    "save": "Save engagement settings",
+    "saving": "Saving…",
+    "savedNotice": "Saved!",
+    "saveError": "Could not save settings."
   },
   "departments": {
     "title": "Departments",

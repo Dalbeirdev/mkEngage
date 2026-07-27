@@ -17,6 +17,8 @@ export interface StoredSession {
   lastSeenSequence: number;
   /** external_id already linked to this visitor (skip repeat identify calls). */
   identifiedExternalId?: string | null;
+  /** Pre-chat profile already submitted (never re-ask, Phase 23). */
+  profiled?: boolean;
 }
 
 function openDb(): Promise<IDBDatabase> {

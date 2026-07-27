@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Widget;
 use App\Http\Controllers\Controller;
 use App\Models\Organization;
 use App\Models\Visitor;
+use App\Services\BusinessHours;
 use App\Tenancy\Tenancy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,7 +24,7 @@ use Illuminate\Support\Facades\RateLimiter;
  */
 final class WidgetSessionController extends Controller
 {
-    public function __invoke(Request $request, Tenancy $tenancy): JsonResponse
+    public function __invoke(Request $request, Tenancy $tenancy, BusinessHours $businessHours): JsonResponse
     {
         $validated = $request->validate([
             'site_key' => ['required', 'string', 'max:40'],
@@ -57,6 +58,18 @@ final class WidgetSessionController extends Controller
 
             return ['visitor_id' => $visitor->id, 'token' => $token->plainTextToken];
         });
+
+        // Phase 23: advertise widget behavior config so the widget can render
+        // the pre-chat form and offline notice without extra round-trips.
+        // Config values only — never org internals.
+        $settings = is_array($organization->settings) ? $organization->settings : [];
+        $prechat = is_array($settings['prechat'] ?? null) ? $settings['prechat'] : [];
+
+        $session['prechat'] = [
+            'enabled' => ($prechat['enabled'] ?? false) === true,
+            'require_email' => ($prechat['require_email'] ?? false) === true,
+        ];
+        $session['open'] = $businessHours->isOpen($organization);
 
         return response()->json($session, 201);
     }

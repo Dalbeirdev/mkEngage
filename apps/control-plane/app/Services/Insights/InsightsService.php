@@ -37,8 +37,34 @@ final class InsightsService
             'range' => ['from' => $start->toDateString(), 'to' => $to->toDateString()],
             'conversations' => $this->conversations($start, $end),
             'messages' => $this->messages($start, $end),
+            'csat' => $this->csat($start, $end),
             'by_department' => $this->byDepartment($start, $end),
             'daily' => $this->daily($start, $end),
+        ];
+    }
+
+    /**
+     * CSAT (Phase 23): average rating + response volume over rated
+     * conversations in range. Raw query ⇒ explicit org filter (two-layer
+     * tenancy: RLS is the second layer, RULES-tenant-isolation #2).
+     *
+     * @return array<string, mixed>
+     */
+    private function csat(Carbon $start, Carbon $end): array
+    {
+        $row = DB::table('conversations')
+            ->where('organization_id', $this->tenant->organizationId())
+            ->whereNotNull('csat_rating')
+            ->whereBetween('csat_rated_at', [$start, $end])
+            ->selectRaw('count(*) as n, avg(csat_rating) as avg_rating')
+            ->first();
+
+        $count = $this->toInt($row?->n);
+        $average = is_numeric($row?->avg_rating) ? round((float) $row->avg_rating, 2) : null;
+
+        return [
+            'responses' => $count,
+            'average' => $count > 0 ? $average : null,
         ];
     }
 

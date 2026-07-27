@@ -747,6 +747,8 @@ components:
         department_id: { type: [string, "null"], format: uuid }
         chatbot_id: { type: [string, "null"], format: uuid }
         last_sequence: { type: integer, minimum: 0, description: Highest assigned sequence number. }
+        csat_rating: { type: [integer, "null"], minimum: 1, maximum: 5, description: Post-close visitor satisfaction rating (Phase 23). }
+        csat_comment: { type: [string, "null"], maxLength: 1000 }
         created_at: { type: string, format: date-time }
         closed_at: { type: [string, "null"], format: date-time }
 

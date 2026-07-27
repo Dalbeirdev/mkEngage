@@ -156,6 +156,8 @@ final class ConversationController extends Controller
             'department_name' => $conversation->department?->name,
             'last_sequence' => $conversation->last_sequence,
             'source_url' => $conversation->source_url,
+            'csat_rating' => $conversation->csat_rating,
+            'csat_comment' => $conversation->csat_comment,
             'created_at' => $conversation->created_at?->toIso8601String(),
             'updated_at' => $conversation->updated_at?->toIso8601String(),
         ];

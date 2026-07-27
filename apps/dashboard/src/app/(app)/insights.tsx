@@ -44,6 +44,13 @@ export function Insights() {
     { label: t("resolved"), value: `${data.conversations.closed} (${pct(data.conversations.resolution_rate)})` },
     { label: t("messages"), value: data.messages.total },
     { label: t("automation"), value: pct(data.messages.automation_rate) },
+    {
+      label: t("csat"),
+      value:
+        data.csat.average !== null
+          ? `★ ${data.csat.average.toFixed(1)} (${data.csat.responses})`
+          : t("csatNone"),
+    },
   ];
 
   const maxDaily = Math.max(1, ...data.daily.map((d) => d.conversations));

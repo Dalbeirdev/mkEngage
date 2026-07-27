@@ -49,6 +49,33 @@ export class WidgetApi {
     };
   }
 
+  /** Pre-chat profile capture (Phase 23): unverified lead data. */
+  async submitProfile(
+    name: string,
+    email: string | null,
+  ): Promise<{ display_name: string; contact_id: string | null }> {
+    return (await this.request("POST", "/api/widget/profile", {
+      name,
+      ...(email !== null && email !== "" ? { email } : {}),
+    })) as { display_name: string; contact_id: string | null };
+  }
+
+  /** CSAT rating on a closed conversation (Phase 23). */
+  async submitRating(conversationId: string, rating: number, comment: string | null): Promise<void> {
+    await this.request("POST", `/api/widget/conversations/${conversationId}/rating`, {
+      rating,
+      ...(comment !== null && comment.trim() !== "" ? { comment: comment.trim() } : {}),
+    });
+  }
+
+  /** Conversation status check (WS transport has no message poll to piggyback on). */
+  async getConversation(conversationId: string): Promise<ConversationSummary> {
+    return (await this.request(
+      "GET",
+      `/api/widget/conversations/${conversationId}`,
+    )) as ConversationSummary;
+  }
+
   async createConversation(sourceUrl: string | null): Promise<ConversationSummary> {
     return (await this.request("POST", "/api/widget/conversations", {
       source_url: sourceUrl,
@@ -58,7 +85,7 @@ export class WidgetApi {
   async listMessages(
     conversationId: string,
     afterSequence: number,
-  ): Promise<{ data: ChatMessage[]; last_sequence: number }> {
+  ): Promise<{ data: ChatMessage[]; last_sequence: number; status?: "open" | "pending" | "closed" }> {
     return (await this.request(
       "GET",
       `/api/widget/conversations/${conversationId}/messages?after_sequence=${afterSequence}`,

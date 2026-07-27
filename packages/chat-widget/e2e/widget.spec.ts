@@ -27,6 +27,12 @@ interface MockState {
   identifyCalls: Array<Record<string, unknown>>;
   failSends: boolean;
   failLists: boolean;
+  /** Phase 23 knobs: session config + conversation status + captured posts. */
+  prechat: { enabled: boolean; require_email: boolean } | null;
+  open: boolean;
+  conversationStatus: "open" | "pending" | "closed";
+  profileCalls: Array<Record<string, unknown>>;
+  ratingCalls: Array<Record<string, unknown>>;
 }
 
 function makeMessage(state: MockState, senderType: string, body: string): MockMessage {
@@ -54,6 +60,11 @@ async function mockApi(page: Page): Promise<MockState> {
     identifyCalls: [],
     failSends: false,
     failLists: false,
+    prechat: null,
+    open: true,
+    conversationStatus: "open",
+    profileCalls: [],
+    ratingCalls: [],
   };
 
   await page.route("http://127.0.0.1:8000/**", async (route) => {
@@ -80,7 +91,22 @@ async function mockApi(page: Page): Promise<MockState> {
 
     if (url.pathname === "/api/widget/session") {
       state.sessionCalls += 1;
-      return json(201, { visitor_id: "v-1", token: "1|mock-token" });
+      return json(201, {
+        visitor_id: "v-1",
+        token: "1|mock-token",
+        ...(state.prechat !== null ? { prechat: state.prechat } : {}),
+        open: state.open,
+      });
+    }
+
+    if (url.pathname === "/api/widget/profile") {
+      state.profileCalls.push(request.postDataJSON() as Record<string, unknown>);
+      return json(200, { display_name: "Lead", contact_id: "ct-2" });
+    }
+
+    if (url.pathname.endsWith("/rating") && request.method() === "POST") {
+      state.ratingCalls.push(request.postDataJSON() as Record<string, unknown>);
+      return json(201, { conversation_id: "c-1", csat_rating: 5 });
     }
 
     if (url.pathname === "/api/widget/identify") {
@@ -98,6 +124,7 @@ async function mockApi(page: Page): Promise<MockState> {
       return json(200, {
         data: state.messages.filter((m) => m.sequence_number > after),
         last_sequence: state.messages.length,
+        status: state.conversationStatus,
       });
     }
 
@@ -345,5 +372,68 @@ test.describe("widget on a hostile host page", () => {
     await expect(widget(page).locator(".emoji-grid").first().locator(".emoji-cell").first()).toContainText(
       "🎉",
     );
+  });
+
+  test("pre-chat form gates the chat and posts the lead profile (Phase 23)", async ({ page }) => {
+    const state = await mockApi(page);
+    state.prechat = { enabled: true, require_email: true };
+    await openWidget(page);
+
+    // Form visible, composer hidden, quick replies suppressed.
+    const prechat = widget(page).locator(".prechat");
+    await expect(prechat).toBeVisible();
+    await expect(widget(page).locator("form.composer-hidden")).toHaveCount(1);
+    await expect(widget(page).locator(".quick-reply")).toHaveCount(0);
+
+    // Start stays disabled until both required fields are filled.
+    const start = widget(page).locator(".prechat-start");
+    await expect(start).toBeDisabled();
+    await prechat.locator("input[name=name]").fill("Ada Lovelace");
+    await expect(start).toBeDisabled();
+    await prechat.locator("input[name=email]").fill("ada@example.com");
+    await expect(start).toBeEnabled();
+    await start.click();
+
+    // Chat unlocks; the profile was posted with the lead data.
+    await expect(widget(page).locator(".prechat")).toHaveCount(0);
+    await expect(widget(page).locator("form.composer-hidden")).toHaveCount(0);
+    await expect.poll(() => state.profileCalls.length).toBe(1);
+    expect(state.profileCalls[0]).toMatchObject({ name: "Ada Lovelace", email: "ada@example.com" });
+  });
+
+  test("shows the offline notice when outside business hours (Phase 23)", async ({ page }) => {
+    const state = await mockApi(page);
+    state.open = false;
+    await openWidget(page);
+
+    await expect(widget(page).locator(".offline-hours")).toContainText("currently away");
+    // Chat still works while away — offline capture, not a hard gate.
+    await textarea(page).fill("Please call me back");
+    await textarea(page).press("Enter");
+    await expect(widget(page).locator(".msg.visitor")).toContainText("Please call me back");
+  });
+
+  test("CSAT stars appear on close and submit the rating (Phase 23)", async ({ page }) => {
+    const state = await mockApi(page);
+    await openWidget(page);
+
+    await textarea(page).fill("Hi!");
+    await textarea(page).press("Enter");
+    await expect(widget(page).locator(".msg.visitor")).toContainText("Hi!");
+
+    // Agent closes the conversation; the next poll delivers the status.
+    state.conversationStatus = "closed";
+
+    const csat = widget(page).locator(".csat");
+    await expect(csat).toBeVisible({ timeout: 10_000 }); // poll interval is 3s
+    await expect(widget(page).locator("form.composer-hidden")).toHaveCount(1);
+
+    await csat.locator(".star").nth(3).click(); // 4 stars
+    await csat.locator(".csat-comment").fill("Great help!");
+    await csat.locator(".csat-submit").click();
+
+    await expect(csat.locator(".csat-thanks")).toContainText("Thanks");
+    await expect.poll(() => state.ratingCalls.length).toBe(1);
+    expect(state.ratingCalls[0]).toMatchObject({ rating: 4, comment: "Great help!" });
   });
 });

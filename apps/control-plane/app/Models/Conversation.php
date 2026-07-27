@@ -13,6 +13,9 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property Carbon|null $closed_at
+ * @property int|null $csat_rating
+ * @property string|null $csat_comment
+ * @property Carbon|null $csat_rated_at
  */
 final class Conversation extends Model
 {
@@ -35,6 +38,8 @@ final class Conversation extends Model
         return [
             'last_sequence' => 'integer',
             'closed_at' => 'datetime',
+            'csat_rating' => 'integer',
+            'csat_rated_at' => 'datetime',
         ];
     }
 

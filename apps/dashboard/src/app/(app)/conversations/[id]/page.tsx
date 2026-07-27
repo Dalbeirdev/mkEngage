@@ -267,6 +267,15 @@ export default function ConversationThreadPage({
             {t("visitorOnline")}
           </span>
         )}
+        {typeof conversation?.csat_rating === "number" && (
+          <span
+            className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-900/40 dark:text-amber-200"
+            title={conversation.csat_comment ?? undefined}
+          >
+            <span aria-hidden>★</span>
+            {t("csatBadge", { rating: conversation.csat_rating })}
+          </span>
+        )}
         <div className="ms-auto flex items-center gap-2 text-sm">
           <span className="text-zinc-500">
             {conversation?.assigned_agent_name

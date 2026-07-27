@@ -16,6 +16,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * The tenancy root (ADR-007). Deliberately NOT BelongsToOrganization — this
  * table defines organization_id rather than carrying it. Reads are restricted
  * by membership/authorization at the application layer.
+ *
+ * @property array<string, mixed>|null $settings
  */
 final class Organization extends Model
 {

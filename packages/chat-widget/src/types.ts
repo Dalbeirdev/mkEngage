@@ -37,6 +37,10 @@ export interface WidgetConfig {
 export interface WidgetSession {
   visitor_id: string;
   token: string;
+  /** Pre-chat form config advertised by the org (Phase 23). */
+  prechat?: { enabled: boolean; require_email: boolean };
+  /** Business-hours state at bootstrap: false ⇒ show the offline notice. */
+  open?: boolean;
 }
 
 export interface ConversationSummary {
