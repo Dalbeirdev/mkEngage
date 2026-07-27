@@ -35,6 +35,16 @@ export class MkEngageWidget extends LitElement {
       --mk-border: #d4d4d8;
       --mk-radius: 14px;
       --mk-z: 2147483000;
+      /* Themeable surfaces (dark theme overrides below) */
+      --mk-header-bg: linear-gradient(135deg, var(--mk-accent), var(--mk-accent-2));
+      --mk-header-edge: var(--mk-accent);
+      --mk-remote-bubble: #f1f2f6;
+      --mk-remote-text: #18181b;
+      --mk-chip-bg: #e4e4e7;
+      --mk-chip-text: #18181b;
+      --mk-branding: #52525b;
+      --mk-time: rgb(255 255 255 / 0.85);
+      --mk-time-remote: #52525b;
 
       /* !important on host typography: host-page rules (even universal
          "* { ... !important }" resets) target the host ELEMENT and inherit
@@ -52,6 +62,38 @@ export class MkEngageWidget extends LitElement {
       color: var(--mk-text) !important;
       letter-spacing: normal !important;
       text-transform: none !important;
+    }
+
+    /* Dark theme (config.theme = "dark") — matches the premium dark reference:
+       flat near-black surfaces, dark-gray remote bubbles, light gray chips.
+       Every pair keeps WCAG AA (Axe-scanned in e2e). */
+    :host([data-theme="dark"]) {
+      --mk-surface: #0c0c0e;
+      --mk-text: #fafafa;
+      --mk-muted: #a1a1aa;
+      --mk-border: #3f3f46;
+      --mk-header-bg: #27272a;
+      --mk-header-edge: #27272a;
+      --mk-remote-bubble: #2e2e33;
+      --mk-remote-text: #fafafa;
+      --mk-chip-bg: #d4d4d8;
+      --mk-chip-text: #18181b;
+      --mk-branding: #a1a1aa;
+      --mk-time-remote: #a1a1aa;
+    }
+
+    :host([data-theme="dark"]) .offline-hours {
+      background: #422006;
+      color: #fde68a;
+      border-color: #92400e;
+    }
+
+    :host([data-theme="dark"]) .star.active {
+      color: #fbbf24; /* amber-400: 10.5:1 on #0c0c0e */
+    }
+
+    :host([data-theme="dark"]) .branding strong {
+      color: #a5b4fc; /* indigo-300: 9.4:1 on #0c0c0e (accent is only 3.1:1) */
     }
 
     .launcher {
@@ -91,7 +133,7 @@ export class MkEngageWidget extends LitElement {
     }
 
     header {
-      background: linear-gradient(135deg, var(--mk-accent), var(--mk-accent-2));
+      background: var(--mk-header-bg);
       color: var(--mk-accent-contrast);
       padding: 14px 14px;
       display: flex;
@@ -130,7 +172,7 @@ export class MkEngageWidget extends LitElement {
       block-size: 11px;
       border-radius: 50%;
       background: #4ade80;
-      border: 2px solid var(--mk-accent);
+      border: 2px solid var(--mk-header-edge);
     }
 
     .header-text {
@@ -156,11 +198,13 @@ export class MkEngageWidget extends LitElement {
       border: none;
       background: transparent;
       color: inherit;
-      font-size: 18px;
+      /* Back-chevron (reference): sits left of the avatar. */
+      font-size: 26px;
+      line-height: 1;
       cursor: pointer;
-      padding: 4px 8px;
+      padding: 2px 8px 6px 2px;
       border-radius: 8px;
-      opacity: 0.85;
+      opacity: 0.9;
     }
 
     .close:hover {
@@ -207,20 +251,27 @@ export class MkEngageWidget extends LitElement {
       object-fit: cover;
     }
 
+    /* Keeps continuation bubbles aligned under the first avatar'd bubble. */
+    .msg-avatar-spacer {
+      inline-size: 26px;
+      flex: 0 0 auto;
+    }
+
+    /* Right-aligned filled pills (reference) — they act for the visitor. */
     .quick-replies {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      padding-inline-start: 34px;
+      justify-content: flex-end;
       margin-block-start: 2px;
     }
 
     .quick-reply {
-      border: 1.5px solid var(--mk-accent);
-      background: var(--mk-surface);
-      color: var(--mk-accent);
+      border: none;
+      background: var(--mk-chip-bg);
+      color: var(--mk-chip-text);
       border-radius: 999px;
-      padding: 7px 14px;
+      padding: 8px 16px;
       font: inherit;
       font-size: 13px;
       font-weight: 500;
@@ -250,9 +301,30 @@ export class MkEngageWidget extends LitElement {
     }
 
     .msg.remote {
-      background: #f1f2f6;
-      color: var(--mk-text);
+      background: var(--mk-remote-bubble);
+      color: var(--mk-remote-text);
       border-end-start-radius: 5px;
+    }
+
+    /* Sender label above a remote bubble group (reference: bot name). */
+    .sender-label {
+      font-size: 12px;
+      color: var(--mk-muted);
+      padding-inline-start: 36px;
+      margin-block-end: -6px;
+    }
+
+    /* In-bubble timestamp, bottom-right (reference: "06:38 PM"). */
+    .msg .time {
+      display: block;
+      text-align: end;
+      font-size: 10px;
+      margin-block-start: 3px;
+      color: var(--mk-time-remote);
+    }
+
+    .msg.visitor .time {
+      color: var(--mk-time);
     }
 
     .composer-hidden {
@@ -402,9 +474,9 @@ export class MkEngageWidget extends LitElement {
     .branding {
       text-align: center;
       font-size: 11px;
-      /* Fixed dark slate (not --mk-muted) so "Powered by" clears WCAG AA (4.5:1)
-         on both the white panel surface and any host page bleed-through. */
-      color: #52525b;
+      /* Theme-pinned (light #52525b / dark #a1a1aa) so "Powered by" clears
+         WCAG AA (4.5:1) on both surfaces and any host page bleed-through. */
+      color: var(--mk-branding);
       padding: 6px 0 9px;
     }
 
@@ -820,7 +892,24 @@ export class MkEngageWidget extends LitElement {
     if (RTL_LOCALES.has((config.locale ?? "en").split("-")[0] ?? "")) {
       this.setAttribute("dir", "rtl");
     }
+    if (config.theme === "dark") {
+      this.setAttribute("data-theme", "dark");
+    } else {
+      this.removeAttribute("data-theme");
+    }
     this.loadEmojiPrefs();
+  }
+
+  /** Locale-aware "06:38 PM"-style time for in-bubble timestamps. */
+  private formatTime(iso: string | null): string {
+    try {
+      return new Intl.DateTimeFormat(this.config?.locale ?? "en", {
+        hour: "numeric",
+        minute: "2-digit",
+      }).format(iso === null ? new Date() : new Date(iso));
+    } catch {
+      return "";
+    }
   }
 
   override disconnectedCallback(): void {
@@ -1289,6 +1378,9 @@ export class MkEngageWidget extends LitElement {
     return html`
       <section class="panel" role="dialog" aria-label=${this.config?.title ?? t("title")}>
         <header>
+          <button class="close" aria-label=${t("close_label")} @click=${() => void this.toggle()}>
+            ‹
+          </button>
           <span class="avatar" aria-hidden>
             ${this.config?.avatarUrl
               ? html`<img src=${this.config.avatarUrl} alt="" />`
@@ -1307,9 +1399,6 @@ export class MkEngageWidget extends LitElement {
                   : (this.config?.subtitle ?? t("subtitle_default"))}
             </span>
           </div>
-          <button class="close" aria-label=${t("close_label")} @click=${() => void this.toggle()}>
-            ✕
-          </button>
         </header>
 
         <div class="log" role="log" aria-label=${t("log_label")} aria-live="polite" data-revision=${this.revision}>
@@ -1319,10 +1408,23 @@ export class MkEngageWidget extends LitElement {
           ${this.showWelcome && (this.config?.greeting || (this.config?.quickReplies?.length ?? 0) > 0)
             ? html`
                 ${this.config?.greeting
-                  ? html`<div class="row remote">
-                      ${this.renderMsgAvatar()}
-                      <div class="msg remote">${this.config.greeting}</div>
-                    </div>`
+                  ? html`
+                      <div class="sender-label">${this.config?.title ?? t("title")}</div>
+                      ${this.config.greeting
+                        .split(/\n+/)
+                        .filter((line) => line.trim() !== "")
+                        .map(
+                          (line, index) => html`
+                            <div class="row remote">
+                              ${index === 0 ? this.renderMsgAvatar() : html`<span class="msg-avatar-spacer"></span>`}
+                              <div class="msg remote">
+                                ${line}
+                                <span class="time">${this.formatTime(null)}</span>
+                              </div>
+                            </div>
+                          `,
+                        )}
+                    `
                   : nothing}
                 ${(this.config?.quickReplies?.length ?? 0) > 0 && !this.showPrechat
                   ? html`<div class="quick-replies">
@@ -1342,8 +1444,11 @@ export class MkEngageWidget extends LitElement {
               `
             : nothing}
           ${this.showPrechat ? this.renderPrechat() : nothing}
-          ${this.messages.messages.map((message) => {
+          ${this.messages.messages.map((message, index) => {
             const isVisitor = message.sender_type === "visitor";
+            const previous = this.messages.messages[index - 1];
+            const startsRemoteGroup =
+              !isVisitor && (previous === undefined || previous.sender_type === "visitor");
             const bubble = html`
               <div class="msg ${isVisitor ? "visitor" : "remote"}">
                 ${message.body}
@@ -1368,11 +1473,17 @@ export class MkEngageWidget extends LitElement {
                     </button>
                   `,
                 )}
+                <span class="time">${this.formatTime(message.sent_at)}</span>
               </div>
             `;
             return isVisitor
               ? html`<div class="row visitor">${bubble}</div>`
-              : html`<div class="row remote">${this.renderMsgAvatar()}${bubble}</div>`;
+              : html`
+                  ${startsRemoteGroup
+                    ? html`<div class="sender-label">${this.config?.title ?? t("title")}</div>`
+                    : nothing}
+                  <div class="row remote">${this.renderMsgAvatar()}${bubble}</div>
+                `;
           })}
           ${this.messages.pendingMessages.map(
             (pending) => html`
@@ -1459,7 +1570,7 @@ export class MkEngageWidget extends LitElement {
           <textarea
             rows="1"
             aria-label=${t("input_label")}
-            placeholder=${t("input_placeholder")}
+            placeholder=${this.config?.inputPlaceholder ?? t("input_placeholder")}
             maxlength="16000"
             .value=${this.draft}
             @input=${(event: Event) => {

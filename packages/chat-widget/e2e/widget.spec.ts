@@ -374,6 +374,38 @@ test.describe("widget on a hostile host page", () => {
     );
   });
 
+  test("dark theme applies the premium palette and passes Axe", async ({ page }) => {
+    await mockApi(page);
+    await page.goto("/demo/index.html?site_key=sk_mock&theme=dark");
+    await launcher(page).click();
+    await expect(panel(page)).toBeVisible();
+
+    // Palette + reference structure: chevron, sender label, split greeting
+    // with in-bubble timestamps, right-aligned filled chips.
+    await expect(widget(page)).toHaveAttribute("data-theme", "dark");
+    await expect(panel(page)).toHaveCSS("background-color", "rgb(12, 12, 14)");
+    await expect(widget(page).locator("header")).toHaveCSS("background-color", "rgb(39, 39, 42)");
+    await expect(widget(page).locator(".close")).toHaveText("‹");
+    await expect(widget(page).locator(".sender-label").first()).toHaveText("TechPIO");
+    await expect(widget(page).locator(".msg.remote")).toHaveCount(2);
+    await expect(widget(page).locator(".msg.remote .time").first()).not.toBeEmpty();
+    const chip = widget(page).locator(".quick-reply").first();
+    await expect(chip).toHaveCSS("background-color", "rgb(212, 212, 216)");
+    await expect(widget(page).locator(".quick-replies")).toHaveCSS("justify-content", "flex-end");
+    await expect(widget(page).locator("textarea")).toHaveAttribute(
+      "placeholder",
+      "We are here to help you",
+    );
+
+    const results = await new AxeBuilder({ page })
+      .include("mkengage-widget")
+      .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
+      .analyze();
+    expect(
+      results.violations.filter((v) => v.impact === "serious" || v.impact === "critical"),
+    ).toEqual([]);
+  });
+
   test("pre-chat form gates the chat and posts the lead profile (Phase 23)", async ({ page }) => {
     const state = await mockApi(page);
     state.prechat = { enabled: true, require_email: true };

@@ -30,6 +30,10 @@ export interface WidgetConfig {
   quickReplies?: string[];
   /** Hide the "powered by mkEngage" footer (paid plans). */
   hideBranding?: boolean;
+  /** Visual theme; "dark" switches to the near-black premium palette. */
+  theme?: "light" | "dark";
+  /** Composer placeholder override (e.g. "We are here to help you"). */
+  inputPlaceholder?: string;
   /** Verified identity payload from the host page (optional). */
   identity?: WidgetIdentity;
 }

@@ -33,13 +33,21 @@
       const externalId = params.get("external_id");
       const signature = params.get("sig");
 
+      const dark = params.get("theme") === "dark";
+
       mount({
         siteKey: params.get("site_key") ?? "sk_demo",
         apiUrl: "http://127.0.0.1:8000",
-        title: "Acme Support",
-        subtitle: "Typically replies in a few minutes",
-        greeting: "Hi there! 👋 Welcome to Acme. How can we help you today?",
-        quickReplies: ["Track my order", "Shipping info", "Returns", "Talk to a human"],
+        title: dark ? "TechPIO" : "Acme Support",
+        subtitle: dark ? "We are online!" : "Typically replies in a few minutes",
+        theme: dark ? "dark" : undefined,
+        inputPlaceholder: dark ? "We are here to help you" : undefined,
+        greeting: dark
+          ? "Hi, there! Welcome Back to TechPIO Services.\nIt's great to see you again. How can we help you today?"
+          : "Hi there! 👋 Welcome to Acme. How can we help you today?",
+        quickReplies: dark
+          ? ["Interested in Services!", "Book a Free Discovery Call", "Just exploring"]
+          : ["Track my order", "Shipping info", "Returns", "Talk to a human"],
         ...(externalId !== null && signature !== null
           ? {
               identity: {
