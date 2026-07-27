@@ -45,6 +45,7 @@ export class MkEngageWidget extends LitElement {
       --mk-branding: #52525b;
       --mk-time: rgb(255 255 255 / 0.85);
       --mk-time-remote: #52525b;
+      --mk-composer-bg: #ffffff;
 
       /* !important on host typography: host-page rules (even universal
          "* { ... !important }" resets) target the host ELEMENT and inherit
@@ -80,6 +81,9 @@ export class MkEngageWidget extends LitElement {
       --mk-chip-text: #18181b;
       --mk-branding: #a1a1aa;
       --mk-time-remote: #a1a1aa;
+      /* Composer bar sits slightly lighter than the log (reference). */
+      --mk-composer-bg: #1a1a1e;
+      --mk-border: #2e2e33;
     }
 
     :host([data-theme="dark"]) .offline-hours {
@@ -121,8 +125,9 @@ export class MkEngageWidget extends LitElement {
       position: absolute;
       inset-inline-end: 0;
       inset-block-end: 72px;
-      inline-size: min(360px, calc(100vw - 32px));
-      block-size: min(520px, calc(100vh - 120px));
+      /* Desktop-first proportions (reference): taller, roomier panel. */
+      inline-size: min(400px, calc(100vw - 32px));
+      block-size: min(650px, calc(100vh - 110px));
       background: var(--mk-surface);
       border: 1px solid var(--mk-border);
       border-radius: var(--mk-radius);
@@ -135,16 +140,16 @@ export class MkEngageWidget extends LitElement {
     header {
       background: var(--mk-header-bg);
       color: var(--mk-accent-contrast);
-      padding: 14px 14px;
+      padding: 16px 16px;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
     }
 
     .avatar {
       position: relative;
-      inline-size: 40px;
-      block-size: 40px;
+      inline-size: 44px;
+      block-size: 44px;
       border-radius: 50%;
       background: rgb(255 255 255 / 0.2);
       display: grid;
@@ -289,8 +294,8 @@ export class MkEngageWidget extends LitElement {
 
     .msg {
       max-inline-size: 78%;
-      padding: 9px 13px;
-      border-radius: 16px;
+      padding: 10px 14px;
+      border-radius: 18px;
       overflow-wrap: anywhere;
       /* NO pre-wrap here: Lit template newlines/indentation between the
          body, attachments, and timestamp would render as blank lines and
@@ -489,6 +494,7 @@ export class MkEngageWidget extends LitElement {
     .branding {
       text-align: center;
       font-size: 11px;
+      background: var(--mk-composer-bg); /* one continuous bottom bar */
       /* Theme-pinned (light #52525b / dark #a1a1aa) so "Powered by" clears
          WCAG AA (4.5:1) on both surfaces and any host page bleed-through. */
       color: var(--mk-branding);
@@ -525,23 +531,26 @@ export class MkEngageWidget extends LitElement {
       display: flex;
       align-items: flex-end;
       gap: 4px;
-      padding: 8px 10px;
+      padding: 10px 12px;
       border-block-start: 1px solid var(--mk-border);
+      background: var(--mk-composer-bg);
     }
 
     textarea {
       box-sizing: border-box;
       flex: 1;
       resize: none;
-      border: 1px solid var(--mk-border);
+      /* Flat bar (reference): bare placeholder on the composer surface —
+         no pill outline. Focus keeps the a11y ring. */
+      border: none;
+      background: transparent;
       border-radius: 12px;
-      padding: 10px 12px;
+      padding: 10px 8px;
       font: inherit;
       block-size: 40px;
       min-block-size: 40px;
       max-block-size: 96px;
       color: var(--mk-text);
-      background: var(--mk-surface);
       /* Auto-grown via JS; hidden overflow prevents the Windows scrollbar
          arrows that showed inside the fixed-height composer. */
       overflow-y: hidden;
