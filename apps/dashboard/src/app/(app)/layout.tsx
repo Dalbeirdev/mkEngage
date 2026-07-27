@@ -36,6 +36,7 @@ export default async function AppLayout({
     { href: "/settings/departments", label: t("departments"), icon: <IconDepartments /> },
     { href: "/settings/widget", label: t("widgetSetup"), icon: <IconWidget /> },
     { href: "/settings/canned", label: t("cannedReplies"), icon: <IconConversations /> },
+    { href: "/settings/channels", label: t("channels"), icon: <IconVisitors /> },
     { href: "/settings/profile", label: t("profile"), icon: <IconProfile /> },
   ];
 

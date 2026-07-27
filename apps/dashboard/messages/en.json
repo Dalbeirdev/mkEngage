@@ -20,7 +20,8 @@
     "departments": "Departments",
     "knowledge": "Knowledge",
     "visitors": "Visitors",
-    "cannedReplies": "Canned replies"
+    "cannedReplies": "Canned replies",
+    "channels": "Channels"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -301,5 +302,26 @@
     "savedNotice": "Saved!",
     "saveError": "Could not save — every message/options/question step needs text, and options edges need labels.",
     "hint": "Drag from a step's bottom handle to the next step's top handle to connect them. Edges from an Options menu are labeled with the option they answer."
+  },
+  "channels": {
+    "title": "Channels",
+    "subtitle": "Connect messaging channels so customers can reach you beyond the website widget. Replies from agents and your chatbot flow back automatically.",
+    "connectWhatsApp": "Connect WhatsApp Business",
+    "connectHelp": "From your Meta App (WhatsApp → API Setup): copy the Phone Number ID, a permanent access token, and the App Secret. After connecting, paste the webhook URL and verify token below into the Meta console.",
+    "fieldName": "Display name (e.g. Support WhatsApp)",
+    "fieldPhoneNumberId": "Phone Number ID",
+    "fieldWabaId": "WhatsApp Business Account ID (optional)",
+    "fieldAccessToken": "Access token",
+    "fieldAppSecret": "App secret",
+    "connect": "Connect channel",
+    "connecting": "Connecting…",
+    "createError": "Could not connect the channel — check the fields.",
+    "loading": "Loading…",
+    "error": "Could not load channels.",
+    "empty": "No channels connected yet.",
+    "disconnect": "Disconnect",
+    "metaSetupHint": "Paste these into Meta App → WhatsApp → Configuration → Webhook (subscribe to the messages field):",
+    "webhookUrl": "Webhook URL",
+    "verifyToken": "Verify token"
   }
 }

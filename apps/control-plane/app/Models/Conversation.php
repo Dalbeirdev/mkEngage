@@ -18,6 +18,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $csat_rated_at
  * @property list<string>|null $tags
  * @property array<string, mixed>|null $flow_state
+ * @property string|null $channel_id
+ * @property string|null $external_thread_id
  */
 final class Conversation extends Model
 {
@@ -33,6 +35,8 @@ final class Conversation extends Model
         'department_id',
         'chatbot_id',
         'source_url',
+        'channel_id',
+        'external_thread_id',
     ];
 
     protected function casts(): array
@@ -51,6 +55,12 @@ final class Conversation extends Model
     public function visitor(): BelongsTo
     {
         return $this->belongsTo(Visitor::class);
+    }
+
+    /** @return BelongsTo<Channel, $this> */
+    public function channel(): BelongsTo
+    {
+        return $this->belongsTo(Channel::class);
     }
 
     /** @return BelongsTo<Contact, $this> */

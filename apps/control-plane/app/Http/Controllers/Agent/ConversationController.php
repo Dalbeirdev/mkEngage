@@ -44,7 +44,7 @@ final class ConversationController extends Controller
                 isset($validated['tag']),
                 fn ($query) => $query->whereJsonContains('tags', $validated['tag']),
             )
-            ->with(['visitor', 'contact', 'department', 'assignedAgent:id,name'])
+            ->with(['visitor', 'contact', 'department', 'assignedAgent:id,name', 'channel:id,type,name'])
             ->orderByDesc('updated_at')
             ->limit($validated['limit'] ?? 50)
             ->get();
@@ -58,7 +58,7 @@ final class ConversationController extends Controller
 
     public function show(string $conversationId): JsonResponse
     {
-        $conversation = Conversation::query()->with(['visitor', 'contact', 'department', 'assignedAgent:id,name'])->find($conversationId);
+        $conversation = Conversation::query()->with(['visitor', 'contact', 'department', 'assignedAgent:id,name', 'channel:id,type,name'])->find($conversationId);
         abort_if($conversation === null, 404);
 
         return response()->json($this->toContract($conversation));
@@ -108,7 +108,7 @@ final class ConversationController extends Controller
         );
 
         return response()->json(
-            $this->toContract($conversation->fresh(['visitor', 'contact', 'department', 'assignedAgent:id,name']) ?? $conversation),
+            $this->toContract($conversation->fresh(['visitor', 'contact', 'department', 'assignedAgent:id,name', 'channel:id,type,name']) ?? $conversation),
             201,
         );
     }
@@ -171,7 +171,7 @@ final class ConversationController extends Controller
             $assignments->autoAssign($conversation, $actorId);
         }
 
-        return response()->json($this->toContract($conversation->load(['visitor', 'contact', 'department', 'assignedAgent:id,name'])));
+        return response()->json($this->toContract($conversation->load(['visitor', 'contact', 'department', 'assignedAgent:id,name', 'channel:id,type,name'])));
     }
 
     /**
@@ -198,7 +198,7 @@ final class ConversationController extends Controller
 
         // The service mutated $conversation in place; reload its relations
         // (fresh assignment) without another find().
-        $conversation->load(['visitor', 'contact', 'department', 'assignedAgent:id,name']);
+        $conversation->load(['visitor', 'contact', 'department', 'assignedAgent:id,name', 'channel:id,type,name']);
 
         return response()->json($this->toContract($conversation));
     }
@@ -226,6 +226,7 @@ final class ConversationController extends Controller
             'department_name' => $conversation->department?->name,
             'last_sequence' => $conversation->last_sequence,
             'source_url' => $conversation->source_url,
+            'channel_type' => $conversation->channel?->type,
             'csat_rating' => $conversation->csat_rating,
             'csat_comment' => $conversation->csat_comment,
             'tags' => $conversation->tags ?? [],

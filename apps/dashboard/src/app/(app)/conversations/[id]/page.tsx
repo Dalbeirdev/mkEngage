@@ -317,6 +317,11 @@ export default function ConversationThreadPage({
             {t("visitorOnline")}
           </span>
         )}
+        {conversation?.channel_type === "whatsapp" && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/40 dark:text-green-300">
+            WhatsApp
+          </span>
+        )}
         {typeof conversation?.csat_rating === "number" && (
           <span
             className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-900/40 dark:text-amber-200"

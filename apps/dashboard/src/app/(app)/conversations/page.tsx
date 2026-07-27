@@ -98,7 +98,14 @@ export default function ConversationsPage() {
                     {name.charAt(0).toUpperCase()}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-medium">{name}</span>
+                    <span className="block truncate font-medium">
+                      {name}
+                      {conversation.channel_type === "whatsapp" && (
+                        <span className="ms-2 rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-800 dark:bg-green-900/40 dark:text-green-300">
+                          WhatsApp
+                        </span>
+                      )}
+                    </span>
                     <span className="block truncate text-xs text-zinc-500">
                     {conversation.department_name !== null && (
                       <span className="me-2 rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">

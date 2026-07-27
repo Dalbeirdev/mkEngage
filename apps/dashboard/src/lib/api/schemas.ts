@@ -93,6 +93,7 @@ export const conversationSchema = z.object({
   csat_rating: z.number().int().min(1).max(5).nullable().optional(),
   csat_comment: z.string().nullable().optional(),
   tags: z.array(z.string()).optional(),
+  channel_type: z.string().nullable().optional(),
   created_at: z.string().nullable(),
   updated_at: z.string().nullable(),
 });
@@ -228,6 +229,20 @@ export type CannedResponse = z.infer<typeof cannedResponseSchema>;
 export const cannedResponseListSchema = z.object({
   data: z.array(cannedResponseSchema),
 });
+
+export const channelSchema = z.object({
+  channel_id: z.uuid(),
+  type: z.string(),
+  name: z.string(),
+  status: z.string(),
+  webhook_url: z.string(),
+  webhook_verify_token: z.string(),
+  created_at: z.string().nullable(),
+});
+
+export type ChannelInfo = z.infer<typeof channelSchema>;
+
+export const channelListSchema = z.object({ data: z.array(channelSchema) });
 
 export const liveVisitorsSchema = z.object({
   data: z.array(

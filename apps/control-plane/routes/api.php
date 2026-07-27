@@ -6,6 +6,7 @@ use App\Http\Controllers\Agent\AgentAttachmentController;
 use App\Http\Controllers\Agent\AgentMessageController;
 use App\Http\Controllers\Agent\AvailabilityController;
 use App\Http\Controllers\Agent\CannedResponseController;
+use App\Http\Controllers\Agent\ChannelController;
 use App\Http\Controllers\Agent\ChatbotController;
 use App\Http\Controllers\Agent\ChatbotFlowController;
 use App\Http\Controllers\Agent\ContactController;
@@ -18,6 +19,7 @@ use App\Http\Controllers\Agent\LiveVisitorController;
 use App\Http\Controllers\Agent\WidgetSettingsController;
 use App\Http\Controllers\AttachmentStreamController;
 use App\Http\Controllers\Auth\IssueApiTokenController;
+use App\Http\Controllers\Channels\WhatsAppWebhookController;
 use App\Http\Controllers\Widget\WidgetAttachmentController;
 use App\Http\Controllers\Widget\WidgetConversationController;
 use App\Http\Controllers\Widget\WidgetHeartbeatController;
@@ -36,6 +38,11 @@ use Illuminate\Support\Facades\Route;
 // Unauthenticated: token issuance + widget bootstrap (rate-limited in controllers).
 Route::post('/auth/token', IssueApiTokenController::class);
 Route::post('/widget/session', WidgetSessionController::class);
+
+// WhatsApp Cloud API webhook (Phase 29): public; Meta authenticates via the
+// verify-token handshake (GET) and HMAC signature (POST).
+Route::get('/channels/whatsapp/{organization}/{channel}', [WhatsAppWebhookController::class, 'verify']);
+Route::post('/channels/whatsapp/{organization}/{channel}', [WhatsAppWebhookController::class, 'receive']);
 
 // Signed attachment stream (§14): the temporary signature IS the auth —
 // minted only by the authorized download endpoints, short expiry.
@@ -66,6 +73,9 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
         Route::get('/visitors/live', [LiveVisitorController::class, 'index']);
         Route::get('/chatbots/{chatbot}/flow', [ChatbotFlowController::class, 'show']);
         Route::put('/chatbots/{chatbot}/flow', [ChatbotFlowController::class, 'update']);
+        Route::get('/channels', [ChannelController::class, 'index']);
+        Route::post('/channels', [ChannelController::class, 'store']);
+        Route::delete('/channels/{channel}', [ChannelController::class, 'destroy']);
         Route::get('/canned-responses', [CannedResponseController::class, 'index']);
         Route::post('/canned-responses', [CannedResponseController::class, 'store']);
         Route::put('/canned-responses/{cannedResponse}', [CannedResponseController::class, 'update']);

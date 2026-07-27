@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Jobs\DeliverChannelMessage;
 use App\Models\Attachment;
 use App\Models\Conversation;
 use App\Models\Message;
@@ -44,6 +45,7 @@ final class ConversationMessenger
         ?string $correlationId = null,
         array $attachmentIds = [],
         ?string $replyToMessageId = null,
+        ?string $channelId = null,
     ): array {
         $existing = Message::query()
             ->where('conversation_id', $conversation->id)
@@ -67,6 +69,7 @@ final class ConversationMessenger
 
         $message = Message::query()->create([
             'conversation_id' => $conversation->id,
+            'channel_id' => $channelId ?? $conversation->channel_id,
             'sender_type' => $senderType,
             'sender_id' => $senderId,
             'sequence_number' => $sequence,
@@ -115,6 +118,15 @@ final class ConversationMessenger
         // Interim direct fan-out (used when NATS is not configured; the
         // gateway's JetStream consumer is the primary path, ADR-005).
         $this->broadcaster->messageAccepted($message);
+
+        // Channel delivery (Phase 29): agent/bot replies in a channel-bound
+        // conversation go back out via the provider (queued, never inline).
+        if ($conversation->channel_id !== null && in_array($senderType, ['agent', 'chatbot'], true)) {
+            DeliverChannelMessage::dispatch(
+                (string) $conversation->organization_id,
+                $message->id,
+            )->afterCommit();
+        }
 
         return ['message' => $message->load('attachments'), 'duplicate' => false];
     }
