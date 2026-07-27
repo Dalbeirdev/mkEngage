@@ -220,6 +220,7 @@ export class MkEngageWidget extends LitElement {
       flex-direction: column;
       gap: 10px;
       margin: 0;
+      scrollbar-width: thin; /* slim rail instead of chunky Windows arrows */
     }
 
     .row {
@@ -291,7 +292,21 @@ export class MkEngageWidget extends LitElement {
       padding: 9px 13px;
       border-radius: 16px;
       overflow-wrap: anywhere;
+      /* NO pre-wrap here: Lit template newlines/indentation between the
+         body, attachments, and timestamp would render as blank lines and
+         balloon the bubble (emoji-only messages made it a 150px square).
+         User newlines are preserved on .body only. */
+    }
+
+    .msg .body {
       white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    /* Emoji-only messages read better large (modern-chat convention). */
+    .msg .body.emoji-only {
+      font-size: 26px;
+      line-height: 1.25;
     }
 
     .msg.visitor {
@@ -527,6 +542,10 @@ export class MkEngageWidget extends LitElement {
       max-block-size: 96px;
       color: var(--mk-text);
       background: var(--mk-surface);
+      /* Auto-grown via JS; hidden overflow prevents the Windows scrollbar
+         arrows that showed inside the fixed-height composer. */
+      overflow-y: hidden;
+      scrollbar-width: none;
     }
 
     textarea:focus-visible {
@@ -907,6 +926,26 @@ export class MkEngageWidget extends LitElement {
       this.removeAttribute("data-theme");
     }
     this.loadEmojiPrefs();
+  }
+
+  /** Grow the composer with its content (40px..96px, then inner scroll). */
+  private autosizeComposer(textarea: HTMLTextAreaElement): void {
+    textarea.style.blockSize = "40px";
+    const grown = Math.min(96, textarea.scrollHeight);
+    textarea.style.blockSize = `${grown}px`;
+    textarea.style.overflowY = textarea.scrollHeight > 96 ? "auto" : "hidden";
+  }
+
+  /** True for short all-emoji bodies (rendered larger, chat convention). */
+  private isEmojiOnly(body: string): boolean {
+    const stripped = body.replace(/\s/gu, "");
+    if (stripped === "" || [...stripped].length > 8) return false;
+    // ‍ (ZWJ) and ️ (variation selector) hold sequences together.
+    return /^(?:\p{Extended_Pictographic}|\p{Emoji_Component}|‍|️)+$/u.test(stripped);
+  }
+
+  private renderBody(body: string): unknown {
+    return html`<span class="body ${this.isEmojiOnly(body) ? "emoji-only" : ""}">${body}</span>`;
   }
 
   /** Locale-aware "06:38 PM"-style time for in-bubble timestamps. */
@@ -1388,6 +1427,13 @@ export class MkEngageWidget extends LitElement {
     this.sending = true;
     this.draft = "";
     this.stopTypingSignal();
+
+    // Collapse the auto-grown composer back to a single line.
+    const composer = this.renderRoot.querySelector("textarea");
+    if (composer !== null) {
+      composer.style.blockSize = "40px";
+      composer.style.overflowY = "hidden";
+    }
     const attachment = this.pendingAttachment;
     this.pendingAttachment = null;
     const idempotencyKey = crypto.randomUUID();
@@ -1540,7 +1586,7 @@ export class MkEngageWidget extends LitElement {
                             <div class="row remote">
                               ${index === 0 ? this.renderMsgAvatar() : html`<span class="msg-avatar-spacer"></span>`}
                               <div class="msg remote">
-                                ${line}
+                                ${this.renderBody(line)}
                                 <span class="time">${this.formatTime(null)}</span>
                               </div>
                             </div>
@@ -1570,7 +1616,7 @@ export class MkEngageWidget extends LitElement {
                 <div class="row remote">
                   ${this.renderMsgAvatar()}
                   <div class="msg remote">
-                    ${this.triggerMessage}
+                    ${this.renderBody(this.triggerMessage)}
                     <span class="time">${this.formatTime(null)}</span>
                   </div>
                 </div>
@@ -1584,7 +1630,7 @@ export class MkEngageWidget extends LitElement {
               !isVisitor && (previous === undefined || previous.sender_type === "visitor");
             const bubble = html`
               <div class="msg ${isVisitor ? "visitor" : "remote"}">
-                ${message.body}
+                ${this.renderBody(message.body)}
                 ${(message.attachments ?? []).map(
                   (attachment) => html`
                     <button
@@ -1622,7 +1668,7 @@ export class MkEngageWidget extends LitElement {
             (pending) => html`
               <div class="row visitor">
                 <div class="msg visitor pending">
-                  ${pending.body}
+                  ${this.renderBody(pending.body)}
                   <span class="meta">${t("pending")}</span>
                 </div>
               </div>
@@ -1698,7 +1744,11 @@ export class MkEngageWidget extends LitElement {
               this.renderRoot.querySelector<HTMLInputElement>(".file-input")?.click();
             }}
           >
-            📎
+            <!-- SVG (not the 📎 glyph): emoji paperclips render as jarring
+                 monochrome outlines on Windows next to the colored smiley. -->
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+            </svg>
           </button>
           <textarea
             rows="1"
@@ -1707,7 +1757,9 @@ export class MkEngageWidget extends LitElement {
             maxlength="16000"
             .value=${this.draft}
             @input=${(event: Event) => {
-              this.draft = (event.target as HTMLTextAreaElement).value;
+              const target = event.target as HTMLTextAreaElement;
+              this.draft = target.value;
+              this.autosizeComposer(target);
               this.notifyTyping();
             }}
             @keydown=${(event: KeyboardEvent) => {

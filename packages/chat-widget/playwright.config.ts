@@ -33,7 +33,9 @@ export default defineConfig({
   webServer: {
     command: "node node_modules/vite/bin/vite.js dev --port 5175 --strictPort --host 127.0.0.1",
     url: "http://127.0.0.1:5175/demo/index.html",
-    reuseExistingServer: false,
+    // CI always boots a pristine server; locally a running dev server (same
+    // source, HMR-fresh) is reused so demos and tests can share the port.
+    reuseExistingServer: process.env["CI"] === undefined,
     timeout: 60_000,
   },
 });
