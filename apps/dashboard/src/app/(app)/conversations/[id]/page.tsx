@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 
 import {
   attachmentSchema,
+  cannedResponseListSchema,
   chatMessageSchema,
   conversationSchema,
   messageListSchema,
@@ -168,6 +169,35 @@ export default function ConversationThreadPage({
     queryFn: () => fetchNotes(id),
   });
 
+  // Canned responses for the "/" composer picker (Phase 25).
+  const canned = useQuery({
+    queryKey: ["canned-responses"],
+    queryFn: async () => {
+      const res = await fetch("/api/cp/canned-responses", { cache: "no-store" });
+      if (!res.ok) throw new Error(`canned ${res.status}`);
+      return cannedResponseListSchema.parse(await res.json()).data;
+    },
+    staleTime: 60_000,
+  });
+
+  // Conversation tags (Phase 25).
+  const [tagDraft, setTagDraft] = useState("");
+  const tagsMutation = useMutation({
+    mutationFn: async (tags: string[]) => {
+      const res = await fetch(`/api/cp/conversations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tags }),
+      });
+      if (!res.ok) throw new Error(`tags ${res.status}`);
+      return conversationSchema.parse(await res.json());
+    },
+    onSuccess: () => {
+      setTagDraft("");
+      void queryClient.invalidateQueries({ queryKey: ["conversation", id, "meta"] });
+    },
+  });
+
   const [noteDraft, setNoteDraft] = useState("");
   const noteMutation = useMutation({
     mutationFn: (body: string) => addNote(id, body),
@@ -276,6 +306,43 @@ export default function ConversationThreadPage({
             {t("csatBadge", { rating: conversation.csat_rating })}
           </span>
         )}
+        {(conversation?.tags ?? []).map((tag) => (
+          <span
+            key={tag}
+            className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300"
+          >
+            {tag}
+            <button
+              type="button"
+              aria-label={t("removeTag", { tag })}
+              onClick={() =>
+                tagsMutation.mutate((conversation?.tags ?? []).filter((existing) => existing !== tag))
+              }
+              className="opacity-60 hover:opacity-100"
+            >
+              ✕
+            </button>
+          </span>
+        ))}
+        <form
+          className="inline-flex"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const tag = tagDraft.trim();
+            if (tag === "" || tagsMutation.isPending) return;
+            tagsMutation.mutate([...(conversation?.tags ?? []), tag]);
+          }}
+        >
+          <input
+            type="text"
+            value={tagDraft}
+            maxLength={30}
+            onChange={(event) => setTagDraft(event.target.value)}
+            placeholder={t("addTag")}
+            aria-label={t("addTag")}
+            className="w-24 rounded-full border border-dashed border-zinc-300 px-2 py-0.5 text-xs focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-950"
+          />
+        </form>
         <div className="ms-auto flex items-center gap-2 text-sm">
           <span className="text-zinc-500">
             {conversation?.assigned_agent_name
@@ -441,6 +508,31 @@ export default function ConversationThreadPage({
               </button>
             </span>
           )}
+        </div>
+      )}
+
+      {/* "/" canned-response picker (Phase 25): draft starts with "/" ⇒ suggest. */}
+      {draft.startsWith("/") && (canned.data?.length ?? 0) > 0 && (
+        <div className="rounded-md border border-zinc-200 bg-white p-1 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+          {(canned.data ?? [])
+            .filter(
+              (item) =>
+                draft === "/" ||
+                item.shortcut.startsWith(draft.slice(1).toLowerCase()) ||
+                item.title.toLowerCase().includes(draft.slice(1).toLowerCase()),
+            )
+            .slice(0, 5)
+            .map((item) => (
+              <button
+                key={item.canned_response_id}
+                type="button"
+                onClick={() => setDraft(item.body)}
+                className="flex w-full items-baseline gap-2 rounded px-2 py-1.5 text-start text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                <code className="text-xs text-indigo-600 dark:text-indigo-400">/{item.shortcut}</code>
+                <span className="truncate text-zinc-600 dark:text-zinc-300">{item.body}</span>
+              </button>
+            ))}
         </div>
       )}
 

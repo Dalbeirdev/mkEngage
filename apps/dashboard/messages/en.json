@@ -19,7 +19,8 @@
     "widgetSetup": "Widget setup",
     "departments": "Departments",
     "knowledge": "Knowledge",
-    "visitors": "Visitors"
+    "visitors": "Visitors",
+    "cannedReplies": "Canned replies"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -86,7 +87,9 @@
     "addNote": "Add",
     "allDepartments": "All departments",
     "filterLabel": "Filter by department",
-    "csatBadge": "{rating}/5"
+    "csatBadge": "{rating}/5",
+    "addTag": "+ tag",
+    "removeTag": "Remove tag {tag}"
   },
   "contacts": {
     "title": "Contacts",
@@ -240,6 +243,21 @@
     "messagePlaceholder": "Say hi — e.g. \"Need any help?\"",
     "send": "Send",
     "sending": "Sending…",
-    "startError": "Could not start the conversation."
+    "startError": "Could not start the conversation.",
+    "leadScoreTitle": "Lead score: {score}/100"
+  },
+  "canned": {
+    "title": "Canned replies",
+    "subtitle": "Reusable reply templates. Agents insert them by typing / in the conversation composer.",
+    "fieldTitle": "Title",
+    "fieldShortcut": "shortcut",
+    "fieldBody": "Reply text…",
+    "add": "Add canned reply",
+    "saving": "Saving…",
+    "createError": "Could not save — shortcuts must be unique and lowercase (a-z, 0-9, -, _).",
+    "loading": "Loading…",
+    "error": "Could not load canned replies.",
+    "empty": "No canned replies yet. Add your first one above.",
+    "delete": "Delete"
   }
 }

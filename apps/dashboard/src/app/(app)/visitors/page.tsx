@@ -48,6 +48,12 @@ function VisitorRow({ visitor }: { visitor: LiveVisitor }) {
   const name =
     visitor.contact_name ?? visitor.display_name ?? t("anonymous");
 
+  const bucketClass = {
+    hot: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
+    warm: "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200",
+    cold: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
+  }[visitor.lead_bucket];
+
   return (
     <li className="flex flex-col gap-2 border-b border-zinc-100 py-3 last:border-b-0 dark:border-zinc-800">
       <div className="flex items-center gap-3">
@@ -69,6 +75,13 @@ function VisitorRow({ visitor }: { visitor: LiveVisitor }) {
             <span className="ms-2">· {t("onSiteFor", { duration: timeOnSite(visitor.first_seen_at) })}</span>
           </p>
         </div>
+        <span
+          className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${bucketClass}`}
+          title={t("leadScoreTitle", { score: visitor.lead_score })}
+        >
+          {visitor.lead_bucket === "hot" ? "🔥" : visitor.lead_bucket === "warm" ? "☀️" : "❄️"}
+          {visitor.lead_score}
+        </span>
         {visitor.conversation_id !== null ? (
           <button
             type="button"

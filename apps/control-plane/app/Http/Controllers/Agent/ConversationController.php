@@ -28,6 +28,7 @@ final class ConversationController extends Controller
         $validated = $request->validate([
             'status' => ['sometimes', 'in:open,pending,closed,all'],
             'department_id' => ['sometimes', 'uuid'],
+            'tag' => ['sometimes', 'string', 'max:30'],
             'limit' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ]);
 
@@ -38,6 +39,10 @@ final class ConversationController extends Controller
             ->when(
                 isset($validated['department_id']),
                 fn ($query) => $query->where('department_id', $validated['department_id']),
+            )
+            ->when(
+                isset($validated['tag']),
+                fn ($query) => $query->whereJsonContains('tags', $validated['tag']),
             )
             ->with(['visitor', 'contact', 'department', 'assignedAgent:id,name'])
             ->orderByDesc('updated_at')
@@ -117,6 +122,10 @@ final class ConversationController extends Controller
             'status' => ['sometimes', 'in:open,pending,closed'],
             'assigned_agent_id' => ['sometimes', 'nullable', 'uuid'],
             'department_id' => ['sometimes', 'uuid'],
+            'tags' => ['sometimes', 'array', 'max:10'],
+            // nullable: the global middleware converts whitespace-only
+            // entries to null before validation — they're dropped below.
+            'tags.*' => ['nullable', 'string', 'max:30', 'regex:/^[^,<>]+$/'],
         ]);
 
         $actorId = $request->user() instanceof User ? $request->user()->id : null;
@@ -124,6 +133,15 @@ final class ConversationController extends Controller
         if (array_key_exists('status', $validated)) {
             $conversation->status = $validated['status'];
             $conversation->closed_at = $validated['status'] === 'closed' ? now() : null;
+        }
+
+        if (array_key_exists('tags', $validated)) {
+            // Normalized: deduped, null/empty entries dropped (Phase 25).
+            // Trimming already happened in the global TrimStrings middleware.
+            $conversation->tags = array_values(array_unique(array_filter(
+                $validated['tags'],
+                fn (mixed $tag): bool => is_string($tag) && $tag !== '',
+            )));
         }
 
         if (array_key_exists('department_id', $validated)) {
@@ -210,6 +228,7 @@ final class ConversationController extends Controller
             'source_url' => $conversation->source_url,
             'csat_rating' => $conversation->csat_rating,
             'csat_comment' => $conversation->csat_comment,
+            'tags' => $conversation->tags ?? [],
             'created_at' => $conversation->created_at?->toIso8601String(),
             'updated_at' => $conversation->updated_at?->toIso8601String(),
         ];

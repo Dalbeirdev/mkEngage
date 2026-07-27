@@ -7,7 +7,9 @@ namespace App\Http\Controllers\Agent;
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\Visitor;
+use App\Services\LeadScorer;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Live visitor board (Phase 24): visitors whose heartbeat landed within the
@@ -20,7 +22,7 @@ final class LiveVisitorController extends Controller
     /** Seconds since the last heartbeat before a visitor drops off the board. */
     private const LIVENESS_WINDOW_SECONDS = 60;
 
-    public function index(): JsonResponse
+    public function index(LeadScorer $scorer): JsonResponse
     {
         $visitors = Visitor::query()
             ->with('contact:id,name,email')
@@ -37,11 +39,29 @@ final class LiveVisitorController extends Controller
             ->get()
             ->keyBy('visitor_id');
 
+        // One aggregate for message counts (lead-scoring signal, Phase 25).
+        // Raw query ⇒ explicit org filter (two-layer tenancy).
+        $messageCounts = DB::table('messages')
+            ->whereIn('sender_id', $visitors->pluck('id')->all())
+            ->where('sender_type', 'visitor')
+            ->where('organization_id', $visitors->first()->organization_id ?? '')
+            ->selectRaw('sender_id, count(*) as n')
+            ->groupBy('sender_id')
+            ->pluck('n', 'sender_id');
+
         return response()->json([
-            'data' => $visitors->map(function (Visitor $visitor) use ($openConversations): array {
+            'data' => $visitors->map(function (Visitor $visitor) use ($openConversations, $messageCounts, $scorer): array {
                 $conversation = $openConversations->get($visitor->id);
+                $sent = $messageCounts->get($visitor->id);
+                $score = $scorer->score(
+                    $visitor,
+                    $conversation !== null,
+                    is_numeric($sent) ? (int) $sent : 0,
+                );
 
                 return [
+                    'lead_score' => $score,
+                    'lead_bucket' => $scorer->bucket($score),
                     'visitor_id' => $visitor->id,
                     'display_name' => $visitor->display_name,
                     'contact_name' => $visitor->contact?->name,

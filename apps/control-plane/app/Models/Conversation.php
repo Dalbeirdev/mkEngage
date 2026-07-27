@@ -16,6 +16,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $csat_rating
  * @property string|null $csat_comment
  * @property Carbon|null $csat_rated_at
+ * @property list<string>|null $tags
  */
 final class Conversation extends Model
 {
@@ -40,6 +41,7 @@ final class Conversation extends Model
             'closed_at' => 'datetime',
             'csat_rating' => 'integer',
             'csat_rated_at' => 'datetime',
+            'tags' => 'array',
         ];
     }
 

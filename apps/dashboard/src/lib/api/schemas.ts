@@ -92,6 +92,7 @@ export const conversationSchema = z.object({
   source_url: z.string().nullable(),
   csat_rating: z.number().int().min(1).max(5).nullable().optional(),
   csat_comment: z.string().nullable().optional(),
+  tags: z.array(z.string()).optional(),
   created_at: z.string().nullable(),
   updated_at: z.string().nullable(),
 });
@@ -197,9 +198,25 @@ export const widgetSettingsSchema = z.object({
 
 export type WidgetSettings = z.infer<typeof widgetSettingsSchema>;
 
+export const cannedResponseSchema = z.object({
+  canned_response_id: z.uuid(),
+  title: z.string(),
+  shortcut: z.string(),
+  body: z.string(),
+  created_at: z.string().nullable(),
+});
+
+export type CannedResponse = z.infer<typeof cannedResponseSchema>;
+
+export const cannedResponseListSchema = z.object({
+  data: z.array(cannedResponseSchema),
+});
+
 export const liveVisitorsSchema = z.object({
   data: z.array(
     z.object({
+      lead_score: z.number().int(),
+      lead_bucket: z.enum(["hot", "warm", "cold"]),
       visitor_id: z.uuid(),
       display_name: z.string().nullable(),
       contact_name: z.string().nullable(),

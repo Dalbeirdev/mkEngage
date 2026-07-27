@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Agent\AgentAttachmentController;
 use App\Http\Controllers\Agent\AgentMessageController;
 use App\Http\Controllers\Agent\AvailabilityController;
+use App\Http\Controllers\Agent\CannedResponseController;
 use App\Http\Controllers\Agent\ChatbotController;
 use App\Http\Controllers\Agent\ContactController;
 use App\Http\Controllers\Agent\ConversationController;
@@ -62,6 +63,10 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
         Route::get('/conversations', [ConversationController::class, 'index']);
         Route::post('/conversations', [ConversationController::class, 'store']);
         Route::get('/visitors/live', [LiveVisitorController::class, 'index']);
+        Route::get('/canned-responses', [CannedResponseController::class, 'index']);
+        Route::post('/canned-responses', [CannedResponseController::class, 'store']);
+        Route::put('/canned-responses/{cannedResponse}', [CannedResponseController::class, 'update']);
+        Route::delete('/canned-responses/{cannedResponse}', [CannedResponseController::class, 'destroy']);
         Route::get('/conversations/{conversation}', [ConversationController::class, 'show']);
         Route::patch('/conversations/{conversation}', [ConversationController::class, 'update']);
         Route::get('/conversations/{conversation}/messages', [AgentMessageController::class, 'index']);
