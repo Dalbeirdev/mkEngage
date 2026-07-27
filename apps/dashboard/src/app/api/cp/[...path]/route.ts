@@ -20,7 +20,7 @@ const ALLOWED = [
   /^visitors\/live$/,
   /^canned-responses(\/[0-9a-f-]{36})?$/,
   /^contacts(\/[0-9a-f-]{36})?$/,
-  /^chatbots(\/[0-9a-f-]{36})?$/,
+  /^chatbots(\/[0-9a-f-]{36})?(\/flow)?$/,
   /^organization\/widget-settings(\/rotate-secret)?$/,
   /^departments(\/[0-9a-f-]{36})?(\/members)?$/,
   /^users$/,

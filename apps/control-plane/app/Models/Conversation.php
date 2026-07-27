@@ -17,6 +17,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $csat_comment
  * @property Carbon|null $csat_rated_at
  * @property list<string>|null $tags
+ * @property array<string, mixed>|null $flow_state
  */
 final class Conversation extends Model
 {
@@ -42,6 +43,7 @@ final class Conversation extends Model
             'csat_rating' => 'integer',
             'csat_rated_at' => 'datetime',
             'tags' => 'array',
+            'flow_state' => 'array',
         ];
     }
 

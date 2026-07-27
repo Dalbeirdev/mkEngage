@@ -8,6 +8,7 @@ use App\Models\Chatbot;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Services\ConversationMessenger;
+use App\Services\FlowRunner;
 use App\Services\KnowledgeRetriever;
 use App\Tenancy\Tenancy;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -39,8 +40,9 @@ final class GenerateChatbotReply implements ShouldQueue
         Tenancy $tenancy,
         ConversationMessenger $messenger,
         KnowledgeRetriever $retriever,
+        FlowRunner $flows,
     ): void {
-        $tenancy->run($this->organizationId, function () use ($messenger, $retriever): void {
+        $tenancy->run($this->organizationId, function () use ($messenger, $retriever, $flows): void {
             $conversation = Conversation::query()->find($this->conversationId);
 
             if ($conversation === null || $conversation->status === 'closed') {
@@ -80,6 +82,22 @@ final class GenerateChatbotReply implements ShouldQueue
 
             if ($history === [] || $history[count($history) - 1]['sender_type'] === 'chatbot') {
                 return; // Nothing new to answer.
+            }
+
+            // mkEngage Flow (Phase 27): a designed flow takes precedence over
+            // free-form AI. FlowRunner returns false to delegate the turn to
+            // the AI pipeline ("ai" node reached or flow finished).
+            if (FlowRunner::hasFlow($chatbot)) {
+                $lastEntry = $history[count($history) - 1];
+                $flowHandled = $flows->step(
+                    $conversation,
+                    $chatbot,
+                    $lastEntry['sender_type'] === 'visitor' ? $lastEntry['body'] : '',
+                );
+
+                if ($flowHandled) {
+                    return;
+                }
             }
 
             // RAG (§10/ADR-003): ground the reply in org knowledge when any

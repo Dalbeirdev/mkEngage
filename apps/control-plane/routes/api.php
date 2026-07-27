@@ -7,6 +7,7 @@ use App\Http\Controllers\Agent\AgentMessageController;
 use App\Http\Controllers\Agent\AvailabilityController;
 use App\Http\Controllers\Agent\CannedResponseController;
 use App\Http\Controllers\Agent\ChatbotController;
+use App\Http\Controllers\Agent\ChatbotFlowController;
 use App\Http\Controllers\Agent\ContactController;
 use App\Http\Controllers\Agent\ConversationController;
 use App\Http\Controllers\Agent\ConversationNoteController;
@@ -63,6 +64,8 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
         Route::get('/conversations', [ConversationController::class, 'index']);
         Route::post('/conversations', [ConversationController::class, 'store']);
         Route::get('/visitors/live', [LiveVisitorController::class, 'index']);
+        Route::get('/chatbots/{chatbot}/flow', [ChatbotFlowController::class, 'show']);
+        Route::put('/chatbots/{chatbot}/flow', [ChatbotFlowController::class, 'update']);
         Route::get('/canned-responses', [CannedResponseController::class, 'index']);
         Route::post('/canned-responses', [CannedResponseController::class, 'store']);
         Route::put('/canned-responses/{cannedResponse}', [CannedResponseController::class, 'update']);

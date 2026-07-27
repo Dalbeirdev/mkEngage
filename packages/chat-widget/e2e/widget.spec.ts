@@ -425,6 +425,34 @@ test.describe("widget on a hostile host page", () => {
     expect(state.heartbeatCalls.length).toBeGreaterThanOrEqual(1);
   });
 
+  test("flow rich messages render option chips; clicking answers the bot (Phase 27)", async ({ page }) => {
+    const state = await mockApi(page);
+    await openWidget(page);
+
+    await textarea(page).fill("hi");
+    await textarea(page).press("Enter");
+    await expect(widget(page).locator(".msg.visitor")).toContainText("hi");
+
+    // The flow bot answers with a rich options message.
+    const message = makeMessage(state, "chatbot", JSON.stringify({
+      text: "What do you need?",
+      options: ["Sales", "Support"],
+    }));
+    message.content_type = "rich";
+
+    const chips = widget(page).locator(".msg.remote ~ .quick-replies .quick-reply, .quick-replies .quick-reply");
+    await expect(widget(page).locator(".msg.remote").last()).toContainText("What do you need?", {
+      timeout: 10_000,
+    });
+    await expect(chips).toHaveCount(2);
+
+    // Clicking a chip sends it as the visitor's reply; chips disappear
+    // (the menu is no longer the latest message).
+    await chips.nth(1).click();
+    await expect(widget(page).locator(".msg.visitor").last()).toContainText("Support");
+    await expect(widget(page).locator(".quick-reply")).toHaveCount(0);
+  });
+
   test("org appearance restyles the widget and white-label hides branding (Phase 26)", async ({ page }) => {
     const state = await mockApi(page);
     state.appearance = {

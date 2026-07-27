@@ -8,6 +8,9 @@ use App\Models\Concerns\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property array<string, mixed>|null $flow
+ */
 final class Chatbot extends Model
 {
     use BelongsToOrganization;
@@ -20,5 +23,13 @@ final class Chatbot extends Model
         'system_prompt',
         'provider',
         'model',
+        'flow',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'flow' => 'array',
+        ];
+    }
 }

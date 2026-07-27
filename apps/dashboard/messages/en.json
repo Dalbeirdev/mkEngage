@@ -126,7 +126,8 @@
     "saveError": "Could not save.",
     "activate": "Activate",
     "pause": "Pause",
-    "activeNote": "Only one chatbot can be active — activating this one pauses the others."
+    "activeNote": "Only one chatbot can be active — activating this one pauses the others.",
+    "openFlowBuilder": "Flow builder"
   },
   "widgetSettings": {
     "title": "Widget setup",
@@ -274,5 +275,29 @@
     "error": "Could not load canned replies.",
     "empty": "No canned replies yet. Add your first one above.",
     "delete": "Delete"
+  },
+  "flowBuilder": {
+    "title": "Flow builder",
+    "loading": "Loading…",
+    "error": "Could not load the flow.",
+    "palette": "Add step",
+    "type_message": "Message",
+    "type_options": "Options menu",
+    "type_question": "Question",
+    "type_handoff": "Human handoff",
+    "type_ai": "AI assistant",
+    "type_end": "End",
+    "inspector": "Step settings",
+    "inspectorEmpty": "Select a step on the canvas to edit it.",
+    "fieldText": "Text",
+    "fieldOptions": "Options (comma-separated)",
+    "fieldVariable": "Save answer as (variable)",
+    "markStart": "Start step",
+    "deleteNode": "Delete step",
+    "save": "Save flow",
+    "saving": "Saving…",
+    "savedNotice": "Saved!",
+    "saveError": "Could not save — every message/options/question step needs text, and options edges need labels.",
+    "hint": "Drag from a step's bottom handle to the next step's top handle to connect them. Edges from an Options menu are labeled with the option they answer."
   }
 }

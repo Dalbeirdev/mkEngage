@@ -1027,6 +1027,23 @@ export class MkEngageWidget extends LitElement {
     textarea.style.overflowY = textarea.scrollHeight > 96 ? "auto" : "hidden";
   }
 
+  /** Parse a rich (flow) body: {text, options[]} — null when not rich/valid. */
+  private parseRich(message: import("./types.js").ChatMessage): { text: string; options: string[] } | null {
+    if (message.content_type !== "rich") return null;
+    try {
+      const parsed: unknown = JSON.parse(message.body);
+      if (typeof parsed !== "object" || parsed === null) return null;
+      const record = parsed as Record<string, unknown>;
+      const text = typeof record["text"] === "string" ? record["text"] : "";
+      const options = Array.isArray(record["options"])
+        ? record["options"].filter((option): option is string => typeof option === "string")
+        : [];
+      return { text, options };
+    } catch {
+      return null;
+    }
+  }
+
   /** True for short all-emoji bodies (rendered larger, chat convention). */
   private isEmojiOnly(body: string): boolean {
     const stripped = body.replace(/\s/gu, "");
@@ -1724,9 +1741,11 @@ export class MkEngageWidget extends LitElement {
             const previous = this.messages.messages[index - 1];
             const startsRemoteGroup =
               !isVisitor && (previous === undefined || previous.sender_type === "visitor");
+            const rich = this.parseRich(message);
+            const isLast = index === this.messages.messages.length - 1;
             const bubble = html`
               <div class="msg ${isVisitor ? "visitor" : "remote"}">
-                ${this.renderBody(message.body)}
+                ${rich !== null ? this.renderBody(rich.text) : this.renderBody(message.body)}
                 ${(message.attachments ?? []).map(
                   (attachment) => html`
                     <button
@@ -1751,6 +1770,26 @@ export class MkEngageWidget extends LitElement {
                 <span class="time">${this.formatTime(message.sent_at)}</span>
               </div>
             `;
+            // Flow options (Phase 27): tappable chips under the LATEST rich
+            // message only — answered menus become plain history.
+            const chips =
+              rich !== null && rich.options.length > 0 && isLast && !isVisitor
+                ? html`
+                    <div class="quick-replies">
+                      ${rich.options.map(
+                        (option) => html`
+                          <button
+                            type="button"
+                            class="quick-reply"
+                            @click=${() => this.sendQuickReply(option)}
+                          >
+                            ${option}
+                          </button>
+                        `,
+                      )}
+                    </div>
+                  `
+                : nothing;
             return isVisitor
               ? html`<div class="row visitor">${bubble}</div>`
               : html`
@@ -1758,6 +1797,7 @@ export class MkEngageWidget extends LitElement {
                     ? html`<div class="sender-label">${this.widgetTitle}</div>`
                     : nothing}
                   <div class="row remote">${this.renderMsgAvatar()}${bubble}</div>
+                  ${chips}
                 `;
           })}
           ${this.messages.pendingMessages.map(
