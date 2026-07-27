@@ -347,6 +347,27 @@ export class MkEngageWidget extends LitElement {
       color: var(--mk-time);
     }
 
+    /* Inline image attachment preview (tap to open full size). */
+    .att-img {
+      display: block;
+      border: none;
+      background: transparent;
+      padding: 0;
+      margin-block-start: 6px;
+      cursor: zoom-in;
+      border-radius: 10px;
+      overflow: hidden;
+      max-inline-size: 100%;
+    }
+
+    .att-img img {
+      display: block;
+      max-inline-size: 220px;
+      max-block-size: 180px;
+      border-radius: 10px;
+      object-fit: cover;
+    }
+
     .composer-hidden {
       display: none !important;
     }
@@ -1411,6 +1432,43 @@ export class MkEngageWidget extends LitElement {
     }
   }
 
+  /** Inline preview URLs for clean image attachments (id → signed URL). */
+  @state() private attachmentUrls: Record<string, string> = {};
+
+  private attachmentUrlInFlight = new Set<string>();
+
+  private isImageAttachment(attachment: AttachmentMeta): boolean {
+    return attachment.scan_status === "clean" && attachment.content_type_header.startsWith("image/");
+  }
+
+  /** Mint preview URLs for any newly arrived image attachments. */
+  private ensureAttachmentPreviews(): void {
+    if (this.conversationId === null) return;
+
+    for (const message of this.messages.messages) {
+      for (const attachment of message.attachments ?? []) {
+        const id = attachment.attachment_id;
+        if (!this.isImageAttachment(attachment)) continue;
+        if (this.attachmentUrls[id] !== undefined || this.attachmentUrlInFlight.has(id)) continue;
+
+        this.attachmentUrlInFlight.add(id);
+        void this.api
+          .attachmentDownloadUrl(this.conversationId, id)
+          .then((url) => {
+            this.attachmentUrls = { ...this.attachmentUrls, [id]: url };
+          })
+          .catch(() => {
+            /* stays a file chip; retried on next update cycle */
+            this.attachmentUrlInFlight.delete(id);
+          });
+      }
+    }
+  }
+
+  protected override updated(): void {
+    this.ensureAttachmentPreviews();
+  }
+
   private async openAttachment(attachment: AttachmentMeta): Promise<void> {
     if (attachment.scan_status !== "clean" || this.conversationId === null) return;
 
@@ -1746,8 +1804,25 @@ export class MkEngageWidget extends LitElement {
             const bubble = html`
               <div class="msg ${isVisitor ? "visitor" : "remote"}">
                 ${rich !== null ? this.renderBody(rich.text) : this.renderBody(message.body)}
-                ${(message.attachments ?? []).map(
-                  (attachment) => html`
+                ${(message.attachments ?? []).map((attachment) => {
+                  // Clean images render INLINE (tap for full size); everything
+                  // else stays a download chip.
+                  const previewUrl = this.isImageAttachment(attachment)
+                    ? this.attachmentUrls[attachment.attachment_id]
+                    : undefined;
+                  if (previewUrl !== undefined) {
+                    return html`
+                      <button
+                        class="att-img"
+                        title=${attachment.file_name}
+                        aria-label=${attachment.file_name}
+                        @click=${() => void this.openAttachment(attachment)}
+                      >
+                        <img src=${previewUrl} alt=${attachment.file_name} loading="lazy" />
+                      </button>
+                    `;
+                  }
+                  return html`
                     <button
                       class="att"
                       ?disabled=${attachment.scan_status !== "clean"}
@@ -1765,8 +1840,8 @@ export class MkEngageWidget extends LitElement {
                             )}
                       </span>
                     </button>
-                  `,
-                )}
+                  `;
+                })}
                 <span class="time">${this.formatTime(message.sent_at)}</span>
               </div>
             `;

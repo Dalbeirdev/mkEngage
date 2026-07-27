@@ -124,6 +124,13 @@ async function mockApi(page: Page): Promise<MockState> {
       return json(200, { display_name: "Lead", contact_id: "ct-2" });
     }
 
+    if (url.pathname.endsWith("/download") && request.method() === "GET") {
+      // 1x1 transparent PNG — enough for an <img> to load successfully.
+      return json(200, {
+        url: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+      });
+    }
+
     if (url.pathname.endsWith("/rating") && request.method() === "POST") {
       state.ratingCalls.push(request.postDataJSON() as Record<string, unknown>);
       return json(201, { conversation_id: "c-1", csat_rating: 5 });
@@ -457,6 +464,40 @@ test.describe("widget on a hostile host page", () => {
     await chips.nth(1).click();
     await expect(widget(page).locator(".msg.visitor").last()).toContainText("Support");
     await expect(widget(page).locator(".quick-reply")).toHaveCount(0);
+  });
+
+  test("image attachments render an inline preview; other files stay chips", async ({ page }) => {
+    const state = await mockApi(page);
+    await openWidget(page);
+
+    await textarea(page).fill("see attached");
+    await textarea(page).press("Enter");
+    await expect(widget(page).locator(".msg.pending")).toHaveCount(0);
+    await expect.poll(() => state.messages.length).toBe(1);
+
+    const withImage = makeMessage(state, "agent", "Here is the diagram");
+    (withImage as unknown as Record<string, unknown>)["attachments"] = [
+      {
+        attachment_id: "at-img-1",
+        file_name: "diagram.png",
+        content_type_header: "image/png",
+        size_bytes: 279000,
+        scan_status: "clean",
+      },
+      {
+        attachment_id: "at-doc-1",
+        file_name: "specs.pdf",
+        content_type_header: "application/pdf",
+        size_bytes: 120000,
+        scan_status: "clean",
+      },
+    ];
+
+    // The image renders inline (mint-on-render signed URL); the PDF stays a chip.
+    const img = widget(page).locator(".att-img img");
+    await expect(img).toBeVisible({ timeout: 10_000 });
+    await expect(img).toHaveAttribute("alt", "diagram.png");
+    await expect(widget(page).locator(".att")).toContainText("specs.pdf");
   });
 
   test("org appearance restyles the widget and white-label hides branding (Phase 26)", async ({ page }) => {
