@@ -124,6 +124,11 @@ async function mockApi(page: Page): Promise<MockState> {
       return json(200, { display_name: "Lead", contact_id: "ct-2" });
     }
 
+    if (url.pathname.endsWith("/reaction") && request.method() === "POST") {
+      const payload = request.postDataJSON() as { emoji: string };
+      return json(200, { reactions: [{ emoji: payload.emoji, count: 1 }] });
+    }
+
     if (url.pathname.endsWith("/download") && request.method() === "GET") {
       // 1x1 transparent PNG — enough for an <img> to load successfully.
       return json(200, {
@@ -464,6 +469,37 @@ test.describe("widget on a hostile host page", () => {
     await chips.nth(1).click();
     await expect(widget(page).locator(".msg.visitor").last()).toContainText("Support");
     await expect(widget(page).locator(".quick-reply")).toHaveCount(0);
+  });
+
+  test("hover actions: react adds a chip; reply quotes the original (Phase 28)", async ({ page }) => {
+    const state = await mockApi(page);
+    await openWidget(page);
+
+    await textarea(page).fill("quote me please");
+    await textarea(page).press("Enter");
+    await expect(widget(page).locator(".msg.pending")).toHaveCount(0);
+    await expect.poll(() => state.messages.length).toBe(1);
+
+    // Hover the visitor message → action bar appears.
+    const row = widget(page).locator(".row.visitor").last();
+    await row.hover();
+    await expect(row.locator(".msg-actions")).toBeVisible();
+
+    // React 👍 → chip with the emoji shows under the bubble.
+    await row.locator(".msg-action").first().click();
+    await expect(widget(page).locator(".reaction-chip")).toContainText("👍");
+
+    // Reply-with-quote → preview above composer, send → quote inside bubble.
+    await row.hover();
+    await row.locator(".msg-action").last().click();
+    await expect(widget(page).locator(".reply-preview")).toContainText("quote me please");
+    await textarea(page).fill("here is my follow-up");
+    await textarea(page).press("Enter");
+    await expect(widget(page).locator(".msg.pending")).toHaveCount(0);
+
+    expect(state.messages.length).toBe(2);
+    // Draft state cleared after sending the quoted reply.
+    await expect(widget(page).locator(".reply-preview")).toHaveCount(0);
   });
 
   test("image attachments render an inline preview; other files stay chips", async ({ page }) => {

@@ -40,6 +40,24 @@ export class MessageStore {
     return added;
   }
 
+  /**
+   * Merge reaction summaries from the poll envelope (Phase 28): reactions
+   * land on ALREADY-seen messages, which incremental fetches never revisit.
+   * Returns true when anything changed (drives a re-render).
+   */
+  applyReactions(map: Record<string, Array<{ emoji: string; count: number }>>): boolean {
+    let changed = false;
+    for (const message of this.bySequence.values()) {
+      const fresh = map[message.message_id] ?? [];
+      const current = JSON.stringify(message.reactions ?? []);
+      if (current !== JSON.stringify(fresh)) {
+        message.reactions = fresh;
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
   addPending(idempotencyKey: string, body: string): PendingMessage {
     const entry: PendingMessage = {
       idempotency_key: idempotencyKey,

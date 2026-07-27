@@ -9,8 +9,10 @@ use App\Jobs\GenerateChatbotReply;
 use App\Models\Attachment;
 use App\Models\Conversation;
 use App\Models\Message;
+use App\Models\MessageReaction;
 use App\Models\Visitor;
 use App\Services\ConversationMessenger;
+use App\Services\ReactionToggler;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -36,12 +38,30 @@ final class WidgetMessageController extends Controller
         ]);
 
         $messages = Message::query()
-            ->with('attachments')
+            ->with(['attachments', 'replyTo', 'reactions'])
             ->where('conversation_id', $conversation->id)
             ->where('sequence_number', '>', $validated['after_sequence'] ?? 0)
             ->orderBy('sequence_number')
             ->limit($validated['limit'] ?? 50)
             ->get();
+
+        // Phase 28: reaction summaries for the whole recent window — the
+        // widget only fetches NEW messages, so reactions landing on already
+        // -seen messages ride this map instead.
+        $reactionMap = MessageReaction::query()
+            ->whereIn(
+                'message_id',
+                Message::query()->where('conversation_id', $conversation->id)
+                    ->orderByDesc('sequence_number')->limit(50)->select('id'),
+            )
+            ->get()
+            ->groupBy('message_id')
+            ->map(
+                fn ($group) => $group->groupBy('emoji')
+                    ->map(fn ($emojiGroup, string $emoji): array => ['emoji' => $emoji, 'count' => $emojiGroup->count()])
+                    ->values()
+                    ->all(),
+            );
 
         return response()->json([
             'data' => $messages->map(fn (Message $message): array => $message->toContract())->all(),
@@ -49,6 +69,30 @@ final class WidgetMessageController extends Controller
             // Phase 23: piggyback conversation status on the poll the widget
             // already makes, so closure (→ CSAT prompt) needs no extra request.
             'status' => $conversation->status,
+            'reactions' => (object) $reactionMap->all(),
+        ]);
+    }
+
+    /** Toggle the visitor's reaction on a message (Phase 28). */
+    public function react(
+        Request $request,
+        ReactionToggler $reactions,
+        string $conversationId,
+        string $messageId,
+    ): JsonResponse {
+        $conversation = $this->ownedConversation($request, $conversationId);
+
+        $validated = $request->validate([
+            'emoji' => ['required', 'string', 'max:16'],
+        ]);
+
+        $message = Message::query()->whereKey($messageId)
+            ->where('conversation_id', $conversation->id)->first();
+        abort_if($message === null, 404);
+
+        return response()->json([
+            'message_id' => $message->id,
+            'reactions' => $reactions->toggle($message, 'visitor', $this->visitor($request)->id, $validated['emoji']),
         ]);
     }
 
@@ -67,7 +111,18 @@ final class WidgetMessageController extends Controller
             'correlation_id' => ['sometimes', 'nullable', 'uuid'],
             'attachment_ids' => ['sometimes', 'array', 'max:'.config()->integer('attachments.max_per_message')],
             'attachment_ids.*' => ['uuid', 'distinct'],
+            'reply_to_message_id' => ['sometimes', 'nullable', 'uuid'],
         ]);
+
+        // A quote must reference a message of THIS conversation (Phase 28).
+        $replyTo = $validated['reply_to_message_id'] ?? null;
+        if (is_string($replyTo)) {
+            abort_unless(
+                Message::query()->whereKey($replyTo)->where('conversation_id', $conversation->id)->exists(),
+                422,
+                'reply_to_message_id must reference a message in this conversation.',
+            );
+        }
 
         $visitor = $this->visitor($request);
 
@@ -84,6 +139,7 @@ final class WidgetMessageController extends Controller
             contentType: $validated['content_type'],
             correlationId: $validated['correlation_id'] ?? null,
             attachmentIds: $attachmentIds,
+            replyToMessageId: is_string($replyTo) ? $replyTo : null,
         );
 
         if (! $result['duplicate'] && $conversation->chatbot_id !== null) {

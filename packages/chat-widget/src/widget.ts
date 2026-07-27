@@ -347,6 +347,103 @@ export class MkEngageWidget extends LitElement {
       color: var(--mk-time);
     }
 
+    /* Hover action bar (Phase 28): Teams-style reactions + reply icon. */
+    .msg-actions {
+      display: none;
+      align-items: center;
+      gap: 2px;
+      background: var(--mk-surface);
+      border: 1px solid var(--mk-border);
+      border-radius: 999px;
+      padding: 2px 6px;
+      box-shadow: 0 2px 8px rgb(0 0 0 / 0.12);
+      align-self: center;
+    }
+
+    .row:hover .msg-actions,
+    .row:focus-within .msg-actions {
+      display: inline-flex;
+    }
+
+    .msg-action {
+      border: none;
+      background: transparent;
+      font-size: 15px;
+      line-height: 1;
+      padding: 4px 5px;
+      cursor: pointer;
+      border-radius: 999px;
+      color: var(--mk-muted);
+    }
+
+    .msg-action:hover {
+      background: var(--mk-remote-bubble);
+      transform: scale(1.15);
+    }
+
+    .reaction-chips {
+      display: flex;
+      gap: 4px;
+      margin-block-start: -6px;
+      padding-inline-start: 36px;
+    }
+
+    .reaction-chips.visitor {
+      justify-content: flex-end;
+      padding-inline-start: 0;
+    }
+
+    .reaction-chip {
+      border: 1px solid var(--mk-border);
+      background: var(--mk-surface);
+      color: var(--mk-text);
+      border-radius: 999px;
+      font-size: 12px;
+      padding: 1px 8px;
+      cursor: pointer;
+    }
+
+    /* Quoted original inside a reply bubble. */
+    .quote {
+      border-inline-start: 3px solid rgb(255 255 255 / 0.55);
+      background: rgb(0 0 0 / 0.12);
+      border-radius: 6px;
+      padding: 4px 8px;
+      margin-block-end: 6px;
+      font-size: 12px;
+      opacity: 0.95;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .msg.remote .quote {
+      border-inline-start-color: var(--mk-accent);
+      background: rgb(0 0 0 / 0.06);
+    }
+
+    /* Reply draft preview above the composer. */
+    .reply-preview {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 12px;
+      padding: 6px 10px;
+      border-inline-start: 3px solid var(--mk-accent);
+      background: var(--mk-remote-bubble);
+      color: var(--mk-remote-text);
+      border-radius: 8px;
+      font-size: 12px;
+    }
+
+    .reply-preview-body {
+      flex: 1;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
     /* Inline image attachment preview (tap to open full size). */
     .att-img {
       display: block;
@@ -1048,6 +1145,32 @@ export class MkEngageWidget extends LitElement {
     textarea.style.overflowY = textarea.scrollHeight > 96 ? "auto" : "hidden";
   }
 
+  /** Quoted-reply draft (Phase 28): set from a message's hover action. */
+  @state() private replyTo: { message_id: string; body: string } | null = null;
+
+  /** Quick reactions offered in the hover bar (Teams-style). */
+  private static readonly QUICK_REACTIONS = ["👍", "❤️", "😂", "😮"];
+
+  /** Toggle a reaction: optimistic update, server settles the summary. */
+  private async reactTo(message: import("./types.js").ChatMessage, emoji: string): Promise<void> {
+    if (this.conversationId === null) return;
+    try {
+      message.reactions = await this.api.react(this.conversationId, message.message_id, emoji);
+      this.revision += 1;
+    } catch {
+      // Transient failure: the next poll's reaction map self-heals the UI.
+    }
+  }
+
+  private startReply(message: import("./types.js").ChatMessage): void {
+    const rich = this.parseRich(message);
+    this.replyTo = {
+      message_id: message.message_id,
+      body: (rich?.text ?? message.body).slice(0, 140),
+    };
+    this.renderRoot.querySelector("textarea")?.focus();
+  }
+
   /** Parse a rich (flow) body: {text, options[]} — null when not rich/valid. */
   private parseRich(message: import("./types.js").ChatMessage): { text: string; options: string[] } | null {
     if (message.content_type !== "rich") return null;
@@ -1400,6 +1523,11 @@ export class MkEngageWidget extends LitElement {
 
       // Phase 23: closure arrives on the same poll — triggers the CSAT prompt.
       if (result.status !== undefined) this.conversationStatus = result.status;
+
+      // Phase 28: merge reaction summaries onto already-seen messages.
+      if (result.reactions !== undefined && this.messages.applyReactions(result.reactions)) {
+        this.revision += 1;
+      }
     } catch (error) {
       if (error instanceof ApiError && error.isAuthFailure) {
         // Token revoked/expired: reset the persisted session; next open
@@ -1613,11 +1741,14 @@ export class MkEngageWidget extends LitElement {
 
     try {
       const conversationId = await this.ensureConversation();
+      const quoted = this.replyTo;
+      this.replyTo = null;
       const message = await this.api.sendMessage(
         conversationId,
         idempotencyKey,
         body,
         attachment === null ? [] : [attachment.attachment_id],
+        quoted?.message_id ?? null,
       );
       this.messages.confirmPending(idempotencyKey, message);
       this.transport?.poke();
@@ -1803,6 +1934,9 @@ export class MkEngageWidget extends LitElement {
             const isLast = index === this.messages.messages.length - 1;
             const bubble = html`
               <div class="msg ${isVisitor ? "visitor" : "remote"}">
+                ${message.reply_to != null
+                  ? html`<div class="quote">${message.reply_to.body}</div>`
+                  : nothing}
                 ${rich !== null ? this.renderBody(rich.text) : this.renderBody(message.body)}
                 ${(message.attachments ?? []).map((attachment) => {
                   // Clean images render INLINE (tap for full size); everything
@@ -1816,7 +1950,10 @@ export class MkEngageWidget extends LitElement {
                         class="att-img"
                         title=${attachment.file_name}
                         aria-label=${attachment.file_name}
-                        @click=${() => void this.openAttachment(attachment)}
+                        @dblclick=${() => void this.openAttachment(attachment)}
+                        @keydown=${(event: KeyboardEvent) => {
+                          if (event.key === "Enter") void this.openAttachment(attachment);
+                        }}
                       >
                         <img src=${previewUrl} alt=${attachment.file_name} loading="lazy" />
                       </button>
@@ -1845,6 +1982,53 @@ export class MkEngageWidget extends LitElement {
                 <span class="time">${this.formatTime(message.sent_at)}</span>
               </div>
             `;
+            // Hover action bar (Phase 28): quick reactions + reply-with-quote.
+            const actions = html`
+              <div class="msg-actions" role="toolbar" aria-label=${t("actions_label")}>
+                ${MkEngageWidget.QUICK_REACTIONS.map(
+                  (emoji) => html`
+                    <button
+                      type="button"
+                      class="msg-action"
+                      aria-label=${emoji}
+                      @click=${() => void this.reactTo(message, emoji)}
+                    >
+                      ${emoji}
+                    </button>
+                  `,
+                )}
+                <button
+                  type="button"
+                  class="msg-action"
+                  aria-label=${t("reply_label")}
+                  title=${t("reply_label")}
+                  @click=${() => this.startReply(message)}
+                >
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="9 17 4 12 9 7" />
+                    <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
+                  </svg>
+                </button>
+              </div>
+            `;
+            const reactionChips =
+              (message.reactions?.length ?? 0) > 0
+                ? html`
+                    <div class="reaction-chips ${isVisitor ? "visitor" : ""}">
+                      ${message.reactions?.map(
+                        (reaction) => html`
+                          <button
+                            type="button"
+                            class="reaction-chip"
+                            @click=${() => void this.reactTo(message, reaction.emoji)}
+                          >
+                            ${reaction.emoji}${reaction.count > 1 ? ` ${reaction.count}` : ""}
+                          </button>
+                        `,
+                      )}
+                    </div>
+                  `
+                : nothing;
             // Flow options (Phase 27): tappable chips under the LATEST rich
             // message only — answered menus become plain history.
             const chips =
@@ -1866,13 +2050,14 @@ export class MkEngageWidget extends LitElement {
                   `
                 : nothing;
             return isVisitor
-              ? html`<div class="row visitor">${bubble}</div>`
+              ? html`<div class="row visitor">${actions}${bubble}</div>
+                  ${reactionChips}`
               : html`
                   ${startsRemoteGroup
                     ? html`<div class="sender-label">${this.widgetTitle}</div>`
                     : nothing}
-                  <div class="row remote">${this.renderMsgAvatar()}${bubble}</div>
-                  ${chips}
+                  <div class="row remote">${this.renderMsgAvatar()}${bubble}${actions}</div>
+                  ${reactionChips} ${chips}
                 `;
           })}
           ${this.messages.pendingMessages.map(
@@ -1923,6 +2108,23 @@ export class MkEngageWidget extends LitElement {
             `
           : nothing}
 
+        ${this.replyTo !== null
+          ? html`
+              <div class="reply-preview">
+                <div class="reply-preview-body">${this.replyTo.body}</div>
+                <button
+                  type="button"
+                  class="chip-remove"
+                  aria-label=${t("reply_cancel")}
+                  @click=${() => {
+                    this.replyTo = null;
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            `
+          : nothing}
         ${this.emojiOpen ? this.renderEmojiPicker() : nothing}
         ${this.conversationStatus === "closed" ? this.renderCsat() : nothing}
 

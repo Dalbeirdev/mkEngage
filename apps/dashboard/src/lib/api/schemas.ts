@@ -125,6 +125,11 @@ export const chatMessageSchema = z.object({
   lifecycle_state: z.string(),
   sent_at: z.string().nullable(),
   attachments: z.array(attachmentSchema).default([]),
+  reply_to: z
+    .object({ message_id: z.uuid(), sender_type: z.string(), body: z.string() })
+    .nullable()
+    .optional(),
+  reactions: z.array(z.object({ emoji: z.string(), count: z.number().int() })).optional(),
 });
 
 export type ChatMessage = z.infer<typeof chatMessageSchema>;

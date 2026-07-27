@@ -74,6 +74,7 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
         Route::patch('/conversations/{conversation}', [ConversationController::class, 'update']);
         Route::get('/conversations/{conversation}/messages', [AgentMessageController::class, 'index']);
         Route::post('/conversations/{conversation}/messages', [AgentMessageController::class, 'store']);
+        Route::post('/conversations/{conversation}/messages/{message}/reaction', [AgentMessageController::class, 'react']);
         Route::post('/conversations/{conversation}/assign', [ConversationController::class, 'assign']);
         Route::get('/conversations/{conversation}/notes', [ConversationNoteController::class, 'index']);
         Route::post('/conversations/{conversation}/notes', [ConversationNoteController::class, 'store']);
@@ -127,6 +128,7 @@ Route::middleware([EstablishTenantContext::class, 'auth:widget', 'ability:widget
         Route::get('/conversations/{conversation}', [WidgetConversationController::class, 'show']);
         Route::get('/conversations/{conversation}/messages', [WidgetMessageController::class, 'index']);
         Route::post('/conversations/{conversation}/messages', [WidgetMessageController::class, 'store']);
+        Route::post('/conversations/{conversation}/messages/{message}/reaction', [WidgetMessageController::class, 'react']);
         Route::post('/conversations/{conversation}/attachments', [WidgetAttachmentController::class, 'store']);
         Route::get('/conversations/{conversation}/attachments/{attachment}/download', [WidgetAttachmentController::class, 'download']);
         Route::post('/identify', WidgetIdentifyController::class);

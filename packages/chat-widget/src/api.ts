@@ -97,7 +97,12 @@ export class WidgetApi {
   async listMessages(
     conversationId: string,
     afterSequence: number,
-  ): Promise<{ data: ChatMessage[]; last_sequence: number; status?: "open" | "pending" | "closed" }> {
+  ): Promise<{
+    data: ChatMessage[];
+    last_sequence: number;
+    status?: "open" | "pending" | "closed";
+    reactions?: Record<string, Array<{ emoji: string; count: number }>>;
+  }> {
     return (await this.request(
       "GET",
       `/api/widget/conversations/${conversationId}/messages?after_sequence=${afterSequence}`,
@@ -109,6 +114,7 @@ export class WidgetApi {
     idempotencyKey: string,
     body: string,
     attachmentIds: string[] = [],
+    replyToMessageId: string | null = null,
   ): Promise<ChatMessage> {
     return (await this.request(
       "POST",
@@ -118,8 +124,24 @@ export class WidgetApi {
         content_type: "text",
         body,
         ...(attachmentIds.length > 0 ? { attachment_ids: attachmentIds } : {}),
+        ...(replyToMessageId !== null ? { reply_to_message_id: replyToMessageId } : {}),
       },
     )) as ChatMessage;
+  }
+
+  /** Toggle the visitor's emoji reaction on a message (Phase 28). */
+  async react(
+    conversationId: string,
+    messageId: string,
+    emoji: string,
+  ): Promise<Array<{ emoji: string; count: number }>> {
+    const result = (await this.request(
+      "POST",
+      `/api/widget/conversations/${conversationId}/messages/${messageId}/reaction`,
+      { emoji },
+    )) as { reactions: Array<{ emoji: string; count: number }> };
+
+    return result.reactions;
   }
 
   /** Multipart upload (§14): the file is scanned async — starts `pending`. */

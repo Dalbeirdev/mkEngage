@@ -89,7 +89,9 @@
     "filterLabel": "Filter by department",
     "csatBadge": "{rating}/5",
     "addTag": "+ tag",
-    "removeTag": "Remove tag {tag}"
+    "removeTag": "Remove tag {tag}",
+    "replyWithQuote": "Reply with quote",
+    "cancelReply": "Cancel reply"
   },
   "contacts": {
     "title": "Contacts",

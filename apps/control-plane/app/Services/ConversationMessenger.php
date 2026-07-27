@@ -43,6 +43,7 @@ final class ConversationMessenger
         string $contentType = 'text',
         ?string $correlationId = null,
         array $attachmentIds = [],
+        ?string $replyToMessageId = null,
     ): array {
         $existing = Message::query()
             ->where('conversation_id', $conversation->id)
@@ -72,6 +73,7 @@ final class ConversationMessenger
             'content_type' => $contentType,
             'body' => $body,
             'lifecycle_state' => 'persisted',
+            'reply_to_message_id' => $replyToMessageId,
             'idempotency_key' => $idempotencyKey,
             'correlation_id' => $correlationId,
             'sent_at' => now(),

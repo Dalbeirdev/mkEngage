@@ -32,6 +32,7 @@ async function sendReply(
   idempotencyKey: string,
   body: string,
   attachmentIds: string[],
+  replyToMessageId: string | null = null,
 ) {
   const response = await fetch(`/api/cp/conversations/${conversationId}/messages`, {
     method: "POST",
@@ -41,6 +42,7 @@ async function sendReply(
       content_type: "text",
       body,
       ...(attachmentIds.length > 0 ? { attachment_ids: attachmentIds } : {}),
+      ...(replyToMessageId !== null ? { reply_to_message_id: replyToMessageId } : {}),
     }),
   });
   if (!response.ok) throw new Error(`Send failed (${response.status})`);
@@ -245,12 +247,30 @@ export default function ConversationThreadPage({
     };
   }, [id, queryClient]);
 
+  // Quoted-reply draft + reaction toggling (Phase 28).
+  const [replyTo, setReplyTo] = useState<{ message_id: string; body: string } | null>(null);
+
   const mutation = useMutation({
     mutationFn: ({ body, attachmentIds }: { body: string; attachmentIds: string[] }) =>
-      sendReply(id, crypto.randomUUID(), body, attachmentIds),
+      sendReply(id, crypto.randomUUID(), body, attachmentIds, replyTo?.message_id ?? null),
     onSuccess: () => {
+      setReplyTo(null);
       void queryClient.invalidateQueries({ queryKey: ["conversation", id, "messages"] });
       void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    },
+  });
+
+  const reactMutation = useMutation({
+    mutationFn: async ({ messageId, emoji }: { messageId: string; emoji: string }) => {
+      const response = await fetch(`/api/cp/conversations/${id}/messages/${messageId}/reaction`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emoji }),
+      });
+      if (!response.ok) throw new Error(`React failed (${response.status})`);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["conversation", id, "messages"] });
     },
   });
 
@@ -400,16 +420,69 @@ export default function ConversationThreadPage({
         {data?.data.map((message) => (
           <div
             key={message.message_id}
-            className={`max-w-[70%] rounded-xl px-3 py-2 text-sm whitespace-pre-wrap ${
+            className={`group relative max-w-[70%] rounded-xl px-3 py-2 text-sm whitespace-pre-wrap ${
               message.sender_type === "agent"
                 ? "ms-auto bg-indigo-600 text-white"
                 : "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100"
             }`}
           >
+            {/* Hover actions (Phase 28): quick reactions + reply-with-quote */}
+            <div className="absolute -top-3 end-2 hidden items-center gap-0.5 rounded-full border border-zinc-200 bg-white px-1.5 py-0.5 shadow-sm group-hover:inline-flex dark:border-zinc-700 dark:bg-zinc-900">
+              {["👍", "❤️", "😂", "😮"].map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  aria-label={emoji}
+                  onClick={() => reactMutation.mutate({ messageId: message.message_id, emoji })}
+                  className="rounded-full px-1 text-sm hover:scale-125"
+                >
+                  {emoji}
+                </button>
+              ))}
+              <button
+                type="button"
+                aria-label={t("replyWithQuote")}
+                title={t("replyWithQuote")}
+                onClick={() =>
+                  setReplyTo({ message_id: message.message_id, body: message.body.slice(0, 140) })
+                }
+                className="rounded-full px-1 text-sm text-zinc-500 hover:scale-110 dark:text-zinc-400"
+              >
+                ↩
+              </button>
+            </div>
             <span className="mb-0.5 block text-[10px] uppercase tracking-wide opacity-70">
               {t(`sender_${message.sender_type}`)} · #{message.sequence_number}
             </span>
+            {message.reply_to != null && (
+              <div
+                className={`mb-1.5 line-clamp-2 rounded-md border-s-2 px-2 py-1 text-xs ${
+                  message.sender_type === "agent"
+                    ? "border-white/60 bg-black/15"
+                    : "border-indigo-500 bg-black/5 dark:bg-white/5"
+                }`}
+              >
+                {message.reply_to.body}
+              </div>
+            )}
             {message.body}
+            {(message.reactions?.length ?? 0) > 0 && (
+              <div className="mt-1 flex gap-1">
+                {message.reactions?.map((reaction) => (
+                  <button
+                    key={reaction.emoji}
+                    type="button"
+                    onClick={() =>
+                      reactMutation.mutate({ messageId: message.message_id, emoji: reaction.emoji })
+                    }
+                    className="rounded-full border border-black/15 bg-white/40 px-1.5 text-xs dark:border-white/20 dark:bg-black/20"
+                  >
+                    {reaction.emoji}
+                    {reaction.count > 1 ? ` ${reaction.count}` : ""}
+                  </button>
+                ))}
+              </div>
+            )}
             {message.attachments.map((attachment) => (
               <button
                 key={attachment.attachment_id}
@@ -533,6 +606,15 @@ export default function ConversationThreadPage({
                 <span className="truncate text-zinc-600 dark:text-zinc-300">{item.body}</span>
               </button>
             ))}
+        </div>
+      )}
+
+      {replyTo !== null && (
+        <div className="flex items-center gap-2 rounded-md border-s-2 border-indigo-500 bg-zinc-100 px-3 py-1.5 text-xs dark:bg-zinc-800">
+          <span className="min-w-0 flex-1 truncate">{replyTo.body}</span>
+          <button type="button" aria-label={t("cancelReply")} onClick={() => setReplyTo(null)}>
+            ✕
+          </button>
         </div>
       )}
 

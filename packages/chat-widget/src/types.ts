@@ -98,6 +98,10 @@ export interface ChatMessage {
   lifecycle_state: string;
   sent_at: string;
   attachments?: AttachmentMeta[];
+  /** Quoted original (excerpt), when this message replies to another (Phase 28). */
+  reply_to?: { message_id: string; sender_type: string; body: string } | null;
+  /** Emoji reaction summary (Phase 28). */
+  reactions?: Array<{ emoji: string; count: number }>;
 }
 
 /** Local-only optimistic message awaiting durable ack (§27: rendered as pending, never confirmed). */
