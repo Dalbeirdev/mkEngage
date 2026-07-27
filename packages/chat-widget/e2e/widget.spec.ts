@@ -33,6 +33,10 @@ interface MockState {
   conversationStatus: "open" | "pending" | "closed";
   profileCalls: Array<Record<string, unknown>>;
   ratingCalls: Array<Record<string, unknown>>;
+  /** Phase 24 knobs: proactive triggers + heartbeat-driven adoption. */
+  triggers: Array<Record<string, unknown>>;
+  adoptConversation: string | null;
+  heartbeatCalls: Array<Record<string, unknown>>;
 }
 
 function makeMessage(state: MockState, senderType: string, body: string): MockMessage {
@@ -65,6 +69,9 @@ async function mockApi(page: Page): Promise<MockState> {
     conversationStatus: "open",
     profileCalls: [],
     ratingCalls: [],
+    triggers: [],
+    adoptConversation: null,
+    heartbeatCalls: [],
   };
 
   await page.route("http://127.0.0.1:8000/**", async (route) => {
@@ -96,7 +103,13 @@ async function mockApi(page: Page): Promise<MockState> {
         token: "1|mock-token",
         ...(state.prechat !== null ? { prechat: state.prechat } : {}),
         open: state.open,
+        triggers: state.triggers,
       });
+    }
+
+    if (url.pathname === "/api/widget/heartbeat") {
+      state.heartbeatCalls.push((request.postDataJSON() ?? {}) as Record<string, unknown>);
+      return json(200, { conversation_id: state.adoptConversation, last_sequence: 0 });
     }
 
     if (url.pathname === "/api/widget/profile") {
@@ -372,6 +385,37 @@ test.describe("widget on a hostile host page", () => {
     await expect(widget(page).locator(".emoji-grid").first().locator(".emoji-cell").first()).toContainText(
       "🎉",
     );
+  });
+
+  test("proactive trigger auto-opens the panel with its message, once (Phase 24)", async ({ page }) => {
+    const state = await mockApi(page);
+    state.triggers = [
+      { id: "t-welcome", enabled: true, type: "time_on_page", seconds: 0, message: "Need any help deciding?" },
+    ];
+
+    // No launcher click: the trigger opens the panel by itself.
+    await page.goto("/demo/index.html?site_key=sk_mock");
+    await expect(panel(page)).toBeVisible({ timeout: 5000 });
+    await expect(widget(page).locator(".msg.remote").last()).toContainText("Need any help deciding?");
+
+    // Fire-once: a reload must NOT auto-open again (persisted fired-set).
+    await page.goto("/demo/index.html?site_key=sk_mock");
+    await page.waitForTimeout(1200);
+    await expect(panel(page)).toHaveCount(0);
+  });
+
+  test("heartbeat tracks presence and adopts an agent-initiated conversation (Phase 24)", async ({ page }) => {
+    const state = await mockApi(page);
+    state.adoptConversation = "c-agent-1";
+    makeMessage(state, "agent", "Hi! I noticed you browsing — can I help?");
+
+    // No interaction at all: load → session → heartbeat → adoption → panel opens.
+    await page.goto("/demo/index.html?site_key=sk_mock");
+    await expect(panel(page)).toBeVisible({ timeout: 5000 });
+    await expect(widget(page).locator(".msg.remote").last()).toContainText("noticed you browsing", {
+      timeout: 10_000,
+    });
+    expect(state.heartbeatCalls.length).toBeGreaterThanOrEqual(1);
   });
 
   test("dark theme applies the premium palette and passes Axe", async ({ page }) => {

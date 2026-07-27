@@ -851,6 +851,15 @@ export class MkEngageWidget extends LitElement {
   /** Business-hours state at bootstrap: false shows the offline notice. */
   @state() private orgOpen = true;
 
+  /** Proactive trigger message shown as a bot bubble when a rule fires (Phase 24). */
+  @state() private triggerMessage: string | null = null;
+
+  private triggers: import("./types.js").TriggerConfig[] = [];
+
+  private triggerTimers: Array<ReturnType<typeof setTimeout>> = [];
+
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+
   @state() private conversationStatus: "open" | "pending" | "closed" = "open";
 
   @state() private csatSelected = 0;
@@ -912,12 +921,108 @@ export class MkEngageWidget extends LitElement {
     }
   }
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    // Phase 24: presence tracking + proactive triggers start at page load,
+    // not first open — that's what makes the live visitor board live.
+    void this.backgroundBootstrap();
+  }
+
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     if (this.typingIdleTimer !== null) clearTimeout(this.typingIdleTimer);
     if (this.remoteTypingClearTimer !== null) clearTimeout(this.remoteTypingClearTimer);
     this.stopStatusTimer();
+    if (this.heartbeatTimer !== null) clearInterval(this.heartbeatTimer);
+    for (const timer of this.triggerTimers) clearTimeout(timer);
     this.transport?.stop();
+  }
+
+  private async backgroundBootstrap(): Promise<void> {
+    if (this.config === null) return;
+    try {
+      await this.ensureSession();
+      this.startHeartbeat();
+      this.evaluateTriggers();
+    } catch {
+      // Offline or API down: the next open retries via toggle().
+    }
+  }
+
+  private startHeartbeat(): void {
+    if (this.heartbeatTimer !== null) return;
+    void this.beat();
+    this.heartbeatTimer = setInterval(() => void this.beat(), 30_000);
+  }
+
+  /** One presence beat; may hand back an agent-initiated conversation. */
+  private async beat(): Promise<void> {
+    try {
+      const granted = (this.config?.consentState ?? "unknown") === "granted";
+      const result = await this.api.heartbeat(
+        granted && typeof location !== "undefined" ? location.href : null,
+        granted && typeof document !== "undefined" ? document.title.slice(0, 200) : null,
+      );
+
+      // Adoption (proactive chat): an agent started a thread for this
+      // visitor from the live board — pick it up and open the panel.
+      if (result.conversation_id !== null && this.conversationId === null) {
+        this.conversationId = result.conversation_id;
+        const stored = await this.sessionStore.load();
+        if (stored !== null) {
+          await this.sessionStore.save({ ...stored, conversationId: this.conversationId });
+        }
+        if (!this.open) {
+          await this.toggle();
+        } else {
+          await this.ensureTransport();
+        }
+      }
+    } catch {
+      // Presence is best-effort; the next beat retries.
+    }
+  }
+
+  /** Client-side proactive rules (Phase 24) — each fires at most once ever. */
+  private evaluateTriggers(): void {
+    if (this.triggers.length === 0 || typeof localStorage === "undefined") return;
+
+    const firedKey = `mkengage-fired-triggers:${this.config?.siteKey ?? ""}`;
+    let fired: string[] = [];
+    try {
+      const raw = localStorage.getItem(firedKey);
+      const parsed: unknown = raw === null ? [] : JSON.parse(raw);
+      fired = Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : [];
+    } catch {
+      fired = [];
+    }
+
+    const fire = (id: string, message: string): void => {
+      if (fired.includes(id)) return;
+      fired.push(id);
+      try {
+        localStorage.setItem(firedKey, JSON.stringify(fired));
+      } catch {
+        // Storage full/blocked: fire anyway, may re-fire next visit.
+      }
+      this.triggerMessage = message;
+      if (!this.open) void this.toggle();
+    };
+
+    for (const trigger of this.triggers) {
+      if (fired.includes(trigger.id)) continue;
+
+      if (trigger.type === "url_match") {
+        const pattern = trigger.url_pattern ?? "";
+        if (pattern !== "" && typeof location !== "undefined" && location.href.includes(pattern)) {
+          fire(trigger.id, trigger.message);
+        }
+      } else {
+        this.triggerTimers.push(
+          setTimeout(() => fire(trigger.id, trigger.message), (trigger.seconds ?? 0) * 1000),
+        );
+      }
+    }
   }
 
   private async toggle(): Promise<void> {
@@ -1018,8 +1123,24 @@ export class MkEngageWidget extends LitElement {
     }
   }
 
-  /** Restore a persisted session or bootstrap a new one (§4 restore state). */
-  private async ensureSession(): Promise<void> {
+  private sessionPromise: Promise<void> | null = null;
+
+  /**
+   * Restore a persisted session or bootstrap a new one (§4 restore state).
+   * Memoized: the page-load background bootstrap (Phase 24) and the first
+   * panel open would otherwise race two session creations — and the second
+   * run's "restored" path would clobber the fresh bootstrap's widget config.
+   */
+  private ensureSession(): Promise<void> {
+    this.sessionPromise ??= this.doEnsureSession().catch((error: unknown) => {
+      this.sessionPromise = null; // allow a retry on the next open
+      throw error;
+    });
+
+    return this.sessionPromise;
+  }
+
+  private async doEnsureSession(): Promise<void> {
     const stored = await this.sessionStore.load();
 
     if (stored !== null) {
@@ -1043,6 +1164,7 @@ export class MkEngageWidget extends LitElement {
         ? { enabled: session.prechat.enabled, requireEmail: session.prechat.require_email }
         : null;
     this.orgOpen = session.open !== false;
+    this.triggers = session.triggers ?? [];
 
     const fresh = {
       visitorId: session.visitor_id,
@@ -1441,6 +1563,17 @@ export class MkEngageWidget extends LitElement {
                       )}
                     </div>`
                   : nothing}
+              `
+            : nothing}
+          ${this.triggerMessage !== null && this.showWelcome
+            ? html`
+                <div class="row remote">
+                  ${this.renderMsgAvatar()}
+                  <div class="msg remote">
+                    ${this.triggerMessage}
+                    <span class="time">${this.formatTime(null)}</span>
+                  </div>
+                </div>
               `
             : nothing}
           ${this.showPrechat ? this.renderPrechat() : nothing}

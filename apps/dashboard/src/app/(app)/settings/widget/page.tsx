@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import {
   rotatedSecretSchema,
   widgetSettingsSchema,
+  type Trigger,
   type WidgetSettings,
 } from "@/lib/api/schemas";
 
@@ -38,6 +39,7 @@ function formatRanges(ranges: Array<[string, string]> | undefined): string {
 async function saveEngagement(payload: {
   prechat: WidgetSettings["prechat"];
   business_hours: WidgetSettings["business_hours"];
+  triggers: Trigger[];
 }) {
   const response = await fetch("/api/cp/organization/widget-settings", {
     method: "PUT",
@@ -88,6 +90,7 @@ function EngagementSection({ settings }: { settings: WidgetSettings }) {
       DAYS.map((day) => [day, formatRanges(settings.business_hours.schedule[day])]),
     ),
   );
+  const [triggers, setTriggers] = useState<Trigger[]>(settings.triggers);
   const [saved, setSaved] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
 
@@ -114,7 +117,14 @@ function EngagementSection({ settings }: { settings: WidgetSettings }) {
     save.mutate({
       prechat: { enabled: prechatEnabled, require_email: requireEmail },
       business_hours: { enabled: hoursEnabled, timezone, schedule },
+      triggers: triggers.filter((trigger) => trigger.message.trim() !== ""),
     });
+  };
+
+  const updateTrigger = (index: number, patch: Partial<Trigger>) => {
+    setTriggers((previous) =>
+      previous.map((trigger, i) => (i === index ? { ...trigger, ...patch } : trigger)),
+    );
   };
 
   const panelClass =
@@ -188,6 +198,98 @@ function EngagementSection({ settings }: { settings: WidgetSettings }) {
             </label>
           ))}
         </div>
+      </fieldset>
+
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium">{t("triggersTitle")}</legend>
+        <p className="text-xs text-zinc-500">{t("triggersHelp")}</p>
+        {triggers.map((trigger, index) => (
+          <div
+            key={trigger.id}
+            className="space-y-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="flex items-center gap-1.5 text-sm">
+                <input
+                  type="checkbox"
+                  checked={trigger.enabled}
+                  onChange={(event) => updateTrigger(index, { enabled: event.target.checked })}
+                />
+                {t("triggerEnabled")}
+              </label>
+              <select
+                value={trigger.type}
+                onChange={(event) =>
+                  updateTrigger(index, { type: event.target.value as Trigger["type"] })
+                }
+                className={inputClass}
+                aria-label={t("triggerType")}
+              >
+                <option value="time_on_page">{t("triggerTypeTime")}</option>
+                <option value="url_match">{t("triggerTypeUrl")}</option>
+              </select>
+              {trigger.type === "time_on_page" ? (
+                <label className="flex items-center gap-1.5 text-sm">
+                  {t("triggerAfter")}
+                  <input
+                    type="number"
+                    min={0}
+                    max={3600}
+                    value={trigger.seconds ?? 10}
+                    onChange={(event) =>
+                      updateTrigger(index, { seconds: Number(event.target.value) })
+                    }
+                    className={`${inputClass} w-20`}
+                  />
+                  {t("triggerSeconds")}
+                </label>
+              ) : (
+                <input
+                  type="text"
+                  value={trigger.url_pattern ?? ""}
+                  onChange={(event) => updateTrigger(index, { url_pattern: event.target.value })}
+                  placeholder="/pricing"
+                  aria-label={t("triggerUrlPattern")}
+                  className={`${inputClass} flex-1`}
+                />
+              )}
+              <button
+                type="button"
+                onClick={() => setTriggers((previous) => previous.filter((_, i) => i !== index))}
+                className="ms-auto rounded-md border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+              >
+                {t("triggerRemove")}
+              </button>
+            </div>
+            <input
+              type="text"
+              value={trigger.message}
+              maxLength={500}
+              onChange={(event) => updateTrigger(index, { message: event.target.value })}
+              placeholder={t("triggerMessagePlaceholder")}
+              aria-label={t("triggerMessage")}
+              className={`${inputClass} w-full`}
+            />
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() =>
+            setTriggers((previous) => [
+              ...previous,
+              {
+                id: `t-${Date.now().toString(36)}`,
+                enabled: true,
+                type: "time_on_page",
+                seconds: 10,
+                message: "",
+              },
+            ])
+          }
+          className="rounded-md border border-zinc-300 px-3 py-1 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+        >
+          {t("triggerAdd")}
+        </button>
       </fieldset>
 
       {parseError !== null && (

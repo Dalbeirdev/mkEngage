@@ -18,7 +18,8 @@
     "chatbots": "Chatbots",
     "widgetSetup": "Widget setup",
     "departments": "Departments",
-    "knowledge": "Knowledge"
+    "knowledge": "Knowledge",
+    "visitors": "Visitors"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -163,7 +164,20 @@
     "save": "Save engagement settings",
     "saving": "Saving…",
     "savedNotice": "Saved!",
-    "saveError": "Could not save settings."
+    "saveError": "Could not save settings.",
+    "triggersTitle": "Proactive triggers",
+    "triggersHelp": "Automatically open the chat with a message when a rule matches. Each trigger fires once per visitor.",
+    "triggerEnabled": "On",
+    "triggerType": "Trigger type",
+    "triggerTypeTime": "Time on page",
+    "triggerTypeUrl": "URL contains",
+    "triggerAfter": "after",
+    "triggerSeconds": "seconds",
+    "triggerUrlPattern": "URL pattern",
+    "triggerMessage": "Trigger message",
+    "triggerMessagePlaceholder": "Hi! Can I help you with anything?",
+    "triggerRemove": "Remove",
+    "triggerAdd": "+ Add trigger"
   },
   "departments": {
     "title": "Departments",
@@ -210,5 +224,22 @@
   "availability": {
     "available": "Available",
     "away": "Away"
+  },
+  "visitors": {
+    "title": "Live visitors",
+    "subtitle": "People on your site right now. Start a conversation before they leave.",
+    "onlineCount": "{count} online",
+    "loading": "Loading…",
+    "error": "Could not load live visitors.",
+    "empty": "No visitors on your site right now. This board refreshes every few seconds.",
+    "anonymous": "Anonymous visitor",
+    "pageUnknown": "Page hidden (no consent)",
+    "onSiteFor": "on site {duration}",
+    "startChat": "Start chat",
+    "openChat": "Open chat",
+    "messagePlaceholder": "Say hi — e.g. \"Need any help?\"",
+    "send": "Send",
+    "sending": "Sending…",
+    "startError": "Could not start the conversation."
   }
 }

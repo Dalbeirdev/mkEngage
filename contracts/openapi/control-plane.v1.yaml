@@ -75,28 +75,43 @@ paths:
     post:
       tags: [conversations]
       operationId: createConversation
-      summary: Create a conversation (API channel)
-      parameters: [ { $ref: "#/components/parameters/idempotencyKey" } ]
+      summary: Start a conversation with a live visitor (agent-initiated proactive chat, Phase 24). Reuses the visitor's existing non-closed conversation; the widget adopts it on its next heartbeat.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [channel_id]
+              required: [visitor_id, message]
               properties:
-                channel_id: { type: string, format: uuid }
-                contact_id: { type: string, format: uuid }
                 visitor_id: { type: string, format: uuid }
-                department_id: { type: string, format: uuid }
-                chatbot_id: { type: string, format: uuid }
-                initial_message: { type: string, maxLength: 16000 }
+                message: { type: string, maxLength: 16000, description: "Opening message, sent as the acting agent." }
       responses:
         "201":
-          description: Created
+          description: Created (or reused existing open conversation)
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Conversation" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+        default: { $ref: "#/components/responses/Problem" }
+
+  /visitors/live:
+    get:
+      tags: [conversations]
+      operationId: listLiveVisitors
+      summary: Live visitor board (Phase 24) — visitors with a heartbeat in the last 60 seconds. Page context present only for consent-granted visitors.
+      responses:
+        "200":
+          description: Live visitors, most recent heartbeat first
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/LiveVisitor" }
         "4XX": { $ref: "#/components/responses/Problem" }
         default: { $ref: "#/components/responses/Problem" }
 
@@ -751,6 +766,21 @@ components:
         csat_comment: { type: [string, "null"], maxLength: 1000 }
         created_at: { type: string, format: date-time }
         closed_at: { type: [string, "null"], format: date-time }
+
+    LiveVisitor:
+      type: object
+      required: [visitor_id, consent_state, last_seen_at]
+      properties:
+        visitor_id: { type: string, format: uuid }
+        display_name: { type: [string, "null"] }
+        contact_name: { type: [string, "null"] }
+        contact_email: { type: [string, "null"] }
+        consent_state: { type: string, enum: [granted, denied, unknown] }
+        current_url: { type: [string, "null"], description: Only stored under granted consent (§4). }
+        page_title: { type: [string, "null"] }
+        first_seen_at: { type: [string, "null"], format: date-time }
+        last_seen_at: { type: [string, "null"], format: date-time }
+        conversation_id: { type: [string, "null"], format: uuid, description: "The visitor's open conversation, if any." }
 
     Message:
       type: object

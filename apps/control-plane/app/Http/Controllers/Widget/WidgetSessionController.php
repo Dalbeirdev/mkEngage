@@ -71,6 +71,13 @@ final class WidgetSessionController extends Controller
         ];
         $session['open'] = $businessHours->isOpen($organization);
 
+        // Phase 24: enabled proactive triggers, evaluated client-side.
+        $triggers = is_array($settings['triggers'] ?? null) ? $settings['triggers'] : [];
+        $session['triggers'] = array_values(array_filter(
+            $triggers,
+            fn (mixed $trigger): bool => is_array($trigger) && ($trigger['enabled'] ?? false) === true,
+        ));
+
         return response()->json($session, 201);
     }
 }

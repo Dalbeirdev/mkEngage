@@ -9,6 +9,7 @@ import {
   IconDepartments,
   IconKnowledge,
   IconProfile,
+  IconVisitors,
   IconWidget,
 } from "@/components/icons";
 import { SidebarNav } from "@/components/sidebar-nav";
@@ -28,6 +29,7 @@ export default async function AppLayout({
   const navigation = [
     { href: "/", label: t("dashboard"), icon: <IconDashboard /> },
     { href: "/conversations", label: t("conversations"), icon: <IconConversations /> },
+    { href: "/visitors", label: t("visitors"), icon: <IconVisitors /> },
     { href: "/contacts", label: t("contacts"), icon: <IconContacts /> },
     { href: "/chatbots", label: t("chatbots"), icon: <IconChatbots /> },
     { href: "/knowledge", label: t("knowledge"), icon: <IconKnowledge /> },

@@ -176,14 +176,45 @@ export const businessHoursSchema = z.object({
 
 export type BusinessHours = z.infer<typeof businessHoursSchema>;
 
+export const triggerSchema = z.object({
+  id: z.string(),
+  enabled: z.boolean(),
+  type: z.enum(["time_on_page", "url_match"]),
+  seconds: z.number().int().optional(),
+  url_pattern: z.string().optional(),
+  message: z.string(),
+});
+
+export type Trigger = z.infer<typeof triggerSchema>;
+
 export const widgetSettingsSchema = z.object({
   site_key: z.string().nullable(),
   signing_configured: z.boolean(),
   prechat: z.object({ enabled: z.boolean(), require_email: z.boolean() }),
   business_hours: businessHoursSchema,
+  triggers: z.array(triggerSchema),
 });
 
 export type WidgetSettings = z.infer<typeof widgetSettingsSchema>;
+
+export const liveVisitorsSchema = z.object({
+  data: z.array(
+    z.object({
+      visitor_id: z.uuid(),
+      display_name: z.string().nullable(),
+      contact_name: z.string().nullable(),
+      contact_email: z.string().nullable(),
+      consent_state: z.string(),
+      current_url: z.string().nullable(),
+      page_title: z.string().nullable(),
+      first_seen_at: z.string().nullable(),
+      last_seen_at: z.string().nullable(),
+      conversation_id: z.uuid().nullable(),
+    }),
+  ),
+});
+
+export type LiveVisitor = z.infer<typeof liveVisitorsSchema>["data"][number];
 
 export const rotatedSecretSchema = z.object({
   signing_secret: z.string().min(1),

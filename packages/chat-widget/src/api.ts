@@ -68,6 +68,18 @@ export class WidgetApi {
     });
   }
 
+  /** Presence heartbeat (Phase 24): keeps the live board fresh; the response
+   *  may hand back an agent-initiated conversation for adoption. */
+  async heartbeat(
+    url: string | null,
+    title: string | null,
+  ): Promise<{ conversation_id: string | null; last_sequence: number }> {
+    return (await this.request("POST", "/api/widget/heartbeat", {
+      ...(url !== null ? { url } : {}),
+      ...(title !== null ? { title } : {}),
+    })) as { conversation_id: string | null; last_sequence: number };
+  }
+
   /** Conversation status check (WS transport has no message poll to piggyback on). */
   async getConversation(conversationId: string): Promise<ConversationSummary> {
     return (await this.request(

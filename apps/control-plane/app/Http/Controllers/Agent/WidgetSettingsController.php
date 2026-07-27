@@ -45,6 +45,7 @@ final class WidgetSettingsController extends Controller
                 'timezone' => is_string($hours['timezone'] ?? null) ? $hours['timezone'] : 'UTC',
                 'schedule' => is_array($hours['schedule'] ?? null) ? $hours['schedule'] : (object) [],
             ],
+            'triggers' => is_array($settings['triggers'] ?? null) ? $settings['triggers'] : [],
         ]);
     }
 
@@ -66,6 +67,15 @@ final class WidgetSettingsController extends Controller
             'business_hours.schedule.*' => ['array', 'max:6'],
             'business_hours.schedule.*.*' => ['array', 'size:2'],
             'business_hours.schedule.*.*.*' => ['string', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
+            // Proactive triggers (Phase 24): evaluated client-side by the widget.
+            'triggers' => ['sometimes', 'array', 'max:10'],
+            'triggers.*' => ['array:id,enabled,type,seconds,url_pattern,message'],
+            'triggers.*.id' => ['required', 'string', 'max:40'],
+            'triggers.*.enabled' => ['required', 'boolean'],
+            'triggers.*.type' => ['required', 'in:time_on_page,url_match'],
+            'triggers.*.seconds' => ['required_if:triggers.*.type,time_on_page', 'integer', 'min:0', 'max:3600'],
+            'triggers.*.url_pattern' => ['required_if:triggers.*.type,url_match', 'string', 'max:200'],
+            'triggers.*.message' => ['required', 'string', 'max:500'],
         ]);
 
         $organization = $this->organization($context);
@@ -84,6 +94,10 @@ final class WidgetSettingsController extends Controller
                 'timezone' => $validated['business_hours']['timezone'] ?? 'UTC',
                 'schedule' => $validated['business_hours']['schedule'] ?? [],
             ];
+        }
+
+        if (array_key_exists('triggers', $validated)) {
+            $settings['triggers'] = $validated['triggers'];
         }
 
         $organization->settings = $settings;

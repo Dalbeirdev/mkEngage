@@ -38,6 +38,16 @@ export interface WidgetConfig {
   identity?: WidgetIdentity;
 }
 
+/** Proactive engagement rule evaluated client-side (Phase 24). */
+export interface TriggerConfig {
+  id: string;
+  enabled: boolean;
+  type: "time_on_page" | "url_match";
+  seconds?: number;
+  url_pattern?: string;
+  message: string;
+}
+
 export interface WidgetSession {
   visitor_id: string;
   token: string;
@@ -45,6 +55,8 @@ export interface WidgetSession {
   prechat?: { enabled: boolean; require_email: boolean };
   /** Business-hours state at bootstrap: false ⇒ show the offline notice. */
   open?: boolean;
+  /** Enabled proactive triggers (Phase 24). */
+  triggers?: TriggerConfig[];
 }
 
 export interface ConversationSummary {

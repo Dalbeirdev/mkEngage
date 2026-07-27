@@ -8,9 +8,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\Department;
 use App\Models\User;
+use App\Models\Visitor;
 use App\Services\AssignmentService;
+use App\Services\ConversationMessenger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 /**
  * Agent conversation surface (OpenAPI /conversations). Tenant scope is
@@ -54,6 +57,55 @@ final class ConversationController extends Controller
         abort_if($conversation === null, 404);
 
         return response()->json($this->toContract($conversation));
+    }
+
+    /**
+     * Agent-initiated (proactive) conversation from the live visitor board
+     * (Phase 24). The opening message is sent as the acting agent; the widget
+     * adopts the thread on its next heartbeat. Reuses the visitor's existing
+     * non-closed conversation instead of stacking a duplicate.
+     */
+    public function store(Request $request, ConversationMessenger $messenger): JsonResponse
+    {
+        $validated = $request->validate([
+            'visitor_id' => ['required', 'uuid'],
+            'message' => ['required', 'string', 'max:16000'],
+        ]);
+
+        $agent = $request->user();
+        abort_unless($agent instanceof User, 403);
+
+        // Org-scoped lookup: a foreign visitor id 404s (no existence leak).
+        $visitor = Visitor::query()->whereKey($validated['visitor_id'])->first();
+        abort_if($visitor === null, 404);
+
+        $conversation = Conversation::query()
+            ->where('visitor_id', $visitor->id)
+            ->where('status', '!=', 'closed')
+            ->latest('created_at')
+            ->first();
+
+        if ($conversation === null) {
+            $conversation = Conversation::query()->create([
+                'visitor_id' => $visitor->id,
+                'contact_id' => $visitor->contact_id,
+                'department_id' => Department::query()->where('is_default', true)->first()?->id,
+                'assigned_agent_id' => $agent->id, // the initiator owns it
+            ]);
+        }
+
+        $messenger->send(
+            conversation: $conversation,
+            senderType: 'agent',
+            senderId: $agent->id,
+            body: $validated['message'],
+            idempotencyKey: (string) Str::uuid7(),
+        );
+
+        return response()->json(
+            $this->toContract($conversation->fresh(['visitor', 'contact', 'department', 'assignedAgent:id,name']) ?? $conversation),
+            201,
+        );
     }
 
     public function update(Request $request, string $conversationId, AssignmentService $assignments): JsonResponse

@@ -12,11 +12,13 @@ use App\Http\Controllers\Agent\ConversationNoteController;
 use App\Http\Controllers\Agent\DepartmentController;
 use App\Http\Controllers\Agent\InsightsController;
 use App\Http\Controllers\Agent\KnowledgeController;
+use App\Http\Controllers\Agent\LiveVisitorController;
 use App\Http\Controllers\Agent\WidgetSettingsController;
 use App\Http\Controllers\AttachmentStreamController;
 use App\Http\Controllers\Auth\IssueApiTokenController;
 use App\Http\Controllers\Widget\WidgetAttachmentController;
 use App\Http\Controllers\Widget\WidgetConversationController;
+use App\Http\Controllers\Widget\WidgetHeartbeatController;
 use App\Http\Controllers\Widget\WidgetIdentifyController;
 use App\Http\Controllers\Widget\WidgetMessageController;
 use App\Http\Controllers\Widget\WidgetProfileController;
@@ -58,6 +60,8 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
 
         // Agent conversation surface (OpenAPI /conversations).
         Route::get('/conversations', [ConversationController::class, 'index']);
+        Route::post('/conversations', [ConversationController::class, 'store']);
+        Route::get('/visitors/live', [LiveVisitorController::class, 'index']);
         Route::get('/conversations/{conversation}', [ConversationController::class, 'show']);
         Route::patch('/conversations/{conversation}', [ConversationController::class, 'update']);
         Route::get('/conversations/{conversation}/messages', [AgentMessageController::class, 'index']);
@@ -119,6 +123,7 @@ Route::middleware([EstablishTenantContext::class, 'auth:widget', 'ability:widget
         Route::get('/conversations/{conversation}/attachments/{attachment}/download', [WidgetAttachmentController::class, 'download']);
         Route::post('/identify', WidgetIdentifyController::class);
         Route::post('/profile', WidgetProfileController::class);
+        Route::post('/heartbeat', WidgetHeartbeatController::class);
         Route::post('/conversations/{conversation}/rating', WidgetRatingController::class);
         Route::post('/gateway-token', function (Request $request, GatewayTokenIssuer $issuer) {
             $visitor = $request->user('widget');
