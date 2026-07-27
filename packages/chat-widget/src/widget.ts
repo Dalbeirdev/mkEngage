@@ -255,6 +255,13 @@ export class MkEngageWidget extends LitElement {
       border-end-start-radius: 5px;
     }
 
+    textarea::placeholder {
+      /* Explicit AA-safe placeholder (7.0:1 on white) — browser defaults
+         (~#757575 in WebKit) sit borderline at 4.5:1 and flake under Axe. */
+      color: var(--mk-muted);
+      opacity: 1;
+    }
+
     .branding {
       text-align: center;
       font-size: 11px;
@@ -556,10 +563,13 @@ export class MkEngageWidget extends LitElement {
         animation: mk-pop 0.16s ease-out;
       }
 
+      /* Transform-only (no opacity fade): a mid-animation Axe scan must never
+         see blended colors — mobile-safari on CI runs this animation even
+         under Playwright's reducedMotion emulation, and an opacity fade made
+         every color in the panel fail contrast checks (1.63:1 blends). */
       @keyframes mk-pop {
         from {
-          transform: translateY(8px);
-          opacity: 0;
+          transform: translateY(10px) scale(0.98);
         }
       }
 
