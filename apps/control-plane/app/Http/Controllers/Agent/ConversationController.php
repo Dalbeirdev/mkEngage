@@ -325,6 +325,7 @@ final class ConversationController extends Controller
             'status' => $conversation->status,
             'visitor_id' => $conversation->visitor_id,
             'visitor_name' => $conversation->visitor?->display_name,
+            'visitor_location' => $conversation->visitor?->location(),
             'contact_id' => $conversation->contact_id,
             'contact_name' => $conversation->contact?->name,
             'contact_email' => $conversation->contact?->email,

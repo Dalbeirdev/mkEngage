@@ -62,6 +62,9 @@ function VisitorRow({ visitor }: { visitor: LiveVisitor }) {
             {visitor.contact_email !== null && <span className="ms-2 text-xs font-normal text-zinc-500">{visitor.contact_email}</span>}
           </p>
           <p className="truncate text-xs text-zinc-500">
+            {visitor.location != null && visitor.location !== "" && (
+              <span className="me-1">📍 {visitor.location} ·</span>
+            )}
             {visitor.page_title ?? visitor.current_url ?? "Unknown page"}
             <span className="ms-2">· on site {timeOnSite(visitor.first_seen_at)}</span>
           </p>

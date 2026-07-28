@@ -801,6 +801,12 @@ export default function ConversationThreadPage({
               )}
             </div>
           )}
+          {conversation?.visitor_location != null && conversation.visitor_location !== "" && (
+            <p className="mt-2 flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-300">
+              <span aria-hidden>📍</span>
+              {conversation.visitor_location}
+            </p>
+          )}
           <dl className="mt-3 space-y-1.5 text-xs">
             <div className="flex justify-between gap-2">
               <dt className="text-zinc-500">First seen</dt>

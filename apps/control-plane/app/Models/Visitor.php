@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToOrganization;
+use App\Support\CountryNames;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,6 +22,8 @@ use Laravel\Sanctum\HasApiTokens;
  * @property Carbon|null $last_seen_at
  * @property string|null $current_url
  * @property string|null $page_title
+ * @property string|null $country_code
+ * @property string|null $city
  */
 final class Visitor extends Model
 {
@@ -36,7 +39,22 @@ final class Visitor extends Model
         'last_seen_at',
         'current_url',
         'page_title',
+        'country_code',
+        'city',
     ];
+
+    /** Human-readable "City, Country" from the captured geo, or null. */
+    public function location(): ?string
+    {
+        $country = CountryNames::name($this->country_code);
+        if ($country === null) {
+            return $this->city;
+        }
+
+        return $this->city !== null && $this->city !== ''
+            ? $this->city.', '.$country
+            : $country;
+    }
 
     protected function casts(): array
     {

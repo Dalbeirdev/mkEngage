@@ -67,6 +67,7 @@ final class LiveVisitorController extends Controller
                     'contact_name' => $visitor->contact?->name,
                     'contact_email' => $visitor->contact?->email,
                     'consent_state' => $visitor->consent_state,
+                    'location' => $visitor->location(),
                     'current_url' => $visitor->current_url,
                     'page_title' => $visitor->page_title,
                     'first_seen_at' => $visitor->created_at?->toIso8601String(),

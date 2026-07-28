@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Organization;
 use App\Models\Visitor;
 use App\Services\BusinessHours;
+use App\Services\GeoLocator;
 use App\Tenancy\Tenancy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,7 +25,7 @@ use Illuminate\Support\Facades\RateLimiter;
  */
 final class WidgetSessionController extends Controller
 {
-    public function __invoke(Request $request, Tenancy $tenancy, BusinessHours $businessHours): JsonResponse
+    public function __invoke(Request $request, Tenancy $tenancy, BusinessHours $businessHours, GeoLocator $geo): JsonResponse
     {
         $validated = $request->validate([
             'site_key' => ['required', 'string', 'max:40'],
@@ -46,11 +47,16 @@ final class WidgetSessionController extends Controller
             return response()->json(['title' => 'Unknown site key', 'status' => 404], 404);
         }
 
+        // Coarse location from the edge proxy's geo headers (no IP stored).
+        $location = $geo->locate($request);
+
         /** @var array{visitor_id: string, token: string} $session */
-        $session = $tenancy->run($organization->id, function () use ($organization, $validated): array {
+        $session = $tenancy->run($organization->id, function () use ($organization, $validated, $location): array {
             $visitor = Visitor::query()->create([
                 'consent_state' => $validated['consent_state'] ?? 'unknown',
                 'last_seen_at' => now(),
+                'country_code' => $location['country_code'],
+                'city' => $location['city'],
             ]);
 
             $token = $visitor->createToken('widget', ['widget']);
