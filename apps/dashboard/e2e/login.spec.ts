@@ -13,11 +13,18 @@ test.describe("login page", () => {
   });
 
   test("redirects unauthenticated app routes to login", async ({ page }) => {
-    await page.goto("/");
+    // "/" is now the public marketing home; the app lives behind auth.
+    await page.goto("/dashboard");
     await expect(page).toHaveURL(/\/login$/);
 
     await page.goto("/settings/profile");
     await expect(page).toHaveURL(/\/login$/);
+  });
+
+  test("serves the public marketing home at /", async ({ page }) => {
+    await page.goto("/");
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole("link", { name: "Start Free Trial" }).first()).toBeVisible();
   });
 
   test("has no serious accessibility violations (light and dark)", async ({ page }) => {
