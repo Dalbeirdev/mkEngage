@@ -105,7 +105,9 @@ export default function ConversationsPage() {
                           className={`ms-2 rounded-full px-1.5 py-0.5 text-[10px] font-semibold capitalize ${
                             conversation.channel_type === "telegram"
                               ? "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300"
-                              : "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
+                              : conversation.channel_type === "messenger"
+                                ? "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300"
+                                : "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
                           }`}
                         >
                           {conversation.channel_type}

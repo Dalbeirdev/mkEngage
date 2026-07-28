@@ -20,6 +20,7 @@ use App\Http\Controllers\Agent\OrganizationLogoController;
 use App\Http\Controllers\Agent\WidgetSettingsController;
 use App\Http\Controllers\AttachmentStreamController;
 use App\Http\Controllers\Auth\IssueApiTokenController;
+use App\Http\Controllers\Channels\MessengerWebhookController;
 use App\Http\Controllers\Channels\TelegramWebhookController;
 use App\Http\Controllers\Channels\WhatsAppWebhookController;
 use App\Http\Controllers\Widget\WidgetAttachmentController;
@@ -51,6 +52,10 @@ Route::post('/channels/whatsapp/{organization}/{channel}', [WhatsAppWebhookContr
 
 // Telegram Bot API webhook (Phase 31): secret-token header authenticated.
 Route::post('/channels/telegram/{organization}/{channel}', [TelegramWebhookController::class, 'receive']);
+
+// Facebook Messenger webhook (Phase 32): same Meta mechanics as WhatsApp.
+Route::get('/channels/messenger/{organization}/{channel}', [MessengerWebhookController::class, 'verify']);
+Route::post('/channels/messenger/{organization}/{channel}', [MessengerWebhookController::class, 'receive']);
 
 // Signed attachment stream (§14): the temporary signature IS the auth —
 // minted only by the authorized download endpoints, short expiry.

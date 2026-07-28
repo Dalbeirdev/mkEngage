@@ -54,9 +54,10 @@ export default function ChannelsPage() {
   const t = useTranslations("channels");
   const queryClient = useQueryClient();
 
-  const [type, setType] = useState<"whatsapp" | "telegram">("whatsapp");
+  const [type, setType] = useState<"whatsapp" | "telegram" | "messenger">("whatsapp");
   const [name, setName] = useState("");
   const [botToken, setBotToken] = useState("");
+  const [pageId, setPageId] = useState("");
   const [phoneNumberId, setPhoneNumberId] = useState("");
   const [wabaId, setWabaId] = useState("");
   const [accessToken, setAccessToken] = useState("");
@@ -78,6 +79,7 @@ export default function ChannelsPage() {
       setAccessToken("");
       setAppSecret("");
       setBotToken("");
+      setPageId("");
       invalidate();
     },
   });
@@ -97,7 +99,15 @@ export default function ChannelsPage() {
           create.mutate(
             type === "telegram"
               ? { type, name: name.trim(), bot_token: botToken.trim() }
-              : {
+              : type === "messenger"
+                ? {
+                    type,
+                    name: name.trim(),
+                    page_id: pageId.trim(),
+                    access_token: accessToken.trim(),
+                    app_secret: appSecret.trim(),
+                  }
+                : {
                   type,
                   name: name.trim(),
                   phone_number_id: phoneNumberId.trim(),
@@ -110,7 +120,7 @@ export default function ChannelsPage() {
       >
         <h2 className="font-semibold">{t("connectTitle")}</h2>
         <div className="flex gap-2" role="radiogroup" aria-label={t("channelType")}>
-          {(["whatsapp", "telegram"] as const).map((option) => (
+          {(["whatsapp", "telegram", "messenger"] as const).map((option) => (
             <button
               key={option}
               type="button"
@@ -127,11 +137,20 @@ export default function ChannelsPage() {
             </button>
           ))}
         </div>
-        <p className="text-xs text-zinc-500">{type === "telegram" ? t("telegramHelp") : t("connectHelp")}</p>
+        <p className="text-xs text-zinc-500">
+          {type === "telegram" ? t("telegramHelp") : type === "messenger" ? t("messengerHelp") : t("connectHelp")}
+        </p>
         {type === "telegram" ? (
           <div className="grid gap-3 sm:grid-cols-2">
             <input type="text" required maxLength={100} value={name} onChange={(e) => setName(e.target.value)} placeholder={t("fieldName")} aria-label={t("fieldName")} className={input} />
             <input type="password" required maxLength={128} value={botToken} onChange={(e) => setBotToken(e.target.value)} placeholder={t("fieldBotToken")} aria-label={t("fieldBotToken")} className={input} />
+          </div>
+        ) : type === "messenger" ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <input type="text" required maxLength={100} value={name} onChange={(e) => setName(e.target.value)} placeholder={t("fieldName")} aria-label={t("fieldName")} className={input} />
+            <input type="text" required maxLength={64} value={pageId} onChange={(e) => setPageId(e.target.value)} placeholder={t("fieldPageId")} aria-label={t("fieldPageId")} className={input} />
+            <input type="password" required maxLength={512} value={accessToken} onChange={(e) => setAccessToken(e.target.value)} placeholder={t("fieldPageToken")} aria-label={t("fieldPageToken")} className={input} />
+            <input type="password" required maxLength={128} value={appSecret} onChange={(e) => setAppSecret(e.target.value)} placeholder={t("fieldAppSecret")} aria-label={t("fieldAppSecret")} className={input} />
           </div>
         ) : (
         <div className="grid gap-3 sm:grid-cols-2">
@@ -167,7 +186,7 @@ export default function ChannelsPage() {
       {(data ?? []).map((channel: ChannelInfo) => (
         <section key={channel.channel_id} className={`${cardPad} space-y-2`}>
           <div className="flex items-center gap-3">
-            <span aria-hidden>{channel.type === "telegram" ? "✈️" : "💬"}</span>
+            <span aria-hidden>{channel.type === "telegram" ? "✈️" : channel.type === "messenger" ? "📨" : "💬"}</span>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium">
                 {channel.name}
@@ -181,7 +200,7 @@ export default function ChannelsPage() {
               {t("disconnect")}
             </button>
           </div>
-          <p className="text-xs text-zinc-500">{channel.type === "telegram" ? t("telegramSetupHint") : t("metaSetupHint")}</p>
+          <p className="text-xs text-zinc-500">{channel.type === "telegram" ? t("telegramSetupHint") : channel.type === "messenger" ? t("messengerSetupHint") : t("metaSetupHint")}</p>
           <CopyField label={t("webhookUrl")} value={channel.webhook_url} />
           <CopyField label={t("verifyToken")} value={channel.webhook_verify_token} />
         </section>

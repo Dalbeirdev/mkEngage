@@ -336,6 +336,10 @@
     "channelType": "Channel type",
     "telegramHelp": "Create a bot with @BotFather on Telegram and paste its token here. mkEngage registers the webhook automatically when your server is publicly reachable.",
     "fieldBotToken": "Bot token (from @BotFather)",
-    "telegramSetupHint": "Webhook registration is automatic on public hosts. If yours failed (local/dev), re-connect after deploying, or call setWebhook with this URL and secret token:"
+    "telegramSetupHint": "Webhook registration is automatic on public hosts. If yours failed (local/dev), re-connect after deploying, or call setWebhook with this URL and secret token:",
+    "messengerHelp": "From your Meta App (Messenger → Settings): generate a Page access token and copy the App Secret. After connecting, paste the webhook URL and verify token into Meta's webhook configuration (subscribe to messages).",
+    "fieldPageId": "Facebook Page ID",
+    "fieldPageToken": "Page access token",
+    "messengerSetupHint": "Paste these into Meta App → Messenger → Settings → Webhooks (subscribe to the messages field):"
   }
 }

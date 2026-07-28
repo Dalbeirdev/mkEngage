@@ -48,14 +48,16 @@ final class DeliverChannelMessage implements ShouldQueue
                 ? Channel::query()->whereKey($conversation->channel_id)->where('status', 'active')->first()
                 : null;
 
-            if ($channel === null || ! in_array($channel->type, ['whatsapp', 'telegram'], true)) {
+            if ($channel === null || ! in_array($channel->type, ['whatsapp', 'telegram', 'messenger'], true)) {
                 return;
             }
 
             try {
-                $response = $channel->type === 'telegram'
-                    ? $this->sendTelegram($channel, $conversation->external_thread_id, $message)
-                    : $this->sendWhatsApp($channel, $conversation->external_thread_id, $message);
+                $response = match ($channel->type) {
+                    'telegram' => $this->sendTelegram($channel, $conversation->external_thread_id, $message),
+                    'messenger' => $this->sendMessenger($channel, $conversation->external_thread_id, $message),
+                    default => $this->sendWhatsApp($channel, $conversation->external_thread_id, $message),
+                };
             } catch (\Throwable) {
                 Log::warning('channel_delivery_failed', [
                     'organization_id' => $this->organizationId,
@@ -119,6 +121,34 @@ final class DeliverChannelMessage implements ShouldQueue
                 rtrim(is_string($base) ? $base : '', '/')
                     .'/bot'.$channel->configString('bot_token').'/sendMessage',
                 $payload,
+            );
+    }
+
+    /** Messenger Send API — rich flow menus become quick-reply buttons. */
+    private function sendMessenger(Channel $channel, string $psid, Message $message): Response
+    {
+        $base = config('services.messenger.base_url', 'https://graph.facebook.com/v20.0');
+        $messagePayload = ['text' => $this->renderBody($message, includeOptionsInText: false)];
+
+        $options = $this->richOptions($message);
+        if ($options !== []) {
+            $messagePayload['quick_replies'] = array_map(fn (string $option): array => [
+                'content_type' => 'text',
+                'title' => mb_substr($option, 0, 20), // Messenger's title cap
+                'payload' => $option,
+            ], $options);
+        }
+
+        return Http::withToken($channel->configString('access_token'))
+            ->timeout(15)
+            ->acceptJson()
+            ->post(
+                rtrim(is_string($base) ? $base : '', '/').'/me/messages',
+                [
+                    'recipient' => ['id' => $psid],
+                    'messaging_type' => 'RESPONSE',
+                    'message' => $messagePayload,
+                ],
             );
     }
 

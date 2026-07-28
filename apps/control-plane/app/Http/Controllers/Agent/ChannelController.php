@@ -33,25 +33,33 @@ final class ChannelController extends Controller
     public function store(Request $request, TenantContext $context): JsonResponse
     {
         $validated = $request->validate([
-            'type' => ['required', 'in:whatsapp,telegram'],
+            'type' => ['required', 'in:whatsapp,telegram,messenger'],
             'name' => ['required', 'string', 'max:100'],
             // WhatsApp Cloud API credentials
             'phone_number_id' => ['required_if:type,whatsapp', 'string', 'max:64'],
             'waba_id' => ['sometimes', 'nullable', 'string', 'max:64'],
-            'access_token' => ['required_if:type,whatsapp', 'string', 'max:512'],
-            'app_secret' => ['required_if:type,whatsapp', 'string', 'max:128'],
+            'access_token' => ['required_if:type,whatsapp,messenger', 'string', 'max:512'],
+            'app_secret' => ['required_if:type,whatsapp,messenger', 'string', 'max:128'],
+            // Messenger page
+            'page_id' => ['required_if:type,messenger', 'string', 'max:64'],
             // Telegram Bot API credential
             'bot_token' => ['required_if:type,telegram', 'string', 'max:128'],
         ]);
 
-        $config = $validated['type'] === 'telegram'
-            ? ['bot_token' => $validated['bot_token']]
-            : [
+        $config = match ($validated['type']) {
+            'telegram' => ['bot_token' => $validated['bot_token']],
+            'messenger' => [
+                'page_id' => $validated['page_id'],
+                'access_token' => $validated['access_token'],
+                'app_secret' => $validated['app_secret'],
+            ],
+            default => [
                 'phone_number_id' => $validated['phone_number_id'],
                 'waba_id' => $validated['waba_id'] ?? null,
                 'access_token' => $validated['access_token'],
                 'app_secret' => $validated['app_secret'],
-            ];
+            ],
+        };
 
         $channel = Channel::query()->create([
             'type' => $validated['type'],
