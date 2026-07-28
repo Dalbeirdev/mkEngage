@@ -12,6 +12,7 @@ import {
   IconVisitors,
   IconWidget,
 } from "@/components/icons";
+import { BrandLogo } from "@/components/brand-logo";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -51,11 +52,8 @@ export default async function AppLayout({
       </a>
 
       <aside className="hidden w-60 shrink-0 border-e border-zinc-200 bg-white p-3 md:flex md:flex-col dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="mb-6 flex items-center gap-2 px-2 py-1">
-          <span className="grid size-8 place-items-center rounded-lg bg-indigo-600 text-sm font-bold text-white">
-            m
-          </span>
-          <span className="text-lg font-bold tracking-tight">mkEngage</span>
+        <div className="mb-6 px-2 py-1">
+          <BrandLogo />
         </div>
         <SidebarNav items={navigation} />
       </aside>

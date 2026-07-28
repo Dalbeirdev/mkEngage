@@ -610,13 +610,22 @@ export class MkEngageWidget extends LitElement {
     }
 
     .branding {
-      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
       font-size: 11px;
       background: var(--mk-composer-bg); /* one continuous bottom bar */
       /* Theme-pinned (light #52525b / dark #a1a1aa) so "Powered by" clears
          WCAG AA (4.5:1) on both surfaces and any host page bleed-through. */
       color: var(--mk-branding);
       padding: 6px 0 9px;
+    }
+
+    .branding svg {
+      display: block;
+      height: 13px;
+      width: auto;
     }
 
     .branding strong {
@@ -2193,7 +2202,27 @@ export class MkEngageWidget extends LitElement {
         </form>
 
         ${this.showBranding
-          ? html`<div class="branding">${t("powered_by")} <strong>mkEngage</strong></div>`
+          ? html`<div class="branding">
+              <svg viewBox="-6 -16 86 82" aria-hidden="true">
+                <defs>
+                  <linearGradient id="mk-brand-fp" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#ff1e6f"></stop>
+                    <stop offset="1" stop-color="#8b3dff"></stop>
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M14 4 h44 a14 14 0 0 1 14 14 v28 a14 14 0 0 1 -14 14 h-21 l-11 11 v-11 h-12 a14 14 0 0 1 -14 -14 v-28 a14 14 0 0 1 14 -14 z"
+                  fill="none" stroke="url(#mk-brand-fp)" stroke-width="6" stroke-linejoin="round"
+                ></path>
+                <line x1="36" y1="-4" x2="36" y2="6" stroke="url(#mk-brand-fp)" stroke-width="5" stroke-linecap="round"></line>
+                <circle cx="36" cy="-8" r="5" fill="url(#mk-brand-fp)"></circle>
+                <rect x="18" y="14" width="36" height="28" rx="10" fill="#141a2e"></rect>
+                <path d="M26 27 q3 4 6 0" fill="none" stroke="#ff1e6f" stroke-width="3.5" stroke-linecap="round"></path>
+                <path d="M40 27 q3 4 6 0" fill="none" stroke="#ff1e6f" stroke-width="3.5" stroke-linecap="round"></path>
+                <path d="M31 34 q5 5 10 0" fill="none" stroke="#ff1e6f" stroke-width="3.5" stroke-linecap="round"></path>
+              </svg>
+              <span>${t("powered_by")} <strong>mkEngage</strong></span>
+            </div>`
           : nothing}
       </section>
     `;
