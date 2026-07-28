@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Models\Attachment;
 use App\Models\Channel;
 use App\Models\Conversation;
 use App\Models\Message;
@@ -13,6 +14,7 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Deliver an agent/chatbot reply to the conversation's channel provider
@@ -52,27 +54,42 @@ final class DeliverChannelMessage implements ShouldQueue
                 return;
             }
 
+            $thread = $conversation->external_thread_id;
+
             try {
-                $response = match ($channel->type) {
-                    'telegram' => $this->sendTelegram($channel, $conversation->external_thread_id, $message),
-                    'messenger' => $this->sendMessenger($channel, $conversation->external_thread_id, $message),
-                    default => $this->sendWhatsApp($channel, $conversation->external_thread_id, $message),
-                };
+                // Media first (Phase 37): clean attachments deliver as native
+                // media; text/flow body still sends after.
+                foreach ($message->attachments as $attachment) {
+                    if ($attachment->scan_status === 'clean') {
+                        $this->deliverAttachment($channel, $thread, $attachment);
+                    }
+                }
+
+                // A body of just the file name (attachment-only agent message)
+                // shouldn't also send as a redundant text line.
+                $bodyOnlyFileName = $message->attachments->contains(
+                    fn ($attachment): bool => $attachment->file_name === $message->body,
+                );
+                if (! ($bodyOnlyFileName && trim($message->body) !== '' && $message->content_type === 'text')) {
+                    $response = match ($channel->type) {
+                        'telegram' => $this->sendTelegram($channel, $thread, $message),
+                        'messenger' => $this->sendMessenger($channel, $thread, $message),
+                        default => $this->sendWhatsApp($channel, $thread, $message),
+                    };
+
+                    if ($response->failed()) {
+                        Log::warning('channel_delivery_failed', [
+                            'organization_id' => $this->organizationId,
+                            'message_id' => $this->messageId,
+                            'status' => $response->status(),
+                        ]);
+                    }
+                }
             } catch (\Throwable) {
                 Log::warning('channel_delivery_failed', [
                     'organization_id' => $this->organizationId,
                     'message_id' => $this->messageId,
                     'reason' => 'transport',
-                ]);
-
-                return;
-            }
-
-            if ($response->failed()) {
-                Log::warning('channel_delivery_failed', [
-                    'organization_id' => $this->organizationId,
-                    'message_id' => $this->messageId,
-                    'status' => $response->status(),
                 ]);
             }
         });
@@ -170,6 +187,89 @@ final class DeliverChannelMessage implements ShouldQueue
                     'message' => $messagePayload,
                 ],
             );
+    }
+
+    /** Deliver one clean attachment as native media to the channel (Phase 37). */
+    private function deliverAttachment(Channel $channel, string $thread, Attachment $attachment): void
+    {
+        $disk = Storage::disk(config()->string('attachments.disk'));
+        if (! $disk->exists($attachment->storage_path)) {
+            return;
+        }
+        $bytes = $disk->get($attachment->storage_path);
+        if ($bytes === null) {
+            return;
+        }
+        $isImage = str_starts_with($attachment->content_type, 'image/');
+
+        match ($channel->type) {
+            'telegram' => $this->telegramMedia($channel, $thread, $attachment, $bytes, $isImage),
+            'whatsapp' => $this->whatsAppMedia($channel, $thread, $attachment, $bytes, $isImage),
+            'messenger' => $this->messengerMedia($channel, $thread, $attachment, $bytes, $isImage),
+            default => null,
+        };
+    }
+
+    private function telegramMedia(Channel $channel, string $chatId, Attachment $attachment, string $bytes, bool $isImage): void
+    {
+        $base = config('services.telegram.base_url', 'https://api.telegram.org');
+        $method = $isImage ? 'sendPhoto' : 'sendDocument';
+        $field = $isImage ? 'photo' : 'document';
+
+        Http::timeout(30)
+            ->attach($field, $bytes, $attachment->file_name)
+            ->post(
+                rtrim(is_string($base) ? $base : '', '/').'/bot'.$channel->configString('bot_token').'/'.$method,
+                ['chat_id' => $chatId],
+            );
+    }
+
+    private function whatsAppMedia(Channel $channel, string $to, Attachment $attachment, string $bytes, bool $isImage): void
+    {
+        $base = config('services.whatsapp.base_url', 'https://graph.facebook.com/v20.0');
+        $root = rtrim(is_string($base) ? $base : '', '/');
+
+        // Two-step: upload media → send by id (Cloud API requirement).
+        $upload = Http::withToken($channel->configString('access_token'))
+            ->timeout(30)
+            ->attach('file', $bytes, $attachment->file_name, ['Content-Type' => $attachment->content_type])
+            ->post($root.'/'.$channel->configString('phone_number_id').'/media', [
+                'messaging_product' => 'whatsapp',
+                'type' => $attachment->content_type,
+            ]);
+
+        $mediaId = $upload->json('id');
+        if (! is_string($mediaId)) {
+            return;
+        }
+
+        $type = $isImage ? 'image' : 'document';
+        Http::withToken($channel->configString('access_token'))
+            ->timeout(15)
+            ->post($root.'/'.$channel->configString('phone_number_id').'/messages', [
+                'messaging_product' => 'whatsapp',
+                'to' => $to,
+                'type' => $type,
+                $type => $isImage
+                    ? ['id' => $mediaId]
+                    : ['id' => $mediaId, 'filename' => $attachment->file_name],
+            ]);
+    }
+
+    private function messengerMedia(Channel $channel, string $psid, Attachment $attachment, string $bytes, bool $isImage): void
+    {
+        $base = config('services.messenger.base_url', 'https://graph.facebook.com/v20.0');
+        $type = $isImage ? 'image' : 'file';
+
+        Http::withToken($channel->configString('access_token'))
+            ->timeout(30)
+            ->attach('filedata', $bytes, $attachment->file_name)
+            ->post(rtrim(is_string($base) ? $base : '', '/').'/me/messages', [
+                'recipient' => json_encode(['id' => $psid]),
+                'message' => json_encode([
+                    'attachment' => ['type' => $type, 'payload' => ['is_reusable' => false]],
+                ]),
+            ]);
     }
 
     /** @return list<string> options of a rich (flow menu) message, else []. */
