@@ -93,6 +93,20 @@ export const insightsOverviewSchema = z.object({
 
 export type InsightsOverview = z.infer<typeof insightsOverviewSchema>;
 
+export const profileSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  email: z.string(),
+  email_verified_at: z.string().nullable(),
+  organization_id: z.uuid(),
+  status: z.string(),
+  role: z.string().nullable(),
+  active_sessions: z.number().int(),
+  created_at: z.string().nullable(),
+  activity: z.array(z.object({ action: z.string(), at: z.string().nullable() })),
+});
+export type Profile = z.infer<typeof profileSchema>;
+
 export const conversationSchema = z.object({
   conversation_id: z.uuid(),
   status: z.enum(["open", "pending", "closed"]),

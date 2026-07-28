@@ -7,11 +7,15 @@ namespace App\Models;
 use App\Models\Concerns\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 /**
  * Append-only (ADR-009): no update/delete surface. UPDATED_AT is disabled and
  * mutation methods are hard-blocked; retention/redaction run as controlled
  * platform workflows (§29), not model operations.
+ *
+ * @property string $action
+ * @property Carbon|null $created_at
  */
 final class AuditLogEntry extends Model
 {
@@ -37,6 +41,7 @@ final class AuditLogEntry extends Model
     {
         return [
             'context' => 'array',
+            'created_at' => 'datetime',
         ];
     }
 

@@ -31,6 +31,7 @@ const ALLOWED = [
   /^organization\/logo$/,
   /^departments(\/[0-9a-f-]{36})?(\/members)?$/,
   /^users$/,
+  /^profile(\/password)?$/,
   /^gateway-token$/,
   /^knowledge\/documents(\/[0-9a-f-]{36})?$/,
 ];

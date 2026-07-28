@@ -19,6 +19,7 @@ use App\Http\Controllers\Agent\InsightsController;
 use App\Http\Controllers\Agent\KnowledgeController;
 use App\Http\Controllers\Agent\LiveVisitorController;
 use App\Http\Controllers\Agent\OrganizationLogoController;
+use App\Http\Controllers\Agent\ProfileController;
 use App\Http\Controllers\Agent\WidgetSettingsController;
 use App\Http\Controllers\AttachmentStreamController;
 use App\Http\Controllers\Auth\IssueApiTokenController;
@@ -71,6 +72,11 @@ Route::get('/attachments/{attachment}/stream', AttachmentStreamController::class
 Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-api'])
     ->group(function (): void {
         Route::get('/user', fn (Request $request) => $request->user());
+
+        // The agent's own profile (account, sessions, activity feed, edits).
+        Route::get('/profile', [ProfileController::class, 'show']);
+        Route::patch('/profile', [ProfileController::class, 'update']);
+        Route::post('/profile/password', [ProfileController::class, 'changePassword']);
 
         // Short-lived gateway socket token (ADR-002); identity only.
         Route::post('/gateway-token', function (Request $request, GatewayTokenIssuer $issuer) {

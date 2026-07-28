@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 
-import { IconChannels, IconClock, IconSettings } from "@/components/icons";
+import { IconChannels, IconClock, IconMessages, IconSettings } from "@/components/icons";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const subscribe = () => () => {};
@@ -27,6 +27,7 @@ export function ProfilePreferences() {
   const rows = [
     { icon: <IconChannels />, label: "Language", value: "English (US)" },
     { icon: <IconClock />, label: "Time zone", value: timeZone },
+    { icon: <IconMessages />, label: "Email notifications", value: "All enabled" },
   ];
 
   return (
