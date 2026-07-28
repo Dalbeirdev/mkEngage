@@ -72,6 +72,23 @@ export const insightsOverviewSchema = z.object({
       messages: z.number().int(),
     }),
   ),
+  by_channel: z.record(z.string(), z.number().int()),
+  first_response: z.object({
+    agent_avg_seconds: z.number().int().nullable(),
+    agent_median_seconds: z.number().int().nullable(),
+    bot_avg_seconds: z.number().int().nullable(),
+    answered_by_agent: z.number().int(),
+  }),
+  hourly: z.array(z.object({ hour: z.number().int(), messages: z.number().int() })),
+  agents: z.array(
+    z.object({
+      agent_id: z.string(),
+      name: z.string(),
+      replies: z.number().int(),
+      closed: z.number().int(),
+      avg_csat: z.number().nullable(),
+    }),
+  ),
 });
 
 export type InsightsOverview = z.infer<typeof insightsOverviewSchema>;

@@ -39,7 +39,17 @@
     "byDepartment": "By department",
     "empty": "No data yet for this period.",
     "csat": "CSAT",
-    "csatNone": "No ratings yet"
+    "csatNone": "No ratings yet",
+    "firstResponse": "Avg first response",
+    "frtNone": "No replies yet",
+    "byChannel": "Conversations by channel",
+    "channelWeb": "Website widget",
+    "busiestHours": "Busiest hours (messages by hour)",
+    "agentLeaderboard": "Agent leaderboard",
+    "colAgent": "Agent",
+    "colReplies": "Replies",
+    "colClosed": "Closed",
+    "colCsat": "Avg CSAT"
   },
   "profile": {
     "title": "Profile",

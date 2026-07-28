@@ -40,7 +40,190 @@ final class InsightsService
             'csat' => $this->csat($start, $end),
             'by_department' => $this->byDepartment($start, $end),
             'daily' => $this->daily($start, $end),
+            // Insights v2 (Phase 34)
+            'by_channel' => $this->byChannel($start, $end),
+            'first_response' => $this->firstResponse($start, $end),
+            'hourly' => $this->hourly($start, $end),
+            'agents' => $this->agents($start, $end),
         ];
+    }
+
+    /**
+     * Conversations per channel type; the widget's null channel reports as
+     * "web". Raw query ⇒ explicit org filter (two-layer tenancy).
+     *
+     * @return array<string, mixed>
+     */
+    private function byChannel(Carbon $start, Carbon $end): array
+    {
+        $rows = DB::table('conversations')
+            ->leftJoin('channels', 'channels.id', '=', 'conversations.channel_id')
+            ->where('conversations.organization_id', $this->tenant->organizationId())
+            ->whereBetween('conversations.created_at', [$start, $end])
+            ->selectRaw("coalesce(channels.type, 'web') as channel_type, count(*) as n")
+            ->groupBy('channel_type')
+            ->pluck('n', 'channel_type');
+
+        return collect(['web', 'whatsapp', 'telegram', 'messenger'])
+            ->mapWithKeys(fn (string $type): array => [$type => $this->toInt($rows[$type] ?? 0)])
+            ->all();
+    }
+
+    /**
+     * First-response time: per conversation in range, seconds between the
+     * first inbound (visitor/contact) message and the first HUMAN agent
+     * reply after it. Bot replies are reported separately — instant bot
+     * answers must not flatter the human number.
+     *
+     * @return array<string, mixed>
+     */
+    private function firstResponse(Carbon $start, Carbon $end): array
+    {
+        $conversationIds = DB::table('conversations')
+            ->where('organization_id', $this->tenant->organizationId())
+            ->whereBetween('created_at', [$start, $end])
+            ->pluck('id');
+
+        $agentSeconds = [];
+        $botSeconds = [];
+
+        // Bounded: overview ranges cap at 366 days and per-org volumes are
+        // administrative-report scale here (ClickHouse path takes over past
+        // that, see the class docblock).
+        foreach ($conversationIds->chunk(200) as $chunk) {
+            $messages = DB::table('messages')
+                ->where('organization_id', $this->tenant->organizationId())
+                ->whereIn('conversation_id', $chunk->all())
+                ->orderBy('sequence_number')
+                ->get(['conversation_id', 'sender_type', 'sent_at']);
+
+            foreach ($messages->groupBy('conversation_id') as $thread) {
+                $firstInboundAt = null;
+                $agentRecorded = false;
+                $botRecorded = false;
+
+                foreach ($thread as $message) {
+                    $sentAt = is_string($message->sent_at) ? Carbon::parse($message->sent_at) : null;
+                    if ($sentAt === null) {
+                        continue;
+                    }
+
+                    if (in_array($message->sender_type, ['visitor', 'contact'], true)) {
+                        $firstInboundAt ??= $sentAt;
+                    } elseif ($firstInboundAt !== null && ! $agentRecorded && $message->sender_type === 'agent') {
+                        $agentSeconds[] = max(0, (int) $firstInboundAt->diffInSeconds($sentAt, true));
+                        $agentRecorded = true;
+                    } elseif ($firstInboundAt !== null && ! $botRecorded && $message->sender_type === 'chatbot') {
+                        $botSeconds[] = max(0, (int) $firstInboundAt->diffInSeconds($sentAt, true));
+                        $botRecorded = true;
+                    }
+
+                    if ($agentRecorded && $botRecorded) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        $average = fn (array $values): ?int => $values === [] ? null : (int) round(array_sum($values) / count($values));
+        $median = function (array $values): ?int {
+            if ($values === []) {
+                return null;
+            }
+            sort($values);
+            $mid = intdiv(count($values), 2);
+
+            return count($values) % 2 === 1
+                ? $values[$mid]
+                : (int) round(($values[$mid - 1] + $values[$mid]) / 2);
+        };
+
+        return [
+            'agent_avg_seconds' => $average($agentSeconds),
+            'agent_median_seconds' => $median($agentSeconds),
+            'bot_avg_seconds' => $average($botSeconds),
+            'answered_by_agent' => count($agentSeconds),
+        ];
+    }
+
+    /**
+     * Message volume by hour of day (0-23) — staffing heatmap.
+     *
+     * @return list<array{hour: int, messages: int}>
+     */
+    private function hourly(Carbon $start, Carbon $end): array
+    {
+        $hourExpression = DB::connection()->getDriverName() === 'pgsql'
+            ? "cast(date_part('hour', sent_at) as integer)"
+            : "cast(strftime('%H', sent_at) as integer)";
+
+        $rows = DB::table('messages')
+            ->where('organization_id', $this->tenant->organizationId())
+            ->whereBetween('sent_at', [$start, $end])
+            ->selectRaw("{$hourExpression} as hour, count(*) as n")
+            ->groupBy('hour')
+            ->pluck('n', 'hour');
+
+        return array_values(collect(range(0, 23))
+            ->map(fn (int $hour): array => ['hour' => $hour, 'messages' => $this->toInt($rows[$hour] ?? 0)])
+            ->all());
+    }
+
+    /**
+     * Agent leaderboard: replies sent, conversations closed while assigned,
+     * and the average CSAT of those closed conversations.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function agents(Carbon $start, Carbon $end): array
+    {
+        $orgId = $this->tenant->organizationId();
+
+        $replies = DB::table('messages')
+            ->where('organization_id', $orgId)
+            ->where('sender_type', 'agent')
+            ->whereBetween('sent_at', [$start, $end])
+            ->selectRaw('sender_id, count(*) as n')
+            ->groupBy('sender_id')
+            ->pluck('n', 'sender_id');
+
+        $closedRows = DB::table('conversations')
+            ->where('organization_id', $orgId)
+            ->where('status', 'closed')
+            ->whereNotNull('assigned_agent_id')
+            ->whereBetween('closed_at', [$start, $end])
+            ->selectRaw('assigned_agent_id, count(*) as closed, avg(csat_rating) as avg_csat')
+            ->groupBy('assigned_agent_id')
+            ->get()
+            ->keyBy('assigned_agent_id');
+
+        $agentIds = $replies->keys()->merge($closedRows->keys())->unique()->values();
+        if ($agentIds->isEmpty()) {
+            return [];
+        }
+
+        $names = DB::table('users')
+            ->where('organization_id', $orgId)
+            ->whereIn('id', $agentIds->all())
+            ->pluck('name', 'id');
+
+        return array_values($agentIds
+            ->map(function (mixed $agentId) use ($replies, $closedRows, $names): array {
+                $closed = $closedRows->get($agentId);
+                $avgCsat = is_object($closed) && is_numeric($closed->avg_csat ?? null)
+                    ? round((float) $closed->avg_csat, 2)
+                    : null;
+
+                return [
+                    'agent_id' => is_string($agentId) ? $agentId : (string) $agentId,
+                    'name' => is_string($names[$agentId] ?? null) ? $names[$agentId] : 'Unknown',
+                    'replies' => $this->toInt($replies[$agentId] ?? 0),
+                    'closed' => is_object($closed) ? $this->toInt($closed->closed ?? 0) : 0,
+                    'avg_csat' => $avgCsat,
+                ];
+            })
+            ->sortByDesc('replies')
+            ->all());
     }
 
     /**
