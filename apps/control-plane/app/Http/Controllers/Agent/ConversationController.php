@@ -9,6 +9,7 @@ use App\Jobs\DeliverWebhooks;
 use App\Models\Conversation;
 use App\Models\ConversationRead;
 use App\Models\Department;
+use App\Models\Message;
 use App\Models\User;
 use App\Models\Visitor;
 use App\Services\AssignmentService;
@@ -73,6 +74,24 @@ final class ConversationController extends Controller
             ->limit($validated['limit'] ?? 50)
             ->get();
 
+        // Last-message previews: the latest message sits at the conversation's
+        // last_sequence, so match on (conversation_id, sequence_number) — no
+        // MAX() aggregate on the UUID key (which Postgres rejects).
+        $latestMessages = collect();
+        if ($conversations->isNotEmpty()) {
+            $latestMessages = Message::query()
+                ->where(function ($query) use ($conversations): void {
+                    foreach ($conversations as $conversation) {
+                        $query->orWhere(function ($sub) use ($conversation): void {
+                            $sub->where('conversation_id', $conversation->id)
+                                ->where('sequence_number', $conversation->last_sequence);
+                        });
+                    }
+                })
+                ->get()
+                ->keyBy('conversation_id');
+        }
+
         // Per-agent unread counts (Phase 33): one query for all rows.
         $user = $request->user();
         $reads = $user instanceof User
@@ -83,8 +102,10 @@ final class ConversationController extends Controller
             : collect();
 
         return response()->json([
-            'data' => $conversations->map(function (Conversation $conversation) use ($reads): array {
+            'data' => $conversations->map(function (Conversation $conversation) use ($reads, $latestMessages): array {
                 $lastRead = $reads->get($conversation->id);
+                $latest = $latestMessages->get($conversation->id);
+                $latest = $latest instanceof Message ? $latest : null;
 
                 return [
                     ...$this->toContract($conversation),
@@ -92,6 +113,8 @@ final class ConversationController extends Controller
                         0,
                         (int) $conversation->last_sequence - (is_numeric($lastRead) ? (int) $lastRead : 0),
                     ),
+                    'last_message' => $this->messagePreview($latest),
+                    'last_message_sender' => $latest?->sender_type,
                 ];
             })->all(),
         ]);
@@ -274,6 +297,24 @@ final class ConversationController extends Controller
     {
         // autoAssign returns null when no agent was eligible; that is a valid
         // outcome (conversation waits in the department queue), not an error.
+    }
+
+    /** A short, plain-text preview of a message for the inbox list. */
+    private function messagePreview(?Message $message): ?string
+    {
+        if ($message === null) {
+            return null;
+        }
+
+        $body = $message->body;
+        if ($message->content_type === 'rich') {
+            $decoded = json_decode($body, true);
+            if (is_array($decoded) && is_string($decoded['text'] ?? null)) {
+                $body = $decoded['text'];
+            }
+        }
+
+        return Str::limit(trim($body), 80);
     }
 
     /** @return array<string, mixed> */

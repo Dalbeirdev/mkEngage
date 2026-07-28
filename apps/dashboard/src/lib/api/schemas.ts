@@ -112,6 +112,8 @@ export const conversationSchema = z.object({
   tags: z.array(z.string()).optional(),
   channel_type: z.string().nullable().optional(),
   unread_count: z.number().int().optional(),
+  last_message: z.string().nullable().optional(),
+  last_message_sender: z.string().nullable().optional(),
   created_at: z.string().nullable(),
   updated_at: z.string().nullable(),
 });

@@ -185,3 +185,15 @@ it('sends WhatsApp rich menus as interactive buttons (≤3) and text beyond', fu
     Http::assertSent(fn ($request): bool => ($request['type'] ?? null) === 'text'
         && str_contains((string) $request['text']['body'], '• D'));
 });
+
+it('includes a last-message preview on inbox rows (redesign)', function (): void {
+    [$org, $token] = p33Org();
+
+    p33Conversation($org, 'The most recent thing the visitor said');
+
+    $row = test()->withToken($token)->getJson('/api/conversations?limit=5')
+        ->assertOk()->json('data.0');
+
+    expect($row['last_message'])->toBe('The most recent thing the visitor said')
+        ->and($row['last_message_sender'])->toBe('visitor');
+});

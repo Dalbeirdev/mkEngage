@@ -13,9 +13,8 @@ import {
   IconMessages,
   IconSparkles,
   IconStar,
-  IconTrendDown,
-  IconTrendUp,
 } from "@/components/icons";
+import { MetricCard, cardShell } from "@/components/metric-card";
 import { conversationListSchema, insightsOverviewSchema, type Conversation } from "@/lib/api/schemas";
 
 async function fetchOverview() {
@@ -74,8 +73,6 @@ function channelMeta(key: string) {
   return CHANNEL_META[key] ?? { label: key.charAt(0).toUpperCase() + key.slice(1), dot: "bg-zinc-400" };
 }
 
-const cardShell =
-  "rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900";
 
 export function DashboardView() {
   const { data, isPending, isError } = useQuery({
@@ -189,109 +186,6 @@ export function DashboardView() {
   );
 }
 
-const TINTS: Record<string, string> = {
-  indigo: "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300",
-  pink: "bg-pink-50 text-pink-600 dark:bg-pink-500/15 dark:text-pink-300",
-  violet: "bg-violet-50 text-violet-600 dark:bg-violet-500/15 dark:text-violet-300",
-  sky: "bg-sky-50 text-sky-600 dark:bg-sky-500/15 dark:text-sky-300",
-  amber: "bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300",
-};
-
-const SPARK_STROKE: Record<string, string> = {
-  indigo: "#6366f1",
-  pink: "#ec4899",
-};
-
-function MetricCard({
-  icon,
-  tint,
-  label,
-  value,
-  spark,
-  delta,
-  caption,
-  stars,
-}: {
-  icon: React.ReactNode;
-  tint: string;
-  label: string;
-  value: string;
-  spark?: number[];
-  delta?: number | null;
-  caption?: string;
-  stars?: number | null;
-}) {
-  return (
-    <div className={cardShell}>
-      <div className="flex items-center gap-2.5">
-        <span className={`grid size-9 shrink-0 place-items-center rounded-xl ${TINTS[tint]}`} aria-hidden>
-          {icon}
-        </span>
-        <span className="text-sm font-medium text-zinc-500">{label}</span>
-      </div>
-      <div className="mt-3 text-3xl font-bold tracking-tight tabular-nums">{value}</div>
-
-      {stars !== undefined && <Stars value={stars} />}
-
-      {delta !== undefined && delta !== null && (
-        <div className="mt-2 flex items-center gap-1 text-xs">
-          <span className={delta >= 0 ? "text-emerald-600" : "text-red-600"}>
-            {delta >= 0 ? <IconTrendUp /> : <IconTrendDown />}
-          </span>
-          <span className={delta >= 0 ? "font-medium text-emerald-600" : "font-medium text-red-600"}>
-            {delta >= 0 ? "+" : ""}
-            {Math.round(delta * 100)}%
-          </span>
-          <span className="text-zinc-400">vs first half</span>
-        </div>
-      )}
-
-      {spark !== undefined && spark.length > 1 && (
-        <Sparkline data={spark} stroke={SPARK_STROKE[tint] ?? "#6366f1"} />
-      )}
-
-      {caption !== undefined && delta === undefined && (
-        <p className="mt-2 text-xs text-zinc-400">{caption}</p>
-      )}
-    </div>
-  );
-}
-
-function Stars({ value }: { value: number | null | undefined }) {
-  const filled = value === null || value === undefined ? 0 : Math.round(value);
-  return (
-    <div className="mt-2 flex gap-0.5 text-indigo-500" aria-hidden>
-      {[1, 2, 3, 4, 5].map((i) => (
-        <span key={i} className={i <= filled ? "text-indigo-500" : "text-zinc-300 dark:text-zinc-700"}>
-          <IconStar />
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function Sparkline({ data, stroke }: { data: number[]; stroke: string }) {
-  const gid = `sp${useId().replace(/:/g, "")}`;
-  const w = 120;
-  const h = 34;
-  const max = Math.max(1, ...data);
-  const step = data.length > 1 ? w / (data.length - 1) : w;
-  const pts = data.map((v, i) => [i * step, h - (v / max) * (h - 4) - 2] as const);
-  const line = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
-  const area = `M0,${h} L${line.split(" ").join(" L")} L${w},${h} Z`;
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="mt-3 h-8 w-full" preserveAspectRatio="none" aria-hidden>
-      <defs>
-        <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor={stroke} stopOpacity="0.25" />
-          <stop offset="1" stopColor={stroke} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={area} fill={`url(#${gid})`} />
-      <polyline points={line} fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 function AreaChart({ daily }: { daily: { date: string; conversations: number }[] }) {
   const gid = `ar${useId().replace(/:/g, "")}`;
