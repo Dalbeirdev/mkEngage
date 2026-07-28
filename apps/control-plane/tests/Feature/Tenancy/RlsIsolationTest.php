@@ -28,6 +28,7 @@ use Illuminate\Support\Str;
 const RLS_EXEMPT = [
     'personal_access_tokens' => 'auth infrastructure: token lookup establishes context (see PAT migration)',
     'outbox_events' => 'platform infrastructure: the relay reads across orgs; envelopes are data-minimized (ADR-005)',
+    'api_keys' => 'auth infrastructure: mk_live_ key lookup establishes context, same pattern as PATs (Phase 35)',
 ];
 
 function tenantTables(): array
