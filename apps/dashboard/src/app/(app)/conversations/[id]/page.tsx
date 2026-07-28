@@ -369,10 +369,39 @@ export default function ConversationThreadPage({
     mutation.mutate({ body, attachmentIds });
   };
 
+  // On-demand AI assist for the sidebar (conversation redesign). Fetched only
+  // when the agent clicks "Suggest" — no automatic AI spend.
+  const assist = useMutation({
+    mutationFn: async (): Promise<{ suggested_reply: string | null; summary: string | null; sentiment: string }> => {
+      const res = await fetch(`/api/cp/conversations/${id}/assist`, { method: "POST" });
+      if (!res.ok) throw new Error(`Assist failed (${res.status})`);
+      return res.json();
+    },
+  });
+
+  const displayName = conversation?.contact_name ?? conversation?.visitor_name ?? t("sender_visitor");
+  const isVip = (conversation?.tags ?? []).includes("vip");
+  const fmtTime = (iso: string | null | undefined) =>
+    iso == null ? "—" : new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  const durationLabel = (() => {
+    if (conversation?.created_at == null || conversation.updated_at == null) return "—";
+    const start = new Date(conversation.created_at).getTime();
+    const end = new Date(conversation.updated_at).getTime();
+    const s = Math.max(0, Math.round((end - start) / 1000));
+    if (s < 60) return `${s}s`;
+    if (s < 3600) return `${Math.floor(s / 60)}m ${s % 60}s`;
+    return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`;
+  })();
+  const channelLabel =
+    conversation?.channel_type == null
+      ? "Live Chat"
+      : conversation.channel_type.charAt(0).toUpperCase() + conversation.channel_type.slice(1);
+
   return (
-    <div className="flex h-[calc(100dvh-7rem)] flex-col space-y-4">
-      <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-bold tracking-tight">{t("threadTitle")}</h1>
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="flex h-[calc(100dvh-7rem)] min-w-0 flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <h1 className="text-2xl font-bold tracking-tight">Conversation</h1>
         {visitorOnline && (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/40 dark:text-green-300">
             <span aria-hidden className="size-1.5 rounded-full bg-green-500" />
@@ -744,6 +773,131 @@ export default function ConversationThreadPage({
           {t("sendError")}
         </p>
       )}
+      </div>
+
+      {/* Right sidebar: visitor, AI assist, conversation details */}
+      <aside className="space-y-4">
+        <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2 font-semibold">
+              <span aria-hidden className={`size-2 rounded-full ${visitorOnline ? "bg-emerald-500" : "bg-zinc-300 dark:bg-zinc-600"}`} />
+              {displayName}
+            </span>
+            <span className={`text-xs font-medium ${visitorOnline ? "text-emerald-600" : "text-zinc-400"}`}>
+              {visitorOnline ? "Online" : "Offline"}
+            </span>
+          </div>
+          {(isVip || conversation?.channel_type != null) && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {isVip && (
+                <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">
+                  VIP Visitor
+                </span>
+              )}
+              {conversation?.channel_type != null && (
+                <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                  {channelLabel}
+                </span>
+              )}
+            </div>
+          )}
+          <dl className="mt-3 space-y-1.5 text-xs">
+            <div className="flex justify-between gap-2">
+              <dt className="text-zinc-500">First seen</dt>
+              <dd className="truncate text-zinc-700 dark:text-zinc-300">{fmtTime(conversation?.created_at)}</dd>
+            </div>
+            {conversation?.source_url != null && conversation.source_url !== "" && (
+              <div className="flex justify-between gap-2">
+                <dt className="shrink-0 text-zinc-500">Current page</dt>
+                <dd className="truncate text-zinc-700 dark:text-zinc-300">{conversation.source_url}</dd>
+              </div>
+            )}
+            {conversation?.contact_email != null && (
+              <div className="flex justify-between gap-2">
+                <dt className="shrink-0 text-zinc-500">Email</dt>
+                <dd className="truncate text-zinc-700 dark:text-zinc-300">{conversation.contact_email}</dd>
+              </div>
+            )}
+          </dl>
+        </section>
+
+        <section className="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-fuchsia-50 p-4 shadow-sm dark:border-indigo-500/20 dark:from-indigo-500/10 dark:to-fuchsia-500/10">
+          <div className="mb-3 flex items-center gap-2">
+            <span className="grid size-7 place-items-center rounded-lg bg-indigo-600 text-sm text-white" aria-hidden>✦</span>
+            <h2 className="text-sm font-semibold">AI Assistant</h2>
+          </div>
+          <button
+            type="button"
+            onClick={() => assist.mutate()}
+            disabled={assist.isPending}
+            className="w-full rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 disabled:opacity-60"
+          >
+            {assist.isPending ? "Thinking…" : "Suggest a reply"}
+          </button>
+          {assist.isError && <p className="mt-2 text-xs text-red-600" role="alert">Couldn’t generate a suggestion.</p>}
+          {assist.data != null && (
+            <div className="mt-3 space-y-3">
+              {assist.data.suggested_reply != null && (
+                <div>
+                  <p className="mb-1 text-xs font-medium text-zinc-500">Suggested reply</p>
+                  <div className="rounded-lg bg-white/70 p-2.5 text-sm text-zinc-700 dark:bg-white/5 dark:text-zinc-200">
+                    {assist.data.suggested_reply}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDraft(assist.data?.suggested_reply ?? "")}
+                    className="mt-1.5 rounded-md bg-indigo-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-indigo-500"
+                  >
+                    Insert
+                  </button>
+                </div>
+              )}
+              {assist.data.summary != null && (
+                <div>
+                  <p className="mb-1 text-xs font-medium text-zinc-500">Conversation summary</p>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-300">{assist.data.summary}</p>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-zinc-500">Sentiment</span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                    assist.data.sentiment === "positive"
+                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                      : assist.data.sentiment === "negative"
+                        ? "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300"
+                        : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+                  }`}
+                >
+                  {assist.data.sentiment.charAt(0).toUpperCase() + assist.data.sentiment.slice(1)}
+                </span>
+              </div>
+            </div>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <h2 className="mb-3 text-sm font-semibold">Conversation details</h2>
+          <dl className="space-y-2 text-sm">
+            <div className="flex justify-between gap-2">
+              <dt className="text-zinc-500">Channel</dt>
+              <dd className="text-zinc-700 dark:text-zinc-300">{channelLabel}</dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt className="text-zinc-500">Duration</dt>
+              <dd className="tabular-nums text-zinc-700 dark:text-zinc-300">{durationLabel}</dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt className="text-zinc-500">Messages</dt>
+              <dd className="tabular-nums text-zinc-700 dark:text-zinc-300">{data?.data.length ?? 0}</dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt className="text-zinc-500">Status</dt>
+              <dd className="capitalize text-zinc-700 dark:text-zinc-300">{conversation?.status ?? "—"}</dd>
+            </div>
+          </dl>
+        </section>
+      </aside>
     </div>
   );
 }
