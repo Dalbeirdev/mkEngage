@@ -48,7 +48,7 @@ export default async function AppLayout({
   const initial = userName.trim().charAt(0).toUpperCase() || "?";
 
   const mainNav = [
-    { href: "/", label: t("dashboard"), icon: <IconDashboard /> },
+    { href: "/dashboard", label: t("dashboard"), icon: <IconDashboard /> },
     { href: "/conversations", label: t("conversations"), icon: <IconConversations /> },
     { href: "/visitors", label: t("visitors"), icon: <IconVisitors /> },
     { href: "/contacts", label: t("contacts"), icon: <IconContacts /> },

@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Sign in — mkEngage" };
 
 export default async function LoginPage() {
   if ((await getSessionToken()) !== null) {
-    redirect("/");
+    redirect("/dashboard");
   }
 
   const t = await getTranslations("login");

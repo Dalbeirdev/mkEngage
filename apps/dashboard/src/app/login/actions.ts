@@ -59,7 +59,7 @@ export async function login(
   const body = tokenResponseSchema.parse(await response.json());
   await setSessionToken(body.token);
 
-  redirect("/");
+  redirect("/dashboard");
 }
 
 export async function logout(): Promise<void> {

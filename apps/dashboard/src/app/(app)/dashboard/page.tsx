@@ -2,7 +2,7 @@ import { Greeting } from "@/components/greeting";
 import { userSchema } from "@/lib/api/schemas";
 import { ApiError, apiJson } from "@/lib/api/server";
 
-import { DashboardView } from "./insights";
+import { DashboardView } from "../insights";
 
 export default async function DashboardPage() {
   let name = "";

@@ -3,25 +3,30 @@ import { NextResponse, type NextRequest } from "next/server";
 import { TOKEN_COOKIE } from "@/lib/auth/session";
 
 /**
- * Route guard: unauthenticated requests to app routes bounce to /login.
- * Presence-only check — token VALIDITY is enforced by the control plane on
- * every API call (server components hitting /api/user etc. redirect on 401).
- * Never trust this layer alone (ADR-009: every boundary re-verifies).
+ * Route guard: the authenticated app areas require a session; the marketing
+ * site ("/", "/features", "/pricing", "/about", "/contact", "/resources",
+ * "/legal/*") and "/login" are public. Presence-only check — token VALIDITY is
+ * enforced by the control plane on every API call (ADR-009: every boundary
+ * re-verifies).
  */
+const PROTECTED_PREFIXES = [
+  "/dashboard",
+  "/conversations",
+  "/visitors",
+  "/contacts",
+  "/chatbots",
+  "/knowledge",
+  "/settings",
+];
+
 export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const isPublic =
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/_next") ||
-    pathname === "/favicon.ico" ||
-    pathname === "/icon.svg";
+  const needsAuth = PROTECTED_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
 
-  if (isPublic) {
-    return NextResponse.next();
-  }
-
-  if (request.cookies.get(TOKEN_COOKIE) === undefined) {
+  if (needsAuth && request.cookies.get(TOKEN_COOKIE) === undefined) {
     const login = request.nextUrl.clone();
     login.pathname = "/login";
     login.search = "";
