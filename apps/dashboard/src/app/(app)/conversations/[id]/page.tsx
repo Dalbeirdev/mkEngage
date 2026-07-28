@@ -333,9 +333,15 @@ export default function ConversationThreadPage({
             {t("visitorOnline")}
           </span>
         )}
-        {conversation?.channel_type === "whatsapp" && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/40 dark:text-green-300">
-            WhatsApp
+        {conversation?.channel_type != null && (
+          <span
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
+              conversation.channel_type === "telegram"
+                ? "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300"
+                : "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
+            }`}
+          >
+            {conversation.channel_type}
           </span>
         )}
         {typeof conversation?.csat_rating === "number" && (

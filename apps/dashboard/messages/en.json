@@ -331,6 +331,11 @@
     "disconnect": "Disconnect",
     "metaSetupHint": "Paste these into Meta App → WhatsApp → Configuration → Webhook (subscribe to the messages field):",
     "webhookUrl": "Webhook URL",
-    "verifyToken": "Verify token"
+    "verifyToken": "Verify token",
+    "connectTitle": "Connect a channel",
+    "channelType": "Channel type",
+    "telegramHelp": "Create a bot with @BotFather on Telegram and paste its token here. mkEngage registers the webhook automatically when your server is publicly reachable.",
+    "fieldBotToken": "Bot token (from @BotFather)",
+    "telegramSetupHint": "Webhook registration is automatic on public hosts. If yours failed (local/dev), re-connect after deploying, or call setWebhook with this URL and secret token:"
   }
 }

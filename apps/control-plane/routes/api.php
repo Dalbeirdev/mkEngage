@@ -20,6 +20,7 @@ use App\Http\Controllers\Agent\OrganizationLogoController;
 use App\Http\Controllers\Agent\WidgetSettingsController;
 use App\Http\Controllers\AttachmentStreamController;
 use App\Http\Controllers\Auth\IssueApiTokenController;
+use App\Http\Controllers\Channels\TelegramWebhookController;
 use App\Http\Controllers\Channels\WhatsAppWebhookController;
 use App\Http\Controllers\Widget\WidgetAttachmentController;
 use App\Http\Controllers\Widget\WidgetConversationController;
@@ -47,6 +48,9 @@ Route::get('/organizations/{organization}/logo', [OrganizationLogoController::cl
 // verify-token handshake (GET) and HMAC signature (POST).
 Route::get('/channels/whatsapp/{organization}/{channel}', [WhatsAppWebhookController::class, 'verify']);
 Route::post('/channels/whatsapp/{organization}/{channel}', [WhatsAppWebhookController::class, 'receive']);
+
+// Telegram Bot API webhook (Phase 31): secret-token header authenticated.
+Route::post('/channels/telegram/{organization}/{channel}', [TelegramWebhookController::class, 'receive']);
 
 // Signed attachment stream (§14): the temporary signature IS the auth —
 // minted only by the authorized download endpoints, short expiry.
