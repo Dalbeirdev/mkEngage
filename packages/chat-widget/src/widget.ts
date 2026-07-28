@@ -2206,8 +2206,9 @@ export class MkEngageWidget extends LitElement {
               <svg viewBox="-6 -16 86 82" aria-hidden="true">
                 <defs>
                   <linearGradient id="mk-brand-fp" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0" stop-color="#ff1e6f"></stop>
-                    <stop offset="1" stop-color="#8b3dff"></stop>
+                    <stop offset="0" stop-color="#3b7bf6"></stop>
+                    <stop offset="0.5" stop-color="#8b3dff"></stop>
+                    <stop offset="1" stop-color="#ec3f94"></stop>
                   </linearGradient>
                 </defs>
                 <path
@@ -2217,9 +2218,9 @@ export class MkEngageWidget extends LitElement {
                 <line x1="36" y1="-4" x2="36" y2="6" stroke="url(#mk-brand-fp)" stroke-width="5" stroke-linecap="round"></line>
                 <circle cx="36" cy="-8" r="5" fill="url(#mk-brand-fp)"></circle>
                 <rect x="18" y="14" width="36" height="28" rx="10" fill="#141a2e"></rect>
-                <path d="M26 27 q3 4 6 0" fill="none" stroke="#ff1e6f" stroke-width="3.5" stroke-linecap="round"></path>
-                <path d="M40 27 q3 4 6 0" fill="none" stroke="#ff1e6f" stroke-width="3.5" stroke-linecap="round"></path>
-                <path d="M31 34 q5 5 10 0" fill="none" stroke="#ff1e6f" stroke-width="3.5" stroke-linecap="round"></path>
+                <path d="M26 27 q3 4 6 0" fill="none" stroke="#ec3f94" stroke-width="3.5" stroke-linecap="round"></path>
+                <path d="M40 27 q3 4 6 0" fill="none" stroke="#ec3f94" stroke-width="3.5" stroke-linecap="round"></path>
+                <path d="M31 34 q5 5 10 0" fill="none" stroke="#ec3f94" stroke-width="3.5" stroke-linecap="round"></path>
               </svg>
               <span>${t("powered_by")} <strong>mkEngage</strong></span>
             </div>`

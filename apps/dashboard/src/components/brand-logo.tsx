@@ -29,8 +29,9 @@ export function BrandMark({ className }: { className?: string }) {
     >
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#ff1e6f" />
-          <stop offset="1" stopColor="#8b3dff" />
+          <stop offset="0" stopColor="#3b7bf6" />
+          <stop offset="0.5" stopColor="#8b3dff" />
+          <stop offset="1" stopColor="#ec3f94" />
         </linearGradient>
       </defs>
       <path
@@ -43,9 +44,9 @@ export function BrandMark({ className }: { className?: string }) {
       <line x1="36" y1="-4" x2="36" y2="6" stroke={`url(#${gradId})`} strokeWidth="4" strokeLinecap="round" />
       <circle cx="36" cy="-8" r="4.5" fill={`url(#${gradId})`} />
       <rect x="18" y="14" width="36" height="28" rx="10" fill="#141a2e" />
-      <path d="M26 27 q3 4 6 0" fill="none" stroke="#ff1e6f" strokeWidth="3" strokeLinecap="round" />
-      <path d="M40 27 q3 4 6 0" fill="none" stroke="#ff1e6f" strokeWidth="3" strokeLinecap="round" />
-      <path d="M31 34 q5 5 10 0" fill="none" stroke="#ff1e6f" strokeWidth="3" strokeLinecap="round" />
+      <path d="M26 27 q3 4 6 0" fill="none" stroke="#ec3f94" strokeWidth="3" strokeLinecap="round" />
+      <path d="M40 27 q3 4 6 0" fill="none" stroke="#ec3f94" strokeWidth="3" strokeLinecap="round" />
+      <path d="M31 34 q5 5 10 0" fill="none" stroke="#ec3f94" strokeWidth="3" strokeLinecap="round" />
     </svg>
   );
 }
@@ -55,7 +56,7 @@ function VectorLockup({ className }: { className?: string }) {
     <span className={`inline-flex items-center gap-2 ${className ?? ""}`}>
       <BrandMark className="h-7 w-auto" />
       <span className="text-lg font-bold tracking-tight">
-        <span className="bg-gradient-to-br from-[#ff1e6f] to-[#8b3dff] bg-clip-text text-transparent">mk</span>
+        <span className="bg-gradient-to-r from-[#3b7bf6] via-[#8b3dff] to-[#ec3f94] bg-clip-text text-transparent">mk</span>
         <span className="text-zinc-900 dark:text-zinc-50">Engage</span>
       </span>
     </span>
