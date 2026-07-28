@@ -108,7 +108,13 @@ final class ChannelController extends Controller
         try {
             $response = Http::timeout(10)->acceptJson()->asForm()->post(
                 rtrim(is_string($base) ? $base : '', '/').'/bot'.$channel->configString('bot_token').'/setWebhook',
-                ['url' => $url, 'secret_token' => $channel->webhook_verify_token],
+                [
+                    'url' => $url,
+                    'secret_token' => $channel->webhook_verify_token,
+                    // message_reaction is NOT sent by default — request it so
+                    // customer emoji reactions sync to the inbox (Phase 38).
+                    'allowed_updates' => json_encode(['message', 'edited_message', 'message_reaction']),
+                ],
             );
 
             return $response->successful() && $response->json('ok') === true;

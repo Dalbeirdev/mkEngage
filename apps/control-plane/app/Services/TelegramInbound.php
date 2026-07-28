@@ -10,6 +10,7 @@ use App\Models\Chatbot;
 use App\Models\Contact;
 use App\Models\Conversation;
 use App\Models\Department;
+use App\Models\Message;
 use Ramsey\Uuid\Uuid;
 
 /**
@@ -25,11 +26,19 @@ final class TelegramInbound
     public function __construct(
         private readonly ConversationMessenger $messenger,
         private readonly AssignmentService $assignments,
+        private readonly ReactionToggler $reactions,
     ) {}
 
     /** @param array<string, mixed> $update  a Bot API Update object */
     public function process(Channel $channel, array $update): bool
     {
+        // Phase 38: a customer emoji reaction inside Telegram arrives as a
+        // message_reaction update (only if allowed_updates opted us in).
+        $reaction = is_array($update['message_reaction'] ?? null) ? $update['message_reaction'] : null;
+        if ($reaction !== null) {
+            return $this->processReaction($channel, $reaction);
+        }
+
         $message = is_array($update['message'] ?? null) ? $update['message'] : null;
         if ($message === null) {
             return false; // edited_message/callbacks etc. — v2 territory.
@@ -98,5 +107,65 @@ final class TelegramInbound
         }
 
         return ! $result['duplicate'];
+    }
+
+    /**
+     * Map a Telegram message_reaction update onto the message we sent and
+     * record the customer's reaction (Phase 38). We only track reactions on
+     * messages we delivered — those carry a provider_message_id to match on.
+     *
+     * @param  array<array-key, mixed>  $reaction  a MessageReactionUpdated object
+     */
+    private function processReaction(Channel $channel, array $reaction): bool
+    {
+        $chat = is_array($reaction['chat'] ?? null) ? $reaction['chat'] : [];
+        $user = is_array($reaction['user'] ?? null) ? $reaction['user'] : [];
+        $chatId = $chat['id'] ?? null;
+        $messageId = $reaction['message_id'] ?? null;
+        $userId = $user['id'] ?? null;
+
+        // Anonymous (actor_chat) reactions carry no user id — nothing to
+        // attribute, so skip. Non-numeric ids are malformed.
+        if (! is_numeric($chatId) || ! is_numeric($messageId) || ! is_numeric($userId)) {
+            return false;
+        }
+
+        $conversation = Conversation::query()
+            ->where('channel_id', $channel->id)
+            ->where('external_thread_id', (string) $chatId)
+            ->latest('created_at')
+            ->first();
+        if ($conversation === null) {
+            return false;
+        }
+
+        $message = Message::query()
+            ->where('conversation_id', $conversation->id)
+            ->where('provider_message_id', (string) $messageId)
+            ->first();
+        if ($message === null) {
+            return false; // a reaction on a message we didn't send/track
+        }
+
+        $contact = Contact::query()->firstOrCreate(
+            ['external_id' => 'tg:'.$userId],
+            ['name' => 'Telegram '.$userId],
+        );
+
+        // new_reaction is the resulting set; take the first emoji reaction,
+        // or null when the customer cleared it. (Custom/paid reactions have
+        // no unicode emoji and are ignored in v1.)
+        $newReaction = is_array($reaction['new_reaction'] ?? null) ? $reaction['new_reaction'] : [];
+        $emoji = null;
+        foreach ($newReaction as $entry) {
+            if (is_array($entry) && ($entry['type'] ?? null) === 'emoji' && is_string($entry['emoji'] ?? null)) {
+                $emoji = $entry['emoji'];
+                break;
+            }
+        }
+
+        $this->reactions->set($message, 'contact', $contact->id, $emoji);
+
+        return true;
     }
 }

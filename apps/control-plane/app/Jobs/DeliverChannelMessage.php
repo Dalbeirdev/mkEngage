@@ -83,6 +83,17 @@ final class DeliverChannelMessage implements ShouldQueue
                             'message_id' => $this->messageId,
                             'status' => $response->status(),
                         ]);
+                    } else {
+                        // Remember the provider message id so inbound events
+                        // (reactions, Phase 38) can map back to this message.
+                        $providerId = match ($channel->type) {
+                            'telegram' => $response->json('result.message_id'),
+                            'messenger' => $response->json('message_id'),
+                            default => $response->json('messages.0.id'),
+                        };
+                        if (is_string($providerId) || is_int($providerId)) {
+                            $message->forceFill(['provider_message_id' => (string) $providerId])->save();
+                        }
                     }
                 }
             } catch (\Throwable) {

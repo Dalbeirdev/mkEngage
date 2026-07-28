@@ -38,6 +38,7 @@ final class Message extends Model
         'correlation_id',
         'sent_at',
         'reply_to_message_id',
+        'provider_message_id',
     ];
 
     protected function casts(): array
