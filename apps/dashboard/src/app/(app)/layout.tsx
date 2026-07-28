@@ -74,8 +74,8 @@ export default async function AppLayout({
       </a>
 
       <aside className="hidden w-64 shrink-0 flex-col border-e border-zinc-200 bg-white p-3 md:flex dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="mb-6 px-2 py-1">
-          <BrandLogo className="h-9 w-auto" />
+        <div className="mb-6 px-2 py-1.5">
+          <BrandLogo className="h-10 w-auto" />
         </div>
 
         <div className="flex-1 space-y-5 overflow-y-auto">

@@ -43,10 +43,18 @@ export function BrandMark({ className }: { className?: string }) {
       />
       <line x1="36" y1="-4" x2="36" y2="6" stroke={`url(#${gradId})`} strokeWidth="4" strokeLinecap="round" />
       <circle cx="36" cy="-8" r="4.5" fill={`url(#${gradId})`} />
-      <rect x="18" y="14" width="36" height="28" rx="10" fill="#141a2e" />
-      <path d="M26 27 q3 4 6 0" fill="none" stroke="#ec3f94" strokeWidth="3" strokeLinecap="round" />
-      <path d="M40 27 q3 4 6 0" fill="none" stroke="#ec3f94" strokeWidth="3" strokeLinecap="round" />
-      <path d="M31 34 q5 5 10 0" fill="none" stroke="#ec3f94" strokeWidth="3" strokeLinecap="round" />
+      <rect x="18" y="14" width="36" height="28" rx="12" fill="#141a2e" />
+      {/* Big friendly eyes with a sparkle highlight */}
+      <circle cx="28" cy="26" r="5" fill="#ffffff" />
+      <circle cx="44" cy="26" r="5" fill="#ffffff" />
+      <circle cx="29" cy="27" r="2.4" fill="#141a2e" />
+      <circle cx="45" cy="27" r="2.4" fill="#141a2e" />
+      <circle cx="27.4" cy="24.6" r="1.1" fill="#ffffff" />
+      <circle cx="43.4" cy="24.6" r="1.1" fill="#ffffff" />
+      {/* Blush + happy open smile */}
+      <ellipse cx="22" cy="33" rx="2" ry="1.3" fill="#ec3f94" opacity="0.55" />
+      <ellipse cx="50" cy="33" rx="2" ry="1.3" fill="#ec3f94" opacity="0.55" />
+      <path d="M31 34 Q36 40 41 34 Z" fill="#ec3f94" />
     </svg>
   );
 }
