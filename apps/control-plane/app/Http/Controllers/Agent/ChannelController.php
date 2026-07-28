@@ -92,15 +92,21 @@ final class ChannelController extends Controller
         ], 201);
     }
 
-    /** POST setWebhook to Telegram; swallow failures (non-public local hosts). */
-    private function registerTelegramWebhook(Request $request, Channel $channel): bool
+    /**
+     * POST setWebhook to Telegram; swallow failures (non-public local hosts).
+     * $hostOverride lets an admin register against a public tunnel URL while
+     * calling the API from localhost (Phase 36 repair).
+     */
+    private function registerTelegramWebhook(Request $request, Channel $channel, ?string $hostOverride = null): bool
     {
         $base = config('services.telegram.base_url', 'https://api.telegram.org');
-        $url = rtrim($request->getSchemeAndHttpHost(), '/')
-            ."/api/channels/telegram/{$channel->organization_id}/{$channel->id}";
+        $host = $hostOverride !== null && $hostOverride !== ''
+            ? rtrim($hostOverride, '/')
+            : rtrim($request->getSchemeAndHttpHost(), '/');
+        $url = $host."/api/channels/telegram/{$channel->organization_id}/{$channel->id}";
 
         try {
-            $response = Http::timeout(10)->acceptJson()->post(
+            $response = Http::timeout(10)->acceptJson()->asForm()->post(
                 rtrim(is_string($base) ? $base : '', '/').'/bot'.$channel->configString('bot_token').'/setWebhook',
                 ['url' => $url, 'secret_token' => $channel->webhook_verify_token],
             );
@@ -109,6 +115,25 @@ final class ChannelController extends Controller
         } catch (\Throwable) {
             return false;
         }
+    }
+
+    /**
+     * Re-run Telegram setWebhook, optionally against a public tunnel host
+     * (Phase 36). Local creates register against 127.0.0.1 which Telegram
+     * rejects; POST {host} here to point the webhook at a reachable URL.
+     */
+    public function registerWebhook(Request $request, string $channelId): JsonResponse
+    {
+        $channel = Channel::query()->whereKey($channelId)->where('type', 'telegram')->first();
+        abort_if($channel === null, 404);
+
+        $validated = $request->validate([
+            'host' => ['sometimes', 'url:https,http', 'max:2048'],
+        ]);
+
+        $registered = $this->registerTelegramWebhook($request, $channel, $validated['host'] ?? null);
+
+        return response()->json(['webhook_registered' => $registered]);
     }
 
     public function destroy(Request $request, string $channelId): JsonResponse

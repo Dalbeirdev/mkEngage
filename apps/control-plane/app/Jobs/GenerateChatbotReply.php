@@ -89,10 +89,13 @@ final class GenerateChatbotReply implements ShouldQueue
             // the AI pipeline ("ai" node reached or flow finished).
             if (FlowRunner::hasFlow($chatbot)) {
                 $lastEntry = $history[count($history) - 1];
+                // Inbound customers are 'visitor' on the web widget but
+                // 'contact' on channels (WhatsApp/Telegram/Messenger) — the
+                // flow must read BOTH, or channel option menus never branch.
                 $flowHandled = $flows->step(
                     $conversation,
                     $chatbot,
-                    $lastEntry['sender_type'] === 'visitor' ? $lastEntry['body'] : '',
+                    in_array($lastEntry['sender_type'], ['visitor', 'contact'], true) ? $lastEntry['body'] : '',
                 );
 
                 if ($flowHandled) {
@@ -104,7 +107,7 @@ final class GenerateChatbotReply implements ShouldQueue
             // matches the visitor's last message. Empty on SQLite/no-knowledge.
             $lastVisitor = '';
             foreach (array_reverse($history) as $entry) {
-                if ($entry['sender_type'] === 'visitor') {
+                if (in_array($entry['sender_type'], ['visitor', 'contact'], true)) {
                     $lastVisitor = $entry['body'];
                     break;
                 }

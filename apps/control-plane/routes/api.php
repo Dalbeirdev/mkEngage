@@ -91,6 +91,7 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
         Route::get('/channels', [ChannelController::class, 'index']);
         Route::post('/channels', [ChannelController::class, 'store']);
         Route::delete('/channels/{channel}', [ChannelController::class, 'destroy']);
+        Route::post('/channels/{channel}/register-webhook', [ChannelController::class, 'registerWebhook']);
         Route::get('/canned-responses', [CannedResponseController::class, 'index']);
         Route::post('/canned-responses', [CannedResponseController::class, 'store']);
         Route::put('/canned-responses/{cannedResponse}', [CannedResponseController::class, 'update']);

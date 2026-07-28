@@ -113,6 +113,42 @@ async function openAttachment(conversationId: string, attachment: Attachment): P
   window.open(url, "_blank", "noopener");
 }
 
+/**
+ * Render a message body. Flow "rich" messages ({text, options[]}) are shown
+ * as text + non-interactive option chips instead of raw JSON (Phase 36).
+ */
+function renderBody(message: { content_type: string; body: string }) {
+  if (message.content_type === "rich") {
+    try {
+      const parsed = JSON.parse(message.body) as { text?: unknown; options?: unknown };
+      const text = typeof parsed.text === "string" ? parsed.text : "";
+      const options = Array.isArray(parsed.options)
+        ? parsed.options.filter((option): option is string => typeof option === "string")
+        : [];
+      return (
+        <>
+          {text}
+          {options.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {options.map((option) => (
+                <span
+                  key={option}
+                  className="rounded-full border border-black/15 bg-white/40 px-2 py-0.5 text-xs dark:border-white/15 dark:bg-black/20"
+                >
+                  {option}
+                </span>
+              ))}
+            </div>
+          )}
+        </>
+      );
+    } catch {
+      return message.body;
+    }
+  }
+  return message.body;
+}
+
 /** Agent thread view: sequence-ordered history + reply box (polling, 3 s). */
 export default function ConversationThreadPage({
   params,
@@ -504,7 +540,7 @@ export default function ConversationThreadPage({
                 {message.reply_to.body}
               </div>
             )}
-            {message.body}
+            {renderBody(message)}
             {(message.reactions?.length ?? 0) > 0 && (
               <div className="mt-1 flex gap-1">
                 {message.reactions?.map((reaction) => (

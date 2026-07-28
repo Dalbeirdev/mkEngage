@@ -2,11 +2,15 @@
 
 declare(strict_types=1);
 
+use App\Jobs\GenerateChatbotReply;
+use App\Models\Channel;
 use App\Models\Chatbot;
 use App\Models\Conversation;
 use App\Models\Department;
+use App\Models\Message;
 use App\Models\Organization;
 use App\Models\User;
+use App\Services\ConversationMessenger;
 use App\Tenancy\Tenancy;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
@@ -251,4 +255,49 @@ it('rejects broken graphs: duplicate ids, dangling edges, bad start, missing fie
         'start' => 'a',
         'nodes' => [['id' => 'a', 'type' => 'question', 'text' => 'name?']],
     ])->assertUnprocessable();
+});
+
+it('runs the flow for CHANNEL contacts, not just widget visitors (Phase 36 fix)', function (): void {
+    // Regression: channel customers are sender_type "contact"; the flow must
+    // read their replies or option menus never branch (Telegram/WhatsApp/FB).
+    $org = Organization::factory()->create();
+
+    [$channel, $conversationId] = app(Tenancy::class)->run($org->id, function () use ($org): array {
+        Chatbot::query()->create([
+            'name' => 'Flow Bot', 'status' => 'active', 'provider' => 'fake', 'flow' => p27Flow(),
+        ]);
+        $channel = Channel::query()->create([
+            'organization_id' => $org->id, 'type' => 'telegram', 'name' => 'TG',
+            'status' => 'active', 'config' => ['bot_token' => 'x'], 'webhook_verify_token' => 'v',
+        ]);
+        $conversation = Conversation::query()->create([
+            'channel_id' => $channel->id, 'external_thread_id' => '42',
+            'chatbot_id' => Chatbot::query()->firstOrFail()->id,
+        ]);
+
+        return [$channel, $conversation->id];
+    });
+
+    Http::fake(['api.telegram.org/*' => Http::response(['ok' => true], 200)]);
+
+    $contactMessage = function (string $body) use ($org, $conversationId, $channel): void {
+        app(Tenancy::class)->run($org->id, function () use ($org, $conversationId, $channel, $body): void {
+            $conversation = Conversation::query()->findOrFail($conversationId);
+            app(ConversationMessenger::class)->send(
+                conversation: $conversation, senderType: 'contact',
+                senderId: Str::uuid7()->toString(), body: $body,
+                idempotencyKey: Str::uuid7()->toString(), channelId: $channel->id,
+            );
+            GenerateChatbotReply::dispatchSync((string) $org->id, $conversationId);
+        });
+    };
+
+    $contactMessage('hi');       // welcome + options
+    $contactMessage('Sales');    // MUST branch to the question, not re-prompt
+
+    $bot = app(Tenancy::class)->run($org->id, fn (): array => Message::query()
+        ->where('conversation_id', $conversationId)->where('sender_type', 'chatbot')
+        ->orderBy('sequence_number')->pluck('body')->all());
+
+    expect(end($bot))->toBe('What is your name?'); // branched — bug fixed
 });
