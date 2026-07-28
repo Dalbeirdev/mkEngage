@@ -10,7 +10,6 @@ use App\Tenancy\Tenancy;
  * Coarse visitor geolocation from edge proxy headers — captured at session
  * bootstrap, surfaced as "City, Country". No IP stored, null without an edge.
  */
-
 it('captures visitor location from edge geo headers at session bootstrap', function (): void {
     $org = Organization::factory()->create();
 
