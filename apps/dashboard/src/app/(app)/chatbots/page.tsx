@@ -58,6 +58,11 @@ export default function ChatbotsPage() {
     },
   });
 
+  const submitCreate = () => {
+    const trimmed = name.trim();
+    if (trimmed.length > 0 && !create.isPending) create.mutate(trimmed);
+  };
+
   const rows = useMemo(() => data ?? [], [data]);
 
   const counts = useMemo(() => {
@@ -107,7 +112,7 @@ export default function ChatbotsPage() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              if (name.trim().length > 0 && !create.isPending) create.mutate(name.trim());
+              submitCreate();
             }}
             className="mt-3 flex items-center gap-2"
             aria-label="Create a new chatbot"
@@ -121,10 +126,13 @@ export default function ChatbotsPage() {
               aria-label="Chatbot name"
               className="min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-900"
             />
+            {/* type="button" + onClick so the click always fires, independent
+                of native form-submit behaviour. */}
             <button
-              type="submit"
+              type="button"
+              onClick={submitCreate}
               disabled={create.isPending || name.trim().length === 0}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 disabled:opacity-60"
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {create.isPending ? "Creating…" : "Create"}
             </button>
