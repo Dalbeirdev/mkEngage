@@ -1,14 +1,22 @@
-import { getTranslations } from "next-intl/server";
+import { Greeting } from "@/components/greeting";
+import { userSchema } from "@/lib/api/schemas";
+import { ApiError, apiJson } from "@/lib/api/server";
 
-import { Insights } from "./insights";
+import { DashboardView } from "./insights";
 
 export default async function DashboardPage() {
-  const t = await getTranslations("dashboard");
+  let name = "";
+  try {
+    name = (await apiJson("/api/user", (d) => userSchema.parse(d))).name;
+  } catch (error) {
+    if (!(error instanceof ApiError)) throw error;
+  }
+  const firstName = name.split(" ")[0] || "there";
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
-      <Insights />
+    <div className="space-y-6">
+      <Greeting name={firstName} />
+      <DashboardView />
     </div>
   );
 }

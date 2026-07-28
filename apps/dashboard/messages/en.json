@@ -22,7 +22,11 @@
     "visitors": "Visitors",
     "cannedReplies": "Canned replies",
     "channels": "Channels",
-    "developers": "Developers"
+    "developers": "Developers",
+    "searchPlaceholder": "Search anything...",
+    "notifications": "Notifications",
+    "upsellTitle": "Let AI handle more conversations!",
+    "upsellCta": "Explore AI"
   },
   "dashboard": {
     "title": "Dashboard",

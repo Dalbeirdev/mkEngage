@@ -24,14 +24,14 @@ export function SidebarNav({
               <Link
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none ${
+                className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none ${
                   active
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300"
+                    ? "bg-indigo-600 text-white shadow-sm shadow-indigo-600/20"
                     : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
                 }`}
               >
                 <span
-                  className={`shrink-0 ${active ? "text-indigo-600 dark:text-indigo-400" : "text-zinc-400"}`}
+                  className={`shrink-0 ${active ? "text-white" : "text-zinc-400"}`}
                   aria-hidden
                 >
                   {item.icon}
