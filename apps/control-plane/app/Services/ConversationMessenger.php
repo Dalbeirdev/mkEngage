@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Jobs\DeliverChannelMessage;
+use App\Jobs\DeliverWebhooks;
 use App\Models\Attachment;
 use App\Models\Conversation;
 use App\Models\Message;
@@ -127,6 +128,21 @@ final class ConversationMessenger
                 $message->id,
             )->afterCommit();
         }
+
+        // Customer webhooks (Phase 35, §15): data-minimized like the outbox
+        // payload — subscribers fetch the full body via the API if needed.
+        DeliverWebhooks::dispatch(
+            (string) $conversation->organization_id,
+            'message.created',
+            [
+                'message_id' => $message->id,
+                'conversation_id' => $conversation->id,
+                'sender_type' => $senderType,
+                'sequence_number' => (int) $message->sequence_number,
+                'content_type' => $contentType,
+                'preview' => mb_substr($body, 0, 140),
+            ],
+        )->afterCommit();
 
         return ['message' => $message->load('attachments'), 'duplicate' => false];
     }

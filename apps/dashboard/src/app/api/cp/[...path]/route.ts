@@ -22,6 +22,8 @@ const ALLOWED = [
   /^visitors\/live$/,
   /^canned-responses(\/[0-9a-f-]{36})?$/,
   /^channels(\/[0-9a-f-]{36})?$/,
+  /^api-keys(\/[0-9a-f-]{36})?$/,
+  /^webhook-endpoints(\/[0-9a-f-]{36})?(\/test)?$/,
   /^contacts(\/[0-9a-f-]{36})?$/,
   /^chatbots(\/[0-9a-f-]{36})?(\/flow)?$/,
   /^organization\/widget-settings(\/rotate-secret)?$/,

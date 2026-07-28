@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Agent;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\DeliverWebhooks;
 use App\Models\Conversation;
 use App\Models\ConversationRead;
 use App\Models\Department;
@@ -190,6 +191,15 @@ final class ConversationController extends Controller
         if (array_key_exists('status', $validated)) {
             $conversation->status = $validated['status'];
             $conversation->closed_at = $validated['status'] === 'closed' ? now() : null;
+
+            if ($validated['status'] === 'closed') {
+                // Customer webhooks (Phase 35).
+                DeliverWebhooks::dispatch(
+                    (string) $conversation->organization_id,
+                    'conversation.closed',
+                    ['conversation_id' => $conversation->id],
+                )->afterCommit();
+            }
         }
 
         if (array_key_exists('tags', $validated)) {

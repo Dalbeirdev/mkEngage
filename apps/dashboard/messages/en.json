@@ -21,7 +21,8 @@
     "knowledge": "Knowledge",
     "visitors": "Visitors",
     "cannedReplies": "Canned replies",
-    "channels": "Channels"
+    "channels": "Channels",
+    "developers": "Developers"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -356,5 +357,25 @@
     "fieldPageId": "Facebook Page ID",
     "fieldPageToken": "Page access token",
     "messengerSetupHint": "Paste these into Meta App → Messenger → Settings → Webhooks (subscribe to the messages field):"
+  },
+  "developers": {
+    "title": "Developers",
+    "subtitle": "Machine API keys for integrations and signed webhooks that push conversation events to your systems.",
+    "keysTitle": "API keys",
+    "keysHelp": "Keys authenticate the read-only machine API (GET /api/v1/conversations…). Shown once — store it safely; revoke instantly kills it.",
+    "keyNamePlaceholder": "Key name (e.g. Zapier)",
+    "createKey": "Create key",
+    "keyRevealed": "Copy your API key now — it will not be shown again.",
+    "noKeys": "No API keys yet.",
+    "revoke": "Revoke",
+    "revoked": "Revoked",
+    "webhooksTitle": "Webhook endpoints",
+    "webhooksHelp": "We POST subscribed events to your URL, signed with X-MkEngage-Signature (sha256 HMAC of the raw body using the endpoint secret).",
+    "webhookUrl": "Webhook URL",
+    "addWebhook": "Add endpoint",
+    "secretRevealed": "Copy your signing secret now — it will not be shown again.",
+    "noWebhooks": "No webhook endpoints yet.",
+    "sendTest": "Send test",
+    "remove": "Remove"
   }
 }

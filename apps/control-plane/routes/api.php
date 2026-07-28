@@ -13,6 +13,7 @@ use App\Http\Controllers\Agent\ContactController;
 use App\Http\Controllers\Agent\ConversationController;
 use App\Http\Controllers\Agent\ConversationNoteController;
 use App\Http\Controllers\Agent\DepartmentController;
+use App\Http\Controllers\Agent\DeveloperController;
 use App\Http\Controllers\Agent\InsightsController;
 use App\Http\Controllers\Agent\KnowledgeController;
 use App\Http\Controllers\Agent\LiveVisitorController;
@@ -31,6 +32,7 @@ use App\Http\Controllers\Widget\WidgetMessageController;
 use App\Http\Controllers\Widget\WidgetProfileController;
 use App\Http\Controllers\Widget\WidgetRatingController;
 use App\Http\Controllers\Widget\WidgetSessionController;
+use App\Http\Middleware\AuthenticateApiKey;
 use App\Http\Middleware\EstablishTenantContext;
 use App\Models\User;
 use App\Models\Visitor;
@@ -142,6 +144,25 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
 
         // mkEngage Insights (tenant-scoped analytics overview).
         Route::get('/insights/overview', [InsightsController::class, 'overview']);
+
+        // Developer platform (Phase 35, §15).
+        Route::get('/api-keys', [DeveloperController::class, 'listKeys']);
+        Route::post('/api-keys', [DeveloperController::class, 'createKey']);
+        Route::delete('/api-keys/{apiKey}', [DeveloperController::class, 'revokeKey']);
+        Route::get('/webhook-endpoints', [DeveloperController::class, 'listWebhooks']);
+        Route::post('/webhook-endpoints', [DeveloperController::class, 'createWebhook']);
+        Route::delete('/webhook-endpoints/{webhookEndpoint}', [DeveloperController::class, 'deleteWebhook']);
+        Route::post('/webhook-endpoints/{webhookEndpoint}/test', [DeveloperController::class, 'testWebhook']);
+    });
+
+// Machine API (Phase 35, §15): scoped mk_live_ keys, read-only v1 surface.
+Route::middleware([AuthenticateApiKey::class])
+    ->prefix('v1')
+    ->group(function (): void {
+        Route::get('/conversations', [ConversationController::class, 'index']);
+        Route::get('/conversations/{conversation}', [ConversationController::class, 'show']);
+        Route::get('/conversations/{conversation}/messages', [AgentMessageController::class, 'index']);
+        Route::get('/contacts', [ContactController::class, 'index']);
     });
 
 // Visitor-facing widget API: the `widget` guard authenticates ONLY Visitor
