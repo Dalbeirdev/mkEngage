@@ -82,10 +82,15 @@ final class WidgetSessionController extends Controller
         // Branding removal is a paid entitlement (white_label) — the embed
         // page cannot turn it off, only this flag can.
         $appearance = is_array($settings['appearance'] ?? null) ? $settings['appearance'] : [];
+        // An uploaded logo file (Phase 30) wins over a pasted URL; the public
+        // URL is built from THIS request's host so it works on any origin.
+        $logoUrl = is_string($appearance['logo_file'] ?? null) && $appearance['logo_file'] !== ''
+            ? url("/api/organizations/{$organization->id}/logo")
+            : (is_string($appearance['logo_url'] ?? null) ? $appearance['logo_url'] : null);
         $session['appearance'] = [
             'preset' => is_string($appearance['preset'] ?? null) ? $appearance['preset'] : 'gradient',
             'accent' => is_string($appearance['accent'] ?? null) ? $appearance['accent'] : null,
-            'logo_url' => is_string($appearance['logo_url'] ?? null) ? $appearance['logo_url'] : null,
+            'logo_url' => $logoUrl,
             'title' => is_string($appearance['title'] ?? null) ? $appearance['title'] : null,
             'subtitle' => is_string($appearance['subtitle'] ?? null) ? $appearance['subtitle'] : null,
         ];

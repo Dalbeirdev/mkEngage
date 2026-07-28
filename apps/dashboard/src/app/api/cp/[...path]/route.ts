@@ -24,6 +24,7 @@ const ALLOWED = [
   /^contacts(\/[0-9a-f-]{36})?$/,
   /^chatbots(\/[0-9a-f-]{36})?(\/flow)?$/,
   /^organization\/widget-settings(\/rotate-secret)?$/,
+  /^organization\/logo$/,
   /^departments(\/[0-9a-f-]{36})?(\/members)?$/,
   /^users$/,
   /^gateway-token$/,

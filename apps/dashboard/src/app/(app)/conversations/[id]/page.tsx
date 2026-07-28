@@ -16,6 +16,7 @@ import {
   noteSchema,
   type Attachment,
 } from "@/lib/api/schemas";
+import { flashTitle, playPing } from "@/lib/notify";
 import { createTypingNotifier, type TypingNotifier } from "@/lib/typing";
 import { btnSmall } from "@/lib/ui";
 
@@ -131,6 +132,9 @@ export default function ConversationThreadPage({
   const logRef = useRef<HTMLDivElement>(null);
   const typingNotifierRef = useRef<TypingNotifier | null>(null);
   const typingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Phase 30: ping the agent when a NEW inbound (visitor/contact) message
+  // lands. -1 = first load, which must stay silent.
+  const inboundCountRef = useRef(-1);
 
   const { data, isPending, isError } = useQuery({
     queryKey: ["conversation", id, "messages"],
@@ -140,6 +144,18 @@ export default function ConversationThreadPage({
     refetchInterval: 15000,
     refetchIntervalInBackground: true,
   });
+
+  useEffect(() => {
+    if (data === undefined) return;
+    const inbound = data.data.filter(
+      (message) => message.sender_type === "visitor" || message.sender_type === "contact",
+    ).length;
+    if (inboundCountRef.current >= 0 && inbound > inboundCountRef.current) {
+      playPing();
+      flashTitle("🔔");
+    }
+    inboundCountRef.current = inbound;
+  }, [data]);
 
   const { data: conversation } = useQuery({
     queryKey: ["conversation", id, "meta"],

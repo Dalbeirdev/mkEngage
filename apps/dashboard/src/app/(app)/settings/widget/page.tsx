@@ -93,6 +93,41 @@ function CopyButton({ text, label, copied }: { text: string; label: string; copi
   );
 }
 
+/** Upload a logo file (Phase 30) — wins over the pasted URL in the widget. */
+function LogoUpload() {
+  const t = useTranslations("widgetSettings");
+  const [state, setState] = useState<"idle" | "uploading" | "done" | "error">("idle");
+
+  return (
+    <label className="flex items-center gap-2 text-sm">
+      {t("logoUpload")}
+      <input
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/gif"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (file === undefined) return;
+          setState("uploading");
+          const form = new FormData();
+          form.append("logo", file);
+          void fetch("/api/cp/organization/logo", { method: "POST", body: form })
+            .then((response) => setState(response.ok ? "done" : "error"))
+            .catch(() => setState("error"));
+        }}
+        className="text-xs"
+      />
+      {state === "uploading" && <span className="text-xs text-zinc-500">{t("logoUploading")}</span>}
+      {state === "done" && <span className="text-xs text-green-700 dark:text-green-400">{t("logoUploaded")}</span>}
+      {state === "error" && (
+        <span className="text-xs text-red-600" role="alert">
+          {t("logoUploadError")}
+        </span>
+      )}
+    </label>
+  );
+}
+
 function AppearanceSection({ settings }: { settings: WidgetSettings }) {
   const t = useTranslations("widgetSettings");
   const queryClient = useQueryClient();
@@ -183,6 +218,7 @@ function AppearanceSection({ settings }: { settings: WidgetSettings }) {
             className={`${inputClass} min-w-0 flex-1`}
           />
         </label>
+        <LogoUpload />
       </div>
 
       <div className="flex flex-wrap gap-4">

@@ -109,6 +109,48 @@ function FlowNode({ data }: NodeProps) {
 
 const nodeTypes = { flowNode: FlowNode };
 
+/** Starter templates (Phase 30) — loaded onto an empty canvas with one click. */
+const TEMPLATES: Record<string, StoredFlow> = {
+  lead_capture: {
+    start: "n1",
+    nodes: [
+      { id: "n1", type: "message", text: "Hi there! 👋 Before we start, a couple of quick questions.", x: 120, y: 40 },
+      { id: "n2", type: "question", text: "What's your name?", variable: "name", x: 120, y: 190 },
+      { id: "n3", type: "question", text: "Thanks {{name}}! What's the best email to reach you?", variable: "email", x: 120, y: 340 },
+      { id: "n4", type: "end", text: "Perfect — our team will reach out at {{email}} shortly!", x: 120, y: 490 },
+    ],
+    edges: [
+      { from: "n1", to: "n2" },
+      { from: "n2", to: "n3" },
+      { from: "n3", to: "n4" },
+    ],
+  },
+  support_triage: {
+    start: "n1",
+    nodes: [
+      { id: "n1", type: "options", text: "Welcome to support! What do you need help with?", options: ["Billing", "Technical issue", "Something else"], x: 220, y: 40 },
+      { id: "n2", type: "handoff", text: "Connecting you to our billing team…", x: 40, y: 240 },
+      { id: "n3", type: "question", text: "Sorry to hear that! Briefly, what's going wrong?", variable: "issue", x: 240, y: 240 },
+      { id: "n4", type: "handoff", text: "Thanks — an engineer will take it from here.", x: 240, y: 400 },
+      { id: "n5", type: "ai", x: 460, y: 240 },
+    ],
+    edges: [
+      { from: "n1", to: "n2", option: "Billing" },
+      { from: "n1", to: "n3", option: "Technical issue" },
+      { from: "n1", to: "n5", option: "Something else" },
+      { from: "n3", to: "n4" },
+    ],
+  },
+  faq_ai: {
+    start: "n1",
+    nodes: [
+      { id: "n1", type: "message", text: "Hi! Ask me anything about our product — I'm powered by your knowledge base.", x: 120, y: 60 },
+      { id: "n2", type: "ai", x: 120, y: 220 },
+    ],
+    edges: [{ from: "n1", to: "n2" }],
+  },
+};
+
 async function fetchFlow(chatbotId: string): Promise<StoredFlow | null> {
   const response = await fetch(`/api/cp/chatbots/${chatbotId}/flow`, { cache: "no-store" });
   if (!response.ok) throw new Error(`Failed to load flow (${response.status})`);
@@ -316,7 +358,32 @@ function FlowCanvas({
       </aside>
 
       {/* Canvas */}
-      <div className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-800">
+      <div className="relative min-w-0 flex-1 overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-800">
+        {nodes.length === 0 && (
+          <div className="absolute inset-0 z-10 grid place-items-center">
+            <div className="space-y-2 rounded-xl border border-zinc-200 bg-white/95 p-4 text-center shadow-lg dark:border-zinc-700 dark:bg-zinc-900/95">
+              <p className="text-sm font-semibold">{t("templatesTitle")}</p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {Object.keys(TEMPLATES).map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => {
+                      const seededTemplate = toCanvas(TEMPLATES[key] ?? null);
+                      setNodes(seededTemplate.nodes);
+                      setEdges(seededTemplate.edges);
+                      setStartId(TEMPLATES[key]?.start ?? null);
+                    }}
+                    className="rounded-md border border-indigo-300 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-300 dark:hover:bg-indigo-950"
+                  >
+                    {t(`template_${key}`)}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-zinc-500">{t("templatesHint")}</p>
+            </div>
+          </div>
+        )}
         <ReactFlow
           nodes={nodes}
           edges={edges}

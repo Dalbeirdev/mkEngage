@@ -199,7 +199,11 @@
     "widgetSubtitle": "Subtitle",
     "brandingHidden": "White-label plan: \"Powered by mkEngage\" is hidden on your widget.",
     "brandingShown": "Free plan shows \"Powered by mkEngage\" on the widget. Upgrade to white-label to remove it.",
-    "appearanceSave": "Save design"
+    "appearanceSave": "Save design",
+    "logoUpload": "or upload",
+    "logoUploading": "Uploading…",
+    "logoUploaded": "Uploaded! Widgets pick it up on next load.",
+    "logoUploadError": "Upload failed — PNG/JPG/WebP/GIF up to 1 MB."
   },
   "departments": {
     "title": "Departments",
@@ -301,7 +305,12 @@
     "saving": "Saving…",
     "savedNotice": "Saved!",
     "saveError": "Could not save — every message/options/question step needs text, and options edges need labels.",
-    "hint": "Drag from a step's bottom handle to the next step's top handle to connect them. Edges from an Options menu are labeled with the option they answer."
+    "hint": "Drag from a step's bottom handle to the next step's top handle to connect them. Edges from an Options menu are labeled with the option they answer.",
+    "templatesTitle": "Start from a template",
+    "template_lead_capture": "Lead capture",
+    "template_support_triage": "Support triage",
+    "template_faq_ai": "FAQ + AI assistant",
+    "templatesHint": "Or add steps from the left palette to build from scratch."
   },
   "channels": {
     "title": "Channels",

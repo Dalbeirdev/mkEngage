@@ -16,6 +16,7 @@ use App\Http\Controllers\Agent\DepartmentController;
 use App\Http\Controllers\Agent\InsightsController;
 use App\Http\Controllers\Agent\KnowledgeController;
 use App\Http\Controllers\Agent\LiveVisitorController;
+use App\Http\Controllers\Agent\OrganizationLogoController;
 use App\Http\Controllers\Agent\WidgetSettingsController;
 use App\Http\Controllers\AttachmentStreamController;
 use App\Http\Controllers\Auth\IssueApiTokenController;
@@ -38,6 +39,9 @@ use Illuminate\Support\Facades\Route;
 // Unauthenticated: token issuance + widget bootstrap (rate-limited in controllers).
 Route::post('/auth/token', IssueApiTokenController::class);
 Route::post('/widget/session', WidgetSessionController::class);
+
+// Public org logo (Phase 30): brand asset shown to every widget visitor.
+Route::get('/organizations/{organization}/logo', [OrganizationLogoController::class, 'show']);
 
 // WhatsApp Cloud API webhook (Phase 29): public; Meta authenticates via the
 // verify-token handshake (GET) and HMAC signature (POST).
@@ -96,6 +100,8 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
         Route::get('/chatbots/{chatbot}', [ChatbotController::class, 'show']);
         Route::patch('/chatbots/{chatbot}', [ChatbotController::class, 'update']);
 
+        Route::post('/organization/logo', [OrganizationLogoController::class, 'store']);
+        Route::delete('/organization/logo', [OrganizationLogoController::class, 'destroy']);
         Route::get('/organization/widget-settings', [WidgetSettingsController::class, 'show']);
         Route::put('/organization/widget-settings', [WidgetSettingsController::class, 'update']);
         Route::post('/organization/widget-settings/rotate-secret', [WidgetSettingsController::class, 'rotateSecret']);
