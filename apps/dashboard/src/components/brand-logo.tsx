@@ -1,16 +1,23 @@
+"use client";
+
+import { useEffect, useId, useRef, useState } from "react";
+
 /**
- * mkEngage brand marks. `BrandMark` is the icon-only robot-in-a-speech-bubble
- * (favicon, collapsed sidebar); `BrandLogo` pairs it with the wordmark — "mk"
- * in the pink→purple brand gradient, "Engage" in the foreground ink so it
- * flips correctly between light and dark. Vector, so it stays crisp at every
- * size.
+ * mkEngage brand marks.
+ *
+ * `BrandLogo` renders the real logo art from `/public/brand/mkengage-logo.png`
+ * (the mascot + wordmark lockup). If that file is missing it falls back to the
+ * built-in vector lockup, so the app never shows a broken image — drop the PNG
+ * in and it lights up automatically.
+ *
+ * `BrandMark` is the icon-only robot-in-a-speech-bubble vector, used for the
+ * fallback and any spot that needs a compact, theme-aware, recolorable mark.
  */
 
-let gradientSeq = 0;
-
 export function BrandMark({ className }: { className?: string }) {
-  // Unique gradient id per instance so multiple marks on a page never clash.
-  const gradId = `mk-brand-grad-${gradientSeq++}`;
+  // useId keeps the gradient id stable across SSR/hydration; strip ':' so it's
+  // a valid url(#…) reference.
+  const gradId = `mk${useId().replace(/:/g, "")}`;
 
   return (
     <svg
@@ -43,7 +50,7 @@ export function BrandMark({ className }: { className?: string }) {
   );
 }
 
-export function BrandLogo({ className }: { className?: string }) {
+function VectorLockup({ className }: { className?: string }) {
   return (
     <span className={`inline-flex items-center gap-2 ${className ?? ""}`}>
       <BrandMark className="h-7 w-auto" />
@@ -52,5 +59,37 @@ export function BrandLogo({ className }: { className?: string }) {
         <span className="text-zinc-900 dark:text-zinc-50">Engage</span>
       </span>
     </span>
+  );
+}
+
+export function BrandLogo({ className }: { className?: string }) {
+  const [failed, setFailed] = useState(false);
+  const ref = useRef<HTMLImageElement>(null);
+
+  // The image can 404 BEFORE React hydrates and attaches onError (SSR gotcha):
+  // a broken, already-complete image fires no late error event. Catch that on
+  // mount so the vector fallback still kicks in.
+  useEffect(() => {
+    const img = ref.current;
+    if (img !== null && img.complete && img.naturalWidth === 0) {
+      setFailed(true);
+    }
+  }, []);
+
+  if (failed) {
+    return <VectorLockup />;
+  }
+
+  return (
+    // The logo art is a fixed brand asset, not user content — next/image adds
+    // no value here and can't statically import a maybe-absent file.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      ref={ref}
+      src="/brand/mkengage-logo.png"
+      alt="mkEngage"
+      className={className ?? "h-8 w-auto"}
+      onError={() => setFailed(true)}
+    />
   );
 }

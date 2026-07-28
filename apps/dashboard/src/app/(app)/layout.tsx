@@ -53,7 +53,7 @@ export default async function AppLayout({
 
       <aside className="hidden w-60 shrink-0 border-e border-zinc-200 bg-white p-3 md:flex md:flex-col dark:border-zinc-800 dark:bg-zinc-900">
         <div className="mb-6 px-2 py-1">
-          <BrandLogo />
+          <BrandLogo className="h-9 w-auto" />
         </div>
         <SidebarNav items={navigation} />
       </aside>

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
-import { BrandMark } from "@/components/brand-logo";
+import { BrandLogo } from "@/components/brand-logo";
 import { getSessionToken } from "@/lib/auth/session";
 
 import { LoginForm } from "./login-form";
@@ -24,12 +24,9 @@ export default async function LoginPage() {
         className="pointer-events-none absolute -top-32 left-1/2 size-[36rem] -translate-x-1/2 rounded-full bg-indigo-500/10 blur-3xl dark:bg-indigo-500/15"
       />
       <div className="relative w-full max-w-sm space-y-6">
-        <div className="flex flex-col items-center space-y-2 text-center">
-          <BrandMark className="h-14 w-auto" />
-          <h1 className="text-2xl font-bold tracking-tight">
-            <span className="bg-gradient-to-br from-[#ff1e6f] to-[#8b3dff] bg-clip-text text-transparent">mk</span>
-            <span className="text-zinc-900 dark:text-zinc-50">Engage</span>
-          </h1>
+        <div className="flex flex-col items-center space-y-3 text-center">
+          <BrandLogo className="h-16 w-auto" />
+          <h1 className="sr-only">mkEngage</h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">{t("subtitle")}</p>
         </div>
         <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
