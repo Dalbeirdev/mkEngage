@@ -121,6 +121,18 @@ final class WhatsAppInbound
                         ? $text['body']
                         : "[unsupported {$type} message]";
 
+                    // Interactive button replies (Phase 33): the id carries
+                    // the FULL option so FlowRunner branching matches even
+                    // when the visible title was truncated to 20 chars.
+                    if ($type === 'interactive') {
+                        $interactive = is_array($message['interactive'] ?? null) ? $message['interactive'] : [];
+                        $reply = is_array($interactive['button_reply'] ?? null) ? $interactive['button_reply'] : [];
+                        $choice = $reply['id'] ?? $reply['title'] ?? null;
+                        if (is_string($choice) && $choice !== '') {
+                            $body = $choice;
+                        }
+                    }
+
                     $out[] = [
                         'wamid' => $message['id'],
                         'from' => $message['from'],

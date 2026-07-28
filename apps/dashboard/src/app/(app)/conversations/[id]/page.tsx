@@ -157,6 +157,16 @@ export default function ConversationThreadPage({
     inboundCountRef.current = inbound;
   }, [data]);
 
+  // Phase 33: viewing the thread advances this agent's read cursor.
+  const lastMarkedRef = useRef(-1);
+  useEffect(() => {
+    if (data === undefined || data.last_sequence === lastMarkedRef.current) return;
+    lastMarkedRef.current = data.last_sequence;
+    void fetch(`/api/cp/conversations/${id}/read`, { method: "POST" }).then(() => {
+      void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    });
+  }, [data, id, queryClient]);
+
   const { data: conversation } = useQuery({
     queryKey: ["conversation", id, "meta"],
     queryFn: async () => {

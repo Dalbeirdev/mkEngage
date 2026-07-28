@@ -94,6 +94,7 @@ export const conversationSchema = z.object({
   csat_comment: z.string().nullable().optional(),
   tags: z.array(z.string()).optional(),
   channel_type: z.string().nullable().optional(),
+  unread_count: z.number().int().optional(),
   created_at: z.string().nullable(),
   updated_at: z.string().nullable(),
 });

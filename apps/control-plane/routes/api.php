@@ -99,6 +99,7 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
         Route::post('/conversations/{conversation}/messages', [AgentMessageController::class, 'store']);
         Route::post('/conversations/{conversation}/messages/{message}/reaction', [AgentMessageController::class, 'react']);
         Route::post('/conversations/{conversation}/assign', [ConversationController::class, 'assign']);
+        Route::post('/conversations/{conversation}/read', [ConversationController::class, 'markRead']);
         Route::get('/conversations/{conversation}/notes', [ConversationNoteController::class, 'index']);
         Route::post('/conversations/{conversation}/notes', [ConversationNoteController::class, 'store']);
         Route::post('/conversations/{conversation}/attachments', [AgentAttachmentController::class, 'store']);

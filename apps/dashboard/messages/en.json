@@ -92,7 +92,12 @@
     "addTag": "+ tag",
     "removeTag": "Remove tag {tag}",
     "replyWithQuote": "Reply with quote",
-    "cancelReply": "Cancel reply"
+    "cancelReply": "Cancel reply",
+    "searchLabel": "Search conversations",
+    "searchPlaceholder": "Search name or message…",
+    "channelFilterLabel": "Filter by channel",
+    "allChannels": "All channels",
+    "channel_web": "Website widget"
   },
   "contacts": {
     "title": "Contacts",

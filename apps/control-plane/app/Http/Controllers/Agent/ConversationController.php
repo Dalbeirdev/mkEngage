@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Agent;
 
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
+use App\Models\ConversationRead;
 use App\Models\Department;
 use App\Models\User;
 use App\Models\Visitor;
@@ -29,10 +30,13 @@ final class ConversationController extends Controller
             'status' => ['sometimes', 'in:open,pending,closed,all'],
             'department_id' => ['sometimes', 'uuid'],
             'tag' => ['sometimes', 'string', 'max:30'],
+            'channel' => ['sometimes', 'in:web,whatsapp,telegram,messenger'],
+            'search' => ['sometimes', 'string', 'max:100'],
             'limit' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ]);
 
         $status = $validated['status'] ?? 'all';
+        $search = isset($validated['search']) ? trim($validated['search']) : '';
 
         $conversations = Conversation::query()
             ->when($status !== 'all', fn ($query) => $query->where('status', $status))
@@ -44,16 +48,69 @@ final class ConversationController extends Controller
                 isset($validated['tag']),
                 fn ($query) => $query->whereJsonContains('tags', $validated['tag']),
             )
+            // Channel filter (Phase 33): "web" means no channel row.
+            ->when(($validated['channel'] ?? null) === 'web', fn ($query) => $query->whereNull('channel_id'))
+            ->when(
+                in_array($validated['channel'] ?? null, ['whatsapp', 'telegram', 'messenger'], true),
+                fn ($query) => $query->whereHas(
+                    'channel',
+                    fn ($sub) => $sub->where('type', $validated['channel']),
+                ),
+            )
+            // Search (Phase 33): participant names OR message bodies.
+            ->when($search !== '', function ($query) use ($search): void {
+                $like = '%'.str_replace(['%', '_'], ['\%', '\_'], $search).'%';
+                $query->where(function ($outer) use ($like): void {
+                    $outer
+                        ->whereHas('contact', fn ($sub) => $sub->where('name', 'like', $like))
+                        ->orWhereHas('visitor', fn ($sub) => $sub->where('display_name', 'like', $like))
+                        ->orWhereHas('messages', fn ($sub) => $sub->where('body', 'like', $like));
+                });
+            })
             ->with(['visitor', 'contact', 'department', 'assignedAgent:id,name', 'channel:id,type,name'])
             ->orderByDesc('updated_at')
             ->limit($validated['limit'] ?? 50)
             ->get();
 
+        // Per-agent unread counts (Phase 33): one query for all rows.
+        $user = $request->user();
+        $reads = $user instanceof User
+            ? ConversationRead::query()
+                ->whereIn('conversation_id', $conversations->pluck('id')->all())
+                ->where('user_id', $user->id)
+                ->pluck('last_read_sequence', 'conversation_id')
+            : collect();
+
         return response()->json([
-            'data' => $conversations->map(
-                fn (Conversation $conversation): array => $this->toContract($conversation),
-            )->all(),
+            'data' => $conversations->map(function (Conversation $conversation) use ($reads): array {
+                $lastRead = $reads->get($conversation->id);
+
+                return [
+                    ...$this->toContract($conversation),
+                    'unread_count' => max(
+                        0,
+                        (int) $conversation->last_sequence - (is_numeric($lastRead) ? (int) $lastRead : 0),
+                    ),
+                ];
+            })->all(),
         ]);
+    }
+
+    /** Advance the calling agent's read cursor (Phase 33). */
+    public function markRead(Request $request, string $conversationId): JsonResponse
+    {
+        $conversation = Conversation::query()->find($conversationId);
+        abort_if($conversation === null, 404);
+
+        $user = $request->user();
+        abort_unless($user instanceof User, 403);
+
+        ConversationRead::query()->updateOrCreate(
+            ['conversation_id' => $conversation->id, 'user_id' => $user->id],
+            ['last_read_sequence' => $conversation->last_sequence],
+        );
+
+        return response()->json(['last_read_sequence' => $conversation->last_sequence]);
     }
 
     public function show(string $conversationId): JsonResponse

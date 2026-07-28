@@ -82,18 +82,38 @@ final class DeliverChannelMessage implements ShouldQueue
     {
         $base = config('services.whatsapp.base_url', 'https://graph.facebook.com/v20.0');
 
+        // Phase 33: rich flow menus with ≤3 options ship as REAL interactive
+        // reply buttons (the Cloud API's cap); more options fall back to the
+        // bullet-list text rendering.
+        $options = $this->richOptions($message);
+        $payload = ['messaging_product' => 'whatsapp', 'to' => $to];
+
+        if ($options !== [] && count($options) <= 3) {
+            $payload['type'] = 'interactive';
+            $payload['interactive'] = [
+                'type' => 'button',
+                'body' => ['text' => $this->renderBody($message, includeOptionsInText: false)],
+                'action' => [
+                    'buttons' => array_map(fn (string $option): array => [
+                        'type' => 'reply',
+                        // 20-char title cap; the full option rides in the id
+                        // so flow branching still matches on the reply.
+                        'reply' => ['id' => mb_substr($option, 0, 256), 'title' => mb_substr($option, 0, 20)],
+                    ], $options),
+                ],
+            ];
+        } else {
+            $payload['type'] = 'text';
+            $payload['text'] = ['body' => $this->renderBody($message)];
+        }
+
         return Http::withToken($channel->configString('access_token'))
             ->timeout(15)
             ->acceptJson()
             ->post(
                 rtrim(is_string($base) ? $base : '', '/')
                     .'/'.$channel->configString('phone_number_id').'/messages',
-                [
-                    'messaging_product' => 'whatsapp',
-                    'to' => $to,
-                    'type' => 'text',
-                    'text' => ['body' => $this->renderBody($message)],
-                ],
+                $payload,
             );
     }
 

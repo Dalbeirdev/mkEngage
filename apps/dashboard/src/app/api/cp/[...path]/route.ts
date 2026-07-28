@@ -14,6 +14,7 @@ const ALLOWED = [
   /^conversations(\/[0-9a-f-]{36})?(\/messages)?$/,
   /^conversations\/[0-9a-f-]{36}\/messages\/[0-9a-f-]{36}\/reaction$/,
   /^conversations\/[0-9a-f-]{36}\/assign$/,
+  /^conversations\/[0-9a-f-]{36}\/read$/,
   /^conversations\/[0-9a-f-]{36}\/notes$/,
   /^conversations\/[0-9a-f-]{36}\/attachments(\/[0-9a-f-]{36}\/download)?$/,
   /^me\/availability$/,

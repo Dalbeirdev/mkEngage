@@ -4,14 +4,17 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { conversationListSchema, departmentListSchema } from "@/lib/api/schemas";
 import { card, emptyState, pageTitle } from "@/lib/ui";
 
-async function fetchConversations(departmentId: string) {
-  const query = departmentId === "all" ? "" : `&department_id=${departmentId}`;
-  const response = await fetch(`/api/cp/conversations?status=all${query}`, { cache: "no-store" });
+async function fetchConversations(departmentId: string, channel: string, search: string) {
+  const params = new URLSearchParams({ status: "all" });
+  if (departmentId !== "all") params.set("department_id", departmentId);
+  if (channel !== "all") params.set("channel", channel);
+  if (search.trim() !== "") params.set("search", search.trim());
+  const response = await fetch(`/api/cp/conversations?${params.toString()}`, { cache: "no-store" });
   if (!response.ok) throw new Error(`Failed to load conversations (${response.status})`);
   return conversationListSchema.parse(await response.json()).data;
 }
@@ -30,10 +33,18 @@ async function fetchDepartments() {
 export default function ConversationsPage() {
   const t = useTranslations("conversations");
   const [departmentId, setDepartmentId] = useState("all");
+  const [channel, setChannel] = useState("all");
+  const [search, setSearch] = useState("");
+  // Debounce: the query key uses the settled value (350ms after typing).
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 350);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["conversations", departmentId],
-    queryFn: () => fetchConversations(departmentId),
+    queryKey: ["conversations", departmentId, channel, debouncedSearch],
+    queryFn: () => fetchConversations(departmentId, channel, debouncedSearch),
     refetchInterval: 5000,
     // Agent console must stay current even when the tab is hidden.
     refetchIntervalInBackground: true,
@@ -45,6 +56,33 @@ export default function ConversationsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
         <h1 className={pageTitle}>{t("title")}</h1>
+        <div className="flex items-center gap-2">
+          <label htmlFor="inbox-search" className="sr-only">
+            {t("searchLabel")}
+          </label>
+          <input
+            id="inbox-search"
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={t("searchPlaceholder")}
+            className="w-48 rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-900"
+          />
+          <label htmlFor="channel-filter" className="sr-only">
+            {t("channelFilterLabel")}
+          </label>
+          <select
+            id="channel-filter"
+            value={channel}
+            onChange={(event) => setChannel(event.target.value)}
+            className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-900"
+          >
+            <option value="all">{t("allChannels")}</option>
+            <option value="web">{t("channel_web")}</option>
+            <option value="whatsapp">WhatsApp</option>
+            <option value="telegram">Telegram</option>
+            <option value="messenger">Messenger</option>
+          </select>
         {departments.data !== undefined && departments.data.length > 0 && (
           <div>
             <label htmlFor="dept-filter" className="sr-only">
@@ -65,6 +103,7 @@ export default function ConversationsPage() {
             </select>
           </div>
         )}
+        </div>
       </div>
 
       {isPending && (
@@ -98,8 +137,13 @@ export default function ConversationsPage() {
                     {name.charAt(0).toUpperCase()}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-medium">
+                    <span className={`block truncate ${(conversation.unread_count ?? 0) > 0 ? "font-bold" : "font-medium"}`}>
                       {name}
+                      {(conversation.unread_count ?? 0) > 0 && (
+                        <span className="ms-2 inline-grid min-w-5 place-items-center rounded-full bg-indigo-600 px-1 text-[10px] font-bold text-white">
+                          {conversation.unread_count}
+                        </span>
+                      )}
                       {conversation.channel_type != null && (
                         <span
                           className={`ms-2 rounded-full px-1.5 py-0.5 text-[10px] font-semibold capitalize ${
