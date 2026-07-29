@@ -32,6 +32,7 @@ const CHANNEL_META: Record<string, { label: string; dot: string }> = {
   telegram: { label: "Telegram", dot: "bg-sky-500" },
   messenger: { label: "Messenger", dot: "bg-blue-500" },
   instagram: { label: "Instagram", dot: "bg-pink-500" },
+  email: { label: "Email", dot: "bg-violet-500" },
 };
 
 function channelMeta(key: string | null | undefined) {
@@ -324,6 +325,7 @@ export default function ConversationsPage() {
             <option value="telegram">Telegram</option>
             <option value="messenger">Messenger</option>
             <option value="instagram">Instagram</option>
+            <option value="email">Email</option>
           </select>
           <select
             value={priority}

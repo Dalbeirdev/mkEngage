@@ -33,8 +33,11 @@ final class ChannelController extends Controller
     public function store(Request $request, TenantContext $context): JsonResponse
     {
         $validated = $request->validate([
-            'type' => ['required', 'in:whatsapp,telegram,messenger,instagram'],
+            'type' => ['required', 'in:whatsapp,telegram,messenger,instagram,email'],
             'name' => ['required', 'string', 'max:100'],
+            // Email channel: the address replies are sent from.
+            'from_address' => ['required_if:type,email', 'email', 'max:255'],
+            'from_name' => ['sometimes', 'nullable', 'string', 'max:100'],
             // WhatsApp Cloud API credentials
             'phone_number_id' => ['required_if:type,whatsapp', 'string', 'max:64'],
             'waba_id' => ['sometimes', 'nullable', 'string', 'max:64'],
@@ -59,6 +62,10 @@ final class ChannelController extends Controller
                 'ig_id' => $validated['ig_id'] ?? null,
                 'access_token' => $validated['access_token'],
                 'app_secret' => $validated['app_secret'],
+            ],
+            'email' => [
+                'from_address' => $validated['from_address'],
+                'from_name' => $validated['from_name'] ?? null,
             ],
             default => [
                 'phone_number_id' => $validated['phone_number_id'],

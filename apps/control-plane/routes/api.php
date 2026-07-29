@@ -28,6 +28,7 @@ use App\Http\Controllers\Agent\WidgetSettingsController;
 use App\Http\Controllers\AttachmentStreamController;
 use App\Http\Controllers\Auth\IssueApiTokenController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\Channels\EmailWebhookController;
 use App\Http\Controllers\Channels\InstagramWebhookController;
 use App\Http\Controllers\Channels\MessengerWebhookController;
 use App\Http\Controllers\Channels\TelegramWebhookController;
@@ -77,6 +78,9 @@ Route::post('/channels/messenger/{organization}/{channel}', [MessengerWebhookCon
 // Instagram DM webhook: rides the Messenger Platform, same Meta mechanics.
 Route::get('/channels/instagram/{organization}/{channel}', [InstagramWebhookController::class, 'verify']);
 Route::post('/channels/instagram/{organization}/{channel}', [InstagramWebhookController::class, 'receive']);
+
+// Inbound email webhook (provider inbound-parse): X-Webhook-Token authenticated.
+Route::post('/channels/email/{organization}/{channel}', [EmailWebhookController::class, 'receive']);
 
 // Signed attachment stream (§14): the temporary signature IS the auth —
 // minted only by the authorized download endpoints, short expiry.

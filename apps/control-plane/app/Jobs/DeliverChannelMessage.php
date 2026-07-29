@@ -14,6 +14,7 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -50,13 +51,20 @@ final class DeliverChannelMessage implements ShouldQueue
                 ? Channel::query()->whereKey($conversation->channel_id)->where('status', 'active')->first()
                 : null;
 
-            if ($channel === null || ! in_array($channel->type, ['whatsapp', 'telegram', 'messenger', 'instagram'], true)) {
+            if ($channel === null || ! in_array($channel->type, ['whatsapp', 'telegram', 'messenger', 'instagram', 'email'], true)) {
                 return;
             }
 
             $thread = $conversation->external_thread_id;
 
             try {
+                // Email replies go out via the mailer, not an HTTP provider API.
+                if ($channel->type === 'email') {
+                    $this->deliverEmail($channel, $thread, $message);
+
+                    return;
+                }
+
                 // Media first (Phase 37): clean attachments deliver as native
                 // media; text/flow body still sends after.
                 foreach ($message->attachments as $attachment) {
@@ -199,6 +207,21 @@ final class DeliverChannelMessage implements ShouldQueue
                     'message' => $messagePayload,
                 ],
             );
+    }
+
+    /** Email reply via the configured mailer (SMTP in prod, log/array in dev). */
+    private function deliverEmail(Channel $channel, string $to, Message $message): void
+    {
+        $from = $channel->configString('from_address');
+        $fromName = $channel->configString('from_name');
+        $body = $this->renderBody($message);
+
+        Mail::raw($body, function (\Illuminate\Mail\Message $mail) use ($to, $from, $fromName): void {
+            $mail->to($to)->subject('Re: your conversation');
+            if ($from !== '') {
+                $mail->from($from, $fromName !== '' ? $fromName : null);
+            }
+        });
     }
 
     /** Deliver one clean attachment as native media to the channel (Phase 37). */

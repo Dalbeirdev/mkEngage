@@ -34,7 +34,7 @@ final class ConversationController extends Controller
             'department_id' => ['sometimes', 'uuid'],
             'tag' => ['sometimes', 'string', 'max:30'],
             'priority' => ['sometimes', 'in:low,normal,high,urgent'],
-            'channel' => ['sometimes', 'in:web,whatsapp,telegram,messenger,instagram'],
+            'channel' => ['sometimes', 'in:web,whatsapp,telegram,messenger,instagram,email'],
             'spam' => ['sometimes', 'in:only,include'],
             'search' => ['sometimes', 'string', 'max:100'],
             'limit' => ['sometimes', 'integer', 'min:1', 'max:100'],
@@ -69,7 +69,7 @@ final class ConversationController extends Controller
             // Channel filter (Phase 33): "web" means no channel row.
             ->when(($validated['channel'] ?? null) === 'web', fn ($query) => $query->whereNull('channel_id'))
             ->when(
-                in_array($validated['channel'] ?? null, ['whatsapp', 'telegram', 'messenger', 'instagram'], true),
+                in_array($validated['channel'] ?? null, ['whatsapp', 'telegram', 'messenger', 'instagram', 'email'], true),
                 fn ($query) => $query->whereHas(
                     'channel',
                     fn ($sub) => $sub->where('type', $validated['channel']),

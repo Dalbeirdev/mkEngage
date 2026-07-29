@@ -84,7 +84,7 @@ it('computes first-response times (agent vs bot), channel split, hourly and lead
         ->assertOk()->json();
 
     // Channel split: 1 web + 1 telegram.
-    expect($overview['by_channel'])->toBe(['web' => 1, 'whatsapp' => 0, 'telegram' => 1, 'messenger' => 0, 'instagram' => 0]);
+    expect($overview['by_channel'])->toBe(['web' => 1, 'whatsapp' => 0, 'telegram' => 1, 'messenger' => 0, 'instagram' => 0, 'email' => 0]);
 
     // FRT: agent times 120s and 60s → avg 90, median 90; bot 5s.
     expect($overview['first_response']['agent_avg_seconds'])->toBe(90)
