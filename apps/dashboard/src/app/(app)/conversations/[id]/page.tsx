@@ -99,6 +99,16 @@ async function setStatus(conversationId: string, status: "open" | "closed") {
   return conversationSchema.parse(await response.json());
 }
 
+async function setPriority(conversationId: string, priority: string) {
+  const response = await fetch(`/api/cp/conversations/${conversationId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ priority }),
+  });
+  if (!response.ok) throw new Error(`Priority change failed (${response.status})`);
+  return conversationSchema.parse(await response.json());
+}
+
 async function fetchNotes(conversationId: string) {
   const response = await fetch(`/api/cp/conversations/${conversationId}/notes`, {
     cache: "no-store",
@@ -239,6 +249,14 @@ export default function ConversationThreadPage({
 
   const statusMutation = useMutation({
     mutationFn: (status: "open" | "closed") => setStatus(id, status),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["conversation", id, "meta"] });
+      void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    },
+  });
+
+  const priorityMutation = useMutation({
+    mutationFn: (priority: string) => setPriority(id, priority),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["conversation", id, "meta"] });
       void queryClient.invalidateQueries({ queryKey: ["conversations"] });
@@ -508,6 +526,18 @@ export default function ConversationThreadPage({
               ? t("assignedTo", { name: conversation.assigned_agent_name })
               : t("unassigned")}
           </span>
+          <select
+            value={conversation?.priority ?? "normal"}
+            disabled={priorityMutation.isPending}
+            onChange={(e) => priorityMutation.mutate(e.target.value)}
+            aria-label="Priority"
+            className="rounded-md border border-zinc-200 bg-white px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-900"
+          >
+            <option value="urgent">Urgent</option>
+            <option value="high">High</option>
+            <option value="normal">Normal</option>
+            <option value="low">Low</option>
+          </select>
           <button
             type="button"
             disabled={assignMutation.isPending}

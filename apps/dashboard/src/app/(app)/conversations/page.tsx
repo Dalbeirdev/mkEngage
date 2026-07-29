@@ -37,6 +37,13 @@ function channelMeta(key: string | null | undefined) {
   return CHANNEL_META[k] ?? { label: k, dot: "bg-zinc-400" };
 }
 
+// Ticket priority chips. Normal is the quiet default (no chip); the rest stand out.
+const PRIORITY_META: Record<string, { label: string; cls: string }> = {
+  urgent: { label: "Urgent", cls: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300" },
+  high: { label: "High", cls: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300" },
+  low: { label: "Low", cls: "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400" },
+};
+
 function relativeTime(iso: string | null): string {
   if (iso === null) return "";
   const then = new Date(iso).getTime();
@@ -53,10 +60,11 @@ function convName(c: Conversation): string {
   return c.contact_name ?? c.visitor_name ?? "Anonymous visitor";
 }
 
-async function fetchConversations(departmentId: string, channel: string, search: string) {
+async function fetchConversations(departmentId: string, channel: string, search: string, priority: string) {
   const params = new URLSearchParams({ status: "all", limit: "100" });
   if (departmentId !== "all") params.set("department_id", departmentId);
   if (channel !== "all") params.set("channel", channel);
+  if (priority !== "all") params.set("priority", priority);
   if (search.trim() !== "") params.set("search", search.trim());
   const res = await fetch(`/api/cp/conversations?${params.toString()}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`Failed to load conversations (${res.status})`);
@@ -78,6 +86,7 @@ export default function ConversationsPage() {
   const [search, setSearch] = useState("");
   const [channel, setChannel] = useState("all");
   const [departmentId, setDepartmentId] = useState("all");
+  const [priority, setPriority] = useState("all");
   const [page, setPage] = useState(1);
 
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -87,8 +96,8 @@ export default function ConversationsPage() {
   }, [search]);
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["conversations", departmentId, channel, debouncedSearch],
-    queryFn: () => fetchConversations(departmentId, channel, debouncedSearch),
+    queryKey: ["conversations", departmentId, channel, priority, debouncedSearch],
+    queryFn: () => fetchConversations(departmentId, channel, debouncedSearch, priority),
     refetchInterval: 5000,
     refetchIntervalInBackground: true,
   });
@@ -256,6 +265,18 @@ export default function ConversationsPage() {
             <option value="messenger">Messenger</option>
             <option value="instagram">Instagram</option>
           </select>
+          <select
+            value={priority}
+            onChange={(e) => setPriority(e.target.value)}
+            aria-label="Filter by priority"
+            className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-900"
+          >
+            <option value="all">All priorities</option>
+            <option value="urgent">Urgent</option>
+            <option value="high">High</option>
+            <option value="normal">Normal</option>
+            <option value="low">Low</option>
+          </select>
           {departments.data !== undefined && departments.data.length > 0 && (
             <select
               value={departmentId}
@@ -315,6 +336,11 @@ export default function ConversationsPage() {
                               {unread && (
                                 <span className="inline-grid min-w-4 place-items-center rounded-full bg-indigo-600 px-1 text-[10px] font-bold text-white">
                                   {c.unread_count}
+                                </span>
+                              )}
+                              {PRIORITY_META[c.priority] !== undefined && (
+                                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${PRIORITY_META[c.priority].cls}`}>
+                                  {PRIORITY_META[c.priority].label}
                                 </span>
                               )}
                             </span>

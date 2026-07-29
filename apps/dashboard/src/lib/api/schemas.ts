@@ -111,6 +111,7 @@ export type Profile = z.infer<typeof profileSchema>;
 export const conversationSchema = z.object({
   conversation_id: z.uuid(),
   status: z.enum(["open", "pending", "closed"]),
+  priority: z.enum(["low", "normal", "high", "urgent"]).catch("normal"),
   visitor_id: z.uuid().nullable(),
   visitor_name: z.string().nullable(),
   visitor_location: z.string().nullable().optional(),
