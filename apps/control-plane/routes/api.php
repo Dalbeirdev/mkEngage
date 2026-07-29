@@ -22,6 +22,7 @@ use App\Http\Controllers\Agent\LiveVisitorController;
 use App\Http\Controllers\Agent\ModerationController;
 use App\Http\Controllers\Agent\OrganizationLogoController;
 use App\Http\Controllers\Agent\ProfileController;
+use App\Http\Controllers\Agent\SavedViewController;
 use App\Http\Controllers\Agent\TwoFactorController;
 use App\Http\Controllers\Agent\WidgetSettingsController;
 use App\Http\Controllers\AttachmentStreamController;
@@ -132,6 +133,11 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
         Route::post('/conversations/{conversation}/messages/{message}/reaction', [AgentMessageController::class, 'react']);
         Route::post('/conversations/{conversation}/assign', [ConversationController::class, 'assign']);
         Route::post('/conversations/{conversation}/transfer', [ConversationController::class, 'transfer']);
+
+        // Per-agent saved inbox views.
+        Route::get('/saved-views', [SavedViewController::class, 'index']);
+        Route::post('/saved-views', [SavedViewController::class, 'store']);
+        Route::delete('/saved-views/{savedView}', [SavedViewController::class, 'destroy']);
         Route::post('/conversations/{conversation}/read', [ConversationController::class, 'markRead']);
         Route::post('/conversations/{conversation}/assist', [ConversationAssistController::class, 'suggest']);
         Route::get('/conversations/{conversation}/notes', [ConversationNoteController::class, 'index']);

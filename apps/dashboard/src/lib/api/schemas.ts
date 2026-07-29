@@ -138,6 +138,22 @@ export const conversationSchema = z.object({
 
 export type Conversation = z.infer<typeof conversationSchema>;
 
+export const savedViewFiltersSchema = z.object({
+  tab: z.string().optional(),
+  channel: z.string().optional(),
+  priority: z.string().optional(),
+  department_id: z.string().optional(),
+  search: z.string().optional(),
+});
+export const savedViewSchema = z.object({
+  saved_view_id: z.uuid(),
+  name: z.string(),
+  filters: savedViewFiltersSchema.catch({}),
+  created_at: z.string().nullable(),
+});
+export type SavedView = z.infer<typeof savedViewSchema>;
+export const savedViewListSchema = z.object({ data: z.array(savedViewSchema) });
+
 export const conversationListSchema = z.object({
   data: z.array(conversationSchema),
 });

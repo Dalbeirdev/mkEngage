@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   IconArrowRight,
@@ -17,7 +17,9 @@ import { MetricCard, cardShell } from "@/components/metric-card";
 import {
   conversationListSchema,
   departmentListSchema,
+  savedViewListSchema,
   type Conversation,
+  type SavedView,
 } from "@/lib/api/schemas";
 
 const PAGE_SIZE = 15;
@@ -78,6 +80,26 @@ async function fetchDepartments() {
   return departmentListSchema.parse(await res.json()).data;
 }
 
+async function fetchViews() {
+  const res = await fetch("/api/cp/saved-views", { cache: "no-store" });
+  if (!res.ok) throw new Error(`Failed to load views (${res.status})`);
+  return savedViewListSchema.parse(await res.json()).data;
+}
+
+async function createView(name: string, filters: SavedView["filters"]) {
+  const res = await fetch("/api/cp/saved-views", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, filters }),
+  });
+  if (!res.ok) throw new Error(`Save view failed (${res.status})`);
+}
+
+async function deleteView(id: string) {
+  const res = await fetch(`/api/cp/saved-views/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(`Delete view failed (${res.status})`);
+}
+
 /**
  * Conversation inbox (§3). Polls via TanStack Query; the render path is
  * unchanged when the gateway subscription lands (ADR-002).
@@ -105,6 +127,39 @@ export default function ConversationsPage() {
   });
 
   const departments = useQuery({ queryKey: ["departments"], queryFn: fetchDepartments });
+
+  const queryClient = useQueryClient();
+  const views = useQuery({ queryKey: ["saved-views"], queryFn: fetchViews });
+  const invalidateViews = () => void queryClient.invalidateQueries({ queryKey: ["saved-views"] });
+  const saveView = useMutation({
+    mutationFn: ({ name, filters }: { name: string; filters: SavedView["filters"] }) => createView(name, filters),
+    onSuccess: invalidateViews,
+  });
+  const removeView = useMutation({ mutationFn: deleteView, onSuccess: invalidateViews });
+
+  function applyView(v: SavedView) {
+    setTab((v.filters.tab as Tab | undefined) ?? "all");
+    setChannel(v.filters.channel ?? "all");
+    setPriority(v.filters.priority ?? "all");
+    setDepartmentId(v.filters.department_id ?? "all");
+    setSearch(v.filters.search ?? "");
+    setPage(1);
+  }
+
+  function saveCurrentView() {
+    const name = window.prompt("Name this view")?.trim();
+    if (name === undefined || name === "") return;
+    saveView.mutate({
+      name,
+      filters: {
+        tab,
+        ...(channel !== "all" ? { channel } : {}),
+        ...(priority !== "all" ? { priority } : {}),
+        ...(departmentId !== "all" ? { department_id: departmentId } : {}),
+        ...(search.trim() !== "" ? { search: search.trim() } : {}),
+      },
+    });
+  }
 
   const rows = useMemo(() => data ?? [], [data]);
 
@@ -298,6 +353,38 @@ export default function ConversationsPage() {
             </select>
           )}
         </div>
+      </div>
+
+      {/* Saved views */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-zinc-500">Views:</span>
+        {(views.data ?? []).map((v) => (
+          <span
+            key={v.saved_view_id}
+            className="inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white py-1 ps-3 pe-1.5 text-xs font-medium dark:border-zinc-700 dark:bg-zinc-900"
+          >
+            <button type="button" onClick={() => applyView(v)} className="hover:text-indigo-600 dark:hover:text-indigo-400">
+              {v.name}
+            </button>
+            <button
+              type="button"
+              aria-label={`Delete view ${v.name}`}
+              onClick={() => removeView.mutate(v.saved_view_id)}
+              className="grid size-4 place-items-center rounded-full text-zinc-400 hover:bg-zinc-100 hover:text-red-600 dark:hover:bg-zinc-800"
+            >
+              ✕
+            </button>
+          </span>
+        ))}
+        {(views.data ?? []).length === 0 && <span className="text-xs text-zinc-400">none yet</span>}
+        <button
+          type="button"
+          onClick={saveCurrentView}
+          disabled={saveView.isPending}
+          className="rounded-full border border-dashed border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-100 disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+        >
+          + Save current view
+        </button>
       </div>
 
       {/* Table */}
