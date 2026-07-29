@@ -35,7 +35,7 @@ export default function AboutPage() {
             <h1>We built mkEngage to <span className="grad-text">help businesses never miss another customer.</span></h1>
             <p className="sub">Our mission is simple — empower every business with AI that talks, understands and helps them build better relationships, faster.</p>
             <div className="hero-actions">
-              <Link className="btn btn-primary" href="/login">▷ Start Free Trial</Link>
+              <Link className="btn btn-primary" href="/signup">▷ Start Free Trial</Link>
               <Link className="btn btn-ghost" href="/contact">📅 Book a Demo</Link>
             </div>
           </div>
@@ -120,7 +120,7 @@ export default function AboutPage() {
           <div className="cta-band">
             <div className="mascot2"><BrandMark size={118} faceLight /></div>
             <div><h2>Let&apos;s build better customer relationships, together.</h2><p>Join thousands of businesses using mkEngage to engage, support and grow every day.</p></div>
-            <div className="acts"><Link className="btn btn-white" href="/login">Start 14-Day Free Trial</Link><Link className="btn btn-outline-white" href="/contact">Book a Demo →</Link></div>
+            <div className="acts"><Link className="btn btn-white" href="/signup">Start 14-Day Free Trial</Link><Link className="btn btn-outline-white" href="/contact">Book a Demo →</Link></div>
           </div>
         </div>
       </section>

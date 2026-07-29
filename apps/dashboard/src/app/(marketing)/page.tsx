@@ -45,7 +45,7 @@ export default function HomePage() {
             <h1>AI Chatbots.<br />Happy Customers.<br /><span className="grad-text">More Sales.</span></h1>
             <p className="sub">mkEngage helps you engage, support and convert customers across every channel with AI chatbots, live chat, and smart automation.</p>
             <div className="hero-actions">
-              <Link className="btn btn-primary" href="/login">Start 14-Day Free Trial →</Link>
+              <Link className="btn btn-primary" href="/signup">Start 14-Day Free Trial →</Link>
               <Link className="btn btn-ghost" href="/contact">▷ Book a Demo</Link>
             </div>
             <div className="ticks">
@@ -212,7 +212,7 @@ export default function HomePage() {
               <p>Join thousands of businesses using mkEngage to build better customer relationships.</p>
             </div>
             <div className="acts">
-              <Link className="btn btn-white" href="/login">Start 14-Day Free Trial</Link>
+              <Link className="btn btn-white" href="/signup">Start 14-Day Free Trial</Link>
               <Link className="btn btn-outline-white" href="/contact">Book a Demo →</Link>
             </div>
           </div>

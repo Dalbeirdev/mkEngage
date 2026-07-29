@@ -79,7 +79,7 @@ export default function PricingPage() {
         <div className="wrap">
           <div className="cta-band">
             <div><h2>Ready to get started?</h2><p>Try mkEngage free for 14 days — no credit card required.</p></div>
-            <div className="acts"><Link className="btn btn-white" href="/login">Start Free Trial</Link><Link className="btn btn-outline-white" href="/contact">Talk to Sales →</Link></div>
+            <div className="acts"><Link className="btn btn-white" href="/signup">Start Free Trial</Link><Link className="btn btn-outline-white" href="/contact">Talk to Sales →</Link></div>
           </div>
         </div>
       </section>

@@ -35,7 +35,7 @@ export function MarketingNav() {
         </nav>
         <div className="nav-cta">
           <Link className="nav-login" href="/login">Log in</Link>
-          <Link className="btn btn-primary" href="/login">Start Free Trial</Link>
+          <Link className="btn btn-primary" href="/signup">Start Free Trial</Link>
         </div>
       </div>
     </header>

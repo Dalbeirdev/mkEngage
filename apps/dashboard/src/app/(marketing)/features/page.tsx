@@ -25,7 +25,7 @@ export default function FeaturesPage() {
           <h1 style={{ marginTop: 18 }}>One platform to <span className="grad-text">engage, support and convert.</span></h1>
           <p className="sub" style={{ margin: "20px auto 0", maxWidth: "34em" }}>Everything your team needs to talk to customers across every channel — AI, live chat, automation, CRM and analytics, built to work together.</p>
           <div className="hero-actions" style={{ justifyContent: "center", marginTop: 26 }}>
-            <Link className="btn btn-primary" href="/login">Start 14-Day Free Trial →</Link>
+            <Link className="btn btn-primary" href="/signup">Start 14-Day Free Trial →</Link>
             <Link className="btn btn-ghost" href="/pricing">View Pricing</Link>
           </div>
         </div>
@@ -64,7 +64,7 @@ export default function FeaturesPage() {
         <div className="wrap">
           <div className="cta-band">
             <div><h2>See every feature in action.</h2><p>Spin up a free workspace in two minutes — no credit card required.</p></div>
-            <div className="acts"><Link className="btn btn-white" href="/login">Start Free Trial</Link><Link className="btn btn-outline-white" href="/contact">Book a Demo →</Link></div>
+            <div className="acts"><Link className="btn btn-white" href="/signup">Start Free Trial</Link><Link className="btn btn-outline-white" href="/contact">Book a Demo →</Link></div>
           </div>
         </div>
       </section>

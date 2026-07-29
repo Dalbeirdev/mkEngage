@@ -47,7 +47,7 @@ export default function ResourcesPage() {
         <div className="wrap">
           <div className="cta-band">
             <div><h2>Can&apos;t find what you need?</h2><p>Our team is happy to help you get set up and answer any question.</p></div>
-            <div className="acts"><Link className="btn btn-white" href="/contact">Contact Us</Link><Link className="btn btn-outline-white" href="/login">Start Free Trial →</Link></div>
+            <div className="acts"><Link className="btn btn-white" href="/contact">Contact Us</Link><Link className="btn btn-outline-white" href="/signup">Start Free Trial →</Link></div>
           </div>
         </div>
       </section>

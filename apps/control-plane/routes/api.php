@@ -23,6 +23,7 @@ use App\Http\Controllers\Agent\ProfileController;
 use App\Http\Controllers\Agent\WidgetSettingsController;
 use App\Http\Controllers\AttachmentStreamController;
 use App\Http\Controllers\Auth\IssueApiTokenController;
+use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Channels\MessengerWebhookController;
 use App\Http\Controllers\Channels\TelegramWebhookController;
 use App\Http\Controllers\Channels\WhatsAppWebhookController;
@@ -44,6 +45,7 @@ use Illuminate\Support\Facades\Route;
 
 // Unauthenticated: token issuance + widget bootstrap (rate-limited in controllers).
 Route::post('/auth/token', IssueApiTokenController::class);
+Route::post('/auth/register', RegisterController::class);
 Route::post('/widget/session', WidgetSessionController::class);
 
 // Public org logo (Phase 30): brand asset shown to every widget visitor.

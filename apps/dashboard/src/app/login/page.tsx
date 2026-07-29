@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
@@ -32,6 +33,12 @@ export default async function LoginPage() {
         <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <LoginForm />
         </div>
+        <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
+          Don’t have an account?{" "}
+          <Link href="/signup" className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
+            Start free
+          </Link>
+        </p>
       </div>
     </main>
   );
