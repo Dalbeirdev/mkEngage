@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { ContactDrawer } from "@/components/contact-drawer";
 import { IconChatbots, IconContacts, IconMessages, IconStar } from "@/components/icons";
 import { MetricCard, cardShell } from "@/components/metric-card";
 import { contactListSchema, type Contact } from "@/lib/api/schemas";
@@ -38,13 +39,75 @@ export default function ContactsPage() {
   const [tab, setTab] = useState<Tab>("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<Contact | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [addForm, setAddForm] = useState({ name: "", email: "", phone: "" });
+  const [addError, setAddError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const importRef = useRef<HTMLInputElement>(null);
 
+  const qc = useQueryClient();
   const { data, isPending, isError } = useQuery({
     queryKey: ["contacts"],
     queryFn: fetchContacts,
     refetchInterval: 15000,
     refetchIntervalInBackground: true,
   });
+
+  const invalidate = () => void qc.invalidateQueries({ queryKey: ["contacts"] });
+
+  const addContact = useMutation({
+    mutationFn: async () => {
+      setAddError(null);
+      const res = await fetch("/api/cp/contacts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: addForm.name.trim() || null,
+          email: addForm.email.trim() || null,
+          phone: addForm.phone.trim() || null,
+        }),
+      });
+      if (!res.ok) throw new Error(res.status === 422 ? "That email already belongs to a contact." : `Failed (${res.status})`);
+    },
+    onSuccess: () => {
+      setAddOpen(false);
+      setAddForm({ name: "", email: "", phone: "" });
+      setNotice("Contact added.");
+      invalidate();
+    },
+    onError: (e: Error) => setAddError(e.message),
+  });
+
+  const importCsv = useMutation({
+    mutationFn: async (file: File) => {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/cp/contacts/import", { method: "POST", body: form });
+      if (!res.ok) throw new Error(res.status === 422 ? "That file couldn’t be read — need a CSV with a name or email column." : `Import failed (${res.status})`);
+      return (await res.json()) as { imported: number; skipped: number };
+    },
+    onSuccess: (r) => {
+      setNotice(`Imported ${r.imported} contact${r.imported === 1 ? "" : "s"}${r.skipped > 0 ? `, skipped ${r.skipped}` : ""}.`);
+      invalidate();
+    },
+    onError: (e: Error) => setNotice(e.message),
+  });
+
+  async function exportCsv() {
+    const res = await fetch("/api/cp/contacts/export", { cache: "no-store" });
+    if (!res.ok) {
+      setNotice("Export failed. Please try again.");
+      return;
+    }
+    const blob = new Blob([await res.text()], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "contacts.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   const rows = useMemo(() => data ?? [], [data]);
 
@@ -84,22 +147,6 @@ export default function ContactsPage() {
   const current = Math.min(page, totalPages);
   const pageRows = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
 
-  function exportCsv() {
-    const header = ["Name", "Email", "External ID", "Channel", "Created"];
-    const lines = filtered.map((c) =>
-      [c.name ?? "", c.email ?? "", c.external_id ?? "", contactChannel(c).label, c.created_at ?? ""]
-        .map((f) => `"${String(f).replace(/"/g, '""')}"`)
-        .join(","),
-    );
-    const blob = new Blob([[header.join(","), ...lines].join("\n")], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "contacts.csv";
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
   const tabs: { key: Tab; label: string; count: number }[] = [
     { key: "all", label: "All", count: counts.total },
     { key: "email", label: "Email", count: counts.email },
@@ -120,14 +167,49 @@ export default function ContactsPage() {
             View and manage all your contacts across channels.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={exportCsv}
-          className="rounded-lg border border-zinc-200 px-3 py-2 text-sm font-medium transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
-        >
-          Export
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            ref={importRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file !== undefined) importCsv.mutate(file);
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => importRef.current?.click()}
+            disabled={importCsv.isPending}
+            className="rounded-lg border border-zinc-200 px-3 py-2 text-sm font-medium transition-colors hover:bg-zinc-100 disabled:opacity-60 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          >
+            {importCsv.isPending ? "Importing…" : "Import CSV"}
+          </button>
+          <button
+            type="button"
+            onClick={() => void exportCsv()}
+            className="rounded-lg border border-zinc-200 px-3 py-2 text-sm font-medium transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          >
+            Export
+          </button>
+          <button
+            type="button"
+            onClick={() => { setAddOpen(true); setAddError(null); }}
+            className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-500"
+          >
+            + Add Contact
+          </button>
+        </div>
       </div>
+
+      {notice !== null && (
+        <div role="status" className="flex items-center justify-between gap-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm text-indigo-800 dark:border-indigo-900 dark:bg-indigo-950/50 dark:text-indigo-200">
+          <span>{notice}</span>
+          <button type="button" onClick={() => setNotice(null)} aria-label="Dismiss" className="text-indigo-400 hover:text-indigo-700">✕</button>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <MetricCard icon={<IconContacts />} tint="indigo" label="Total Contacts" value={counts.total.toLocaleString()} caption="all contacts" />
@@ -190,7 +272,11 @@ export default function ContactsPage() {
                   const meta = contactChannel(c);
                   const name = c.name ?? "Unnamed";
                   return (
-                    <tr key={c.contact_id} className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+                    <tr
+                      key={c.contact_id}
+                      onClick={() => setSelected(c)}
+                      className="cursor-pointer transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/40"
+                    >
                       <td className="px-4 py-3">
                         <span className="flex items-center gap-3">
                           <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">
@@ -258,6 +344,44 @@ export default function ContactsPage() {
           </div>
         )}
       </div>
+
+      <ContactDrawer contact={selected} onClose={() => setSelected(null)} />
+
+      {addOpen && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Add contact">
+          <button type="button" aria-label="Close" className="absolute inset-0 bg-black/30" onClick={() => setAddOpen(false)} />
+          <form
+            onSubmit={(e) => { e.preventDefault(); if (!addContact.isPending) addContact.mutate(); }}
+            className={`relative w-full max-w-sm space-y-4 p-6 ${cardShell}`}
+          >
+            <h2 className="text-lg font-bold">Add a contact</h2>
+            <div className="space-y-1">
+              <label htmlFor="c-name" className="block text-sm font-medium">Name</label>
+              <input id="c-name" value={addForm.name} onChange={(e) => setAddForm({ ...addForm, name: e.target.value })} className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950" />
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="c-email" className="block text-sm font-medium">Email</label>
+              <input id="c-email" type="email" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950" />
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="c-phone" className="block text-sm font-medium">Phone</label>
+              <input id="c-phone" value={addForm.phone} onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })} className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950" />
+            </div>
+            <p className="text-xs text-zinc-500">Enter at least a name or an email.</p>
+            {addError !== null && <p className="text-sm text-red-600" role="alert">{addError}</p>}
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={addContact.isPending || (addForm.name.trim() === "" && addForm.email.trim() === "")}
+                className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
+              >
+                {addContact.isPending ? "Adding…" : "Add contact"}
+              </button>
+              <button type="button" onClick={() => setAddOpen(false)} className="rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700">Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

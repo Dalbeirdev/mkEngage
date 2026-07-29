@@ -10,6 +10,7 @@ use App\Http\Controllers\Agent\ChannelController;
 use App\Http\Controllers\Agent\ChatbotController;
 use App\Http\Controllers\Agent\ChatbotFlowController;
 use App\Http\Controllers\Agent\ContactController;
+use App\Http\Controllers\Agent\ContactNoteController;
 use App\Http\Controllers\Agent\ConversationAssistController;
 use App\Http\Controllers\Agent\ConversationController;
 use App\Http\Controllers\Agent\ConversationNoteController;
@@ -167,7 +168,13 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
         });
 
         Route::get('/contacts', [ContactController::class, 'index']);
+        Route::post('/contacts', [ContactController::class, 'store']);
+        // Static segments before the {contact} wildcard so they aren't captured.
+        Route::get('/contacts/export', [ContactController::class, 'export']);
+        Route::post('/contacts/import', [ContactController::class, 'import']);
         Route::get('/contacts/{contact}', [ContactController::class, 'show']);
+        Route::get('/contacts/{contact}/notes', [ContactNoteController::class, 'index']);
+        Route::post('/contacts/{contact}/notes', [ContactNoteController::class, 'store']);
 
         // Agent availability (routing v2): the caller's own available/away state.
         Route::get('/me/availability', [AvailabilityController::class, 'show']);

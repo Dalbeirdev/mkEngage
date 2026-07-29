@@ -26,6 +26,8 @@ const ALLOWED = [
   /^api-keys(\/[0-9a-f-]{36})?$/,
   /^webhook-endpoints(\/[0-9a-f-]{36})?(\/test)?$/,
   /^contacts(\/[0-9a-f-]{36})?$/,
+  /^contacts\/(export|import)$/,
+  /^contacts\/[0-9a-f-]{36}\/notes$/,
   /^chatbots(\/[0-9a-f-]{36})?(\/flow)?$/,
   /^organization\/widget-settings(\/rotate-secret)?$/,
   /^organization\/logo$/,

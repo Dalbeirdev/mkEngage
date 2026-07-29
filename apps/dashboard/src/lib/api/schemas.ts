@@ -193,6 +193,20 @@ export const contactListSchema = z.object({
   data: z.array(contactSchema),
 });
 
+export const contactNoteSchema = z.object({
+  note_id: z.uuid(),
+  contact_id: z.uuid(),
+  author_id: z.uuid(),
+  author_name: z.string().nullable(),
+  body: z.string(),
+  created_at: z.string().nullable(),
+});
+export type ContactNote = z.infer<typeof contactNoteSchema>;
+
+export const contactNoteListSchema = z.object({
+  data: z.array(contactNoteSchema),
+});
+
 export const chatbotSchema = z.object({
   chatbot_id: z.uuid(),
   name: z.string(),
