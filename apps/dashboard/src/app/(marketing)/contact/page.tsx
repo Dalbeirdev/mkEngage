@@ -1,5 +1,9 @@
 "use client";
 
+import { useActionState } from "react";
+
+import { submitContact, type LeadState } from "../lead-actions";
+
 const METHODS = [
   { t: "Sales Inquiries", d: "Want to learn more about mkEngage? Talk to our sales team.", m: "sales@mkengage.com", bg: "#eef0ff", c: "#4f66d6" },
   { t: "Support", d: "Need help with your account? We're here for you 24/7.", m: "support@mkengage.com", bg: "#e7f8ee", c: "#16a34a" },
@@ -14,6 +18,10 @@ const FAQS = [
 ];
 
 export default function ContactPage() {
+  const [state, formAction, pending] = useActionState<LeadState, FormData>(submitContact, {
+    status: "idle",
+  });
+
   return (
     <>
       <section className="hero soft-bg">
@@ -55,15 +63,28 @@ export default function ContactPage() {
           <div className="card form">
             <h2>Send us a message</h2>
             <p className="lede">Fill out the form and our team will get back to you.</p>
-            <form onSubmit={(e) => e.preventDefault()}>
-              <div className="field"><label htmlFor="fn">Full Name</label><input id="fn" placeholder="Enter your full name" /></div>
-              <div className="field"><label htmlFor="em">Work Email</label><input id="em" type="email" placeholder="Enter your work email" /></div>
-              <div className="field"><label htmlFor="co">Company Name</label><input id="co" placeholder="Enter your company name" /></div>
-              <div className="field"><label htmlFor="su">Subject</label><select id="su"><option>What is this regarding?</option><option>Sales</option><option>Support</option><option>Partnership</option><option>Other</option></select></div>
-              <div className="field"><label htmlFor="ms">Message</label><textarea id="ms" placeholder="Tell us more about your question or requirement…" /></div>
-              <button className="btn btn-primary" type="submit">Send Message</button>
-              <div className="privacy">🔒 Your information is safe with us. We respect your privacy.</div>
-            </form>
+            {state.status === "ok" ? (
+              <div role="status" style={{ padding: "24px 4px" }}>
+                <div style={{ fontSize: 32 }} aria-hidden>✅</div>
+                <b style={{ display: "block", marginTop: 8, color: "var(--ink)" }}>Message sent</b>
+                <p style={{ fontSize: 14, color: "var(--muted)", marginTop: 4 }}>{state.message}</p>
+              </div>
+            ) : (
+              <form action={formAction}>
+                {state.status === "error" && (
+                  <div role="alert" style={{ background: "#fef2f2", color: "#b91c1c", border: "1px solid #fecaca", borderRadius: 10, padding: "10px 12px", fontSize: 13.5, marginBottom: 12 }}>
+                    {state.message}
+                  </div>
+                )}
+                <div className="field"><label htmlFor="fn">Full Name</label><input id="fn" name="name" required placeholder="Enter your full name" /></div>
+                <div className="field"><label htmlFor="em">Work Email</label><input id="em" name="email" type="email" required placeholder="Enter your work email" /></div>
+                <div className="field"><label htmlFor="co">Company Name</label><input id="co" name="company" placeholder="Enter your company name" /></div>
+                <div className="field"><label htmlFor="su">Subject</label><select id="su" name="subject" defaultValue=""><option value="">What is this regarding?</option><option>Sales</option><option>Support</option><option>Partnership</option><option>Other</option></select></div>
+                <div className="field"><label htmlFor="ms">Message</label><textarea id="ms" name="message" required placeholder="Tell us more about your question or requirement…" /></div>
+                <button className="btn btn-primary" type="submit" disabled={pending}>{pending ? "Sending…" : "Send Message"}</button>
+                <div className="privacy">🔒 Your information is safe with us. We respect your privacy.</div>
+              </form>
+            )}
           </div>
 
           <div className="card office">

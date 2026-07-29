@@ -29,6 +29,7 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Channels\MessengerWebhookController;
 use App\Http\Controllers\Channels\TelegramWebhookController;
 use App\Http\Controllers\Channels\WhatsAppWebhookController;
+use App\Http\Controllers\MarketingLeadController;
 use App\Http\Controllers\Widget\WidgetAttachmentController;
 use App\Http\Controllers\Widget\WidgetConversationController;
 use App\Http\Controllers\Widget\WidgetHeartbeatController;
@@ -49,6 +50,11 @@ use Illuminate\Support\Facades\Route;
 Route::post('/auth/token', IssueApiTokenController::class);
 Route::post('/auth/register', RegisterController::class);
 Route::post('/widget/session', WidgetSessionController::class);
+
+// Public marketing-site leads (contact form + newsletter): unauthenticated,
+// IP rate-limited in the controller.
+Route::post('/contact', [MarketingLeadController::class, 'contact']);
+Route::post('/newsletter', [MarketingLeadController::class, 'subscribe']);
 
 // Public org logo (Phase 30): brand asset shown to every widget visitor.
 Route::get('/organizations/{organization}/logo', [OrganizationLogoController::class, 'show']);

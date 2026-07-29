@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { BrandMark } from "./brand";
+import { NewsletterForm } from "./newsletter-form";
 
 const COLS: { title: string; links: { label: string; href: string }[] }[] = [
   { title: "Product", links: [
@@ -48,10 +49,7 @@ export function MarketingFooter() {
         <div>
           <h5>Stay Updated</h5>
           <p style={{ fontSize: "13.5px" }}>Subscribe to our newsletter for product updates and tips.</p>
-          <form className="news" action="/" aria-label="Newsletter signup">
-            <input type="email" placeholder="Enter your email" aria-label="Email" />
-            <button className="btn btn-primary" type="submit">Subscribe</button>
-          </form>
+          <NewsletterForm />
         </div>
       </div>
       <div className="wrap foot-bottom">© 2026 mkEngage. All rights reserved.</div>
