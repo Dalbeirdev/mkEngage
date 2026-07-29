@@ -29,6 +29,7 @@ const CHANNEL_META: Record<string, { label: string; dot: string }> = {
   whatsapp: { label: "WhatsApp", dot: "bg-emerald-500" },
   telegram: { label: "Telegram", dot: "bg-sky-500" },
   messenger: { label: "Messenger", dot: "bg-blue-500" },
+  instagram: { label: "Instagram", dot: "bg-pink-500" },
 };
 
 function channelMeta(key: string | null | undefined) {
@@ -253,6 +254,7 @@ export default function ConversationsPage() {
             <option value="whatsapp">WhatsApp</option>
             <option value="telegram">Telegram</option>
             <option value="messenger">Messenger</option>
+            <option value="instagram">Instagram</option>
           </select>
           {departments.data !== undefined && departments.data.length > 0 && (
             <select

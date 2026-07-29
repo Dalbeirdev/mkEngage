@@ -64,7 +64,7 @@ final class InsightsService
             ->groupBy('channel_type')
             ->pluck('n', 'channel_type');
 
-        return collect(['web', 'whatsapp', 'telegram', 'messenger'])
+        return collect(['web', 'whatsapp', 'telegram', 'messenger', 'instagram'])
             ->mapWithKeys(fn (string $type): array => [$type => $this->toInt($rows[$type] ?? 0)])
             ->all();
     }

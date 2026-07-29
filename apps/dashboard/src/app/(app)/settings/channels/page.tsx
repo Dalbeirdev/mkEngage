@@ -6,12 +6,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { cardShell } from "@/components/metric-card";
 import { channelListSchema, channelSchema, type ChannelInfo } from "@/lib/api/schemas";
 
-type ChannelType = "whatsapp" | "telegram" | "messenger";
+type ChannelType = "whatsapp" | "telegram" | "messenger" | "instagram";
 
 const TYPE_META: Record<string, { label: string; tile: string; short: string }> = {
   whatsapp: { label: "WhatsApp", tile: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300", short: "WA" },
   telegram: { label: "Telegram", tile: "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300", short: "TG" },
   messenger: { label: "Messenger", tile: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300", short: "MS" },
+  instagram: { label: "Instagram", tile: "bg-pink-100 text-pink-700 dark:bg-pink-500/15 dark:text-pink-300", short: "IG" },
 };
 
 const inputCls =
@@ -89,6 +90,7 @@ export default function ChannelsPage() {
   const [wabaId, setWabaId] = useState("");
   const [accessToken, setAccessToken] = useState("");
   const [appSecret, setAppSecret] = useState("");
+  const [igId, setIgId] = useState("");
 
   const { data, isPending, isError } = useQuery({ queryKey: ["channels"], queryFn: fetchChannels });
   const invalidate = () => void queryClient.invalidateQueries({ queryKey: ["channels"] });
@@ -103,6 +105,7 @@ export default function ChannelsPage() {
       setAppSecret("");
       setBotToken("");
       setPageId("");
+      setIgId("");
       invalidate();
     },
   });
@@ -113,7 +116,9 @@ export default function ChannelsPage() {
       ? "Paste your @BotFather bot token. We register the webhook automatically."
       : type === "messenger"
         ? "Connect a Facebook Page with messaging enabled and admin access."
-        : "Connect your WhatsApp Cloud API number. Data is stored encrypted.";
+        : type === "instagram"
+          ? "Connect an Instagram professional account linked to a Facebook Page."
+          : "Connect your WhatsApp Cloud API number. Data is stored encrypted.";
 
   return (
     <div className="space-y-6">
@@ -130,7 +135,7 @@ export default function ChannelsPage() {
       <section className={`space-y-4 ${cardShell}`}>
         <h2 className="text-sm font-semibold">Connect a channel</h2>
         <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Channel type">
-          {(["whatsapp", "telegram", "messenger"] as const).map((option) => (
+          {(["whatsapp", "telegram", "messenger", "instagram"] as const).map((option) => (
             <button
               key={option}
               type="button"
@@ -162,7 +167,9 @@ export default function ChannelsPage() {
                 ? { type, name: name.trim(), bot_token: botToken.trim() }
                 : type === "messenger"
                   ? { type, name: name.trim(), page_id: pageId.trim(), access_token: accessToken.trim(), app_secret: appSecret.trim() }
-                  : {
+                  : type === "instagram"
+                    ? { type, name: name.trim(), ig_id: igId.trim() === "" ? null : igId.trim(), access_token: accessToken.trim(), app_secret: appSecret.trim() }
+                    : {
                       type,
                       name: name.trim(),
                       phone_number_id: phoneNumberId.trim(),
@@ -181,6 +188,13 @@ export default function ChannelsPage() {
             {type === "messenger" && (
               <>
                 <input type="text" required maxLength={64} value={pageId} onChange={(e) => setPageId(e.target.value)} placeholder="Page ID" aria-label="Page ID" className={inputCls} />
+                <input type="password" required maxLength={512} value={accessToken} onChange={(e) => setAccessToken(e.target.value)} placeholder="Page access token" aria-label="Page access token" className={inputCls} />
+                <input type="password" required maxLength={128} value={appSecret} onChange={(e) => setAppSecret(e.target.value)} placeholder="App secret" aria-label="App secret" className={inputCls} />
+              </>
+            )}
+            {type === "instagram" && (
+              <>
+                <input type="text" maxLength={64} value={igId} onChange={(e) => setIgId(e.target.value)} placeholder="Instagram account ID (optional)" aria-label="Instagram account ID" className={inputCls} />
                 <input type="password" required maxLength={512} value={accessToken} onChange={(e) => setAccessToken(e.target.value)} placeholder="Page access token" aria-label="Page access token" className={inputCls} />
                 <input type="password" required maxLength={128} value={appSecret} onChange={(e) => setAppSecret(e.target.value)} placeholder="App secret" aria-label="App secret" className={inputCls} />
               </>

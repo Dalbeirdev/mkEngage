@@ -23,6 +23,7 @@ function contactChannel(c: Contact): { label: string; dot: string } {
   const id = c.external_id ?? "";
   if (id.startsWith("tg:")) return { label: "Telegram", dot: "bg-sky-500" };
   if (id.startsWith("fb:")) return { label: "Messenger", dot: "bg-blue-500" };
+  if (id.startsWith("ig:")) return { label: "Instagram", dot: "bg-pink-500" };
   if (id.startsWith("wa:")) return { label: "WhatsApp", dot: "bg-emerald-500" };
   if (c.email !== null && c.email !== "") return { label: "Email", dot: "bg-violet-500" };
   return { label: "Website", dot: "bg-indigo-500" };

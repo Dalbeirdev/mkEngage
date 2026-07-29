@@ -50,7 +50,7 @@ final class DeliverChannelMessage implements ShouldQueue
                 ? Channel::query()->whereKey($conversation->channel_id)->where('status', 'active')->first()
                 : null;
 
-            if ($channel === null || ! in_array($channel->type, ['whatsapp', 'telegram', 'messenger'], true)) {
+            if ($channel === null || ! in_array($channel->type, ['whatsapp', 'telegram', 'messenger', 'instagram'], true)) {
                 return;
             }
 
@@ -73,7 +73,8 @@ final class DeliverChannelMessage implements ShouldQueue
                 if (! ($bodyOnlyFileName && trim($message->body) !== '' && $message->content_type === 'text')) {
                     $response = match ($channel->type) {
                         'telegram' => $this->sendTelegram($channel, $thread, $message),
-                        'messenger' => $this->sendMessenger($channel, $thread, $message),
+                        // Instagram shares the Messenger Send API (/me/messages).
+                        'messenger', 'instagram' => $this->sendMessenger($channel, $thread, $message),
                         default => $this->sendWhatsApp($channel, $thread, $message),
                     };
 
@@ -88,7 +89,7 @@ final class DeliverChannelMessage implements ShouldQueue
                         // (reactions, Phase 38) can map back to this message.
                         $providerId = match ($channel->type) {
                             'telegram' => $response->json('result.message_id'),
-                            'messenger' => $response->json('message_id'),
+                            'messenger', 'instagram' => $response->json('message_id'),
                             default => $response->json('messages.0.id'),
                         };
                         if (is_string($providerId) || is_int($providerId)) {
@@ -216,7 +217,7 @@ final class DeliverChannelMessage implements ShouldQueue
         match ($channel->type) {
             'telegram' => $this->telegramMedia($channel, $thread, $attachment, $bytes, $isImage),
             'whatsapp' => $this->whatsAppMedia($channel, $thread, $attachment, $bytes, $isImage),
-            'messenger' => $this->messengerMedia($channel, $thread, $attachment, $bytes, $isImage),
+            'messenger', 'instagram' => $this->messengerMedia($channel, $thread, $attachment, $bytes, $isImage),
             default => null,
         };
     }
