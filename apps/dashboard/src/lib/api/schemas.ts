@@ -101,6 +101,7 @@ export const profileSchema = z.object({
   organization_id: z.uuid(),
   status: z.string(),
   role: z.string().nullable(),
+  two_factor_enabled: z.boolean(),
   active_sessions: z.number().int(),
   created_at: z.string().nullable(),
   activity: z.array(z.object({ action: z.string(), at: z.string().nullable() })),

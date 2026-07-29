@@ -21,6 +21,7 @@ use App\Http\Controllers\Agent\LiveVisitorController;
 use App\Http\Controllers\Agent\ModerationController;
 use App\Http\Controllers\Agent\OrganizationLogoController;
 use App\Http\Controllers\Agent\ProfileController;
+use App\Http\Controllers\Agent\TwoFactorController;
 use App\Http\Controllers\Agent\WidgetSettingsController;
 use App\Http\Controllers\AttachmentStreamController;
 use App\Http\Controllers\Auth\IssueApiTokenController;
@@ -80,6 +81,12 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
         Route::get('/profile', [ProfileController::class, 'show']);
         Route::patch('/profile', [ProfileController::class, 'update']);
         Route::post('/profile/password', [ProfileController::class, 'changePassword']);
+
+        // Two-factor auth (TOTP): enroll → confirm, plus recovery + disable.
+        Route::post('/profile/2fa/enroll', [TwoFactorController::class, 'enroll']);
+        Route::post('/profile/2fa/confirm', [TwoFactorController::class, 'confirm']);
+        Route::post('/profile/2fa/recovery-codes', [TwoFactorController::class, 'recoveryCodes']);
+        Route::delete('/profile/2fa', [TwoFactorController::class, 'disable']);
 
         // Short-lived gateway socket token (ADR-002); identity only.
         Route::post('/gateway-token', function (Request $request, GatewayTokenIssuer $issuer) {

@@ -34,6 +34,7 @@ const ALLOWED = [
   /^departments(\/[0-9a-f-]{36})?(\/members)?$/,
   /^users$/,
   /^profile(\/password)?$/,
+  /^profile\/2fa(\/(enroll|confirm|recovery-codes))?$/,
   /^gateway-token$/,
   /^knowledge\/documents(\/[0-9a-f-]{36})?$/,
 ];

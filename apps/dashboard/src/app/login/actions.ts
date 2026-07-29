@@ -11,20 +11,27 @@ const loginInputSchema = z.object({
   organization: z.string().min(1).max(100),
   email: z.email().max(255),
   password: z.string().min(1).max(1024),
+  code: z.string().max(10).optional(),
 });
 
 export type LoginState = {
   error: string | null;
+  /** Set once the account requires a TOTP code — reveals the code field. */
+  twoFactorRequired?: boolean;
 };
 
 export async function login(
   _previous: LoginState,
   formData: FormData,
 ): Promise<LoginState> {
+  const codeRaw = formData.get("code");
+  const code = typeof codeRaw === "string" && codeRaw.trim() !== "" ? codeRaw.trim() : undefined;
+
   const parsed = loginInputSchema.safeParse({
     organization: formData.get("organization"),
     email: formData.get("email"),
     password: formData.get("password"),
+    code,
   });
 
   if (!parsed.success) {
@@ -45,9 +52,26 @@ export async function login(
       return { error: "Too many attempts. Try again in a minute." };
     }
 
+    const json: unknown = await response.json().catch(() => ({}));
+
+    // 2FA-enabled account: reveal the code field and prompt (the password was
+    // correct, so this is not a credential error).
+    if (
+      response.status === 422 &&
+      typeof json === "object" &&
+      json !== null &&
+      (json as { two_factor_required?: unknown }).two_factor_required === true
+    ) {
+      const message =
+        typeof (json as { message?: unknown }).message === "string"
+          ? (json as { message: string }).message
+          : "Enter the code from your authenticator app.";
+      return { error: code !== undefined ? message : null, twoFactorRequired: true };
+    }
+
     // Identical message regardless of which credential was wrong — the
     // control plane already guarantees this; do not re-derive detail here.
-    const problem = problemSchema.safeParse(await response.json().catch(() => ({})));
+    const problem = problemSchema.safeParse(json);
     return {
       error:
         problem.success && problem.data.message

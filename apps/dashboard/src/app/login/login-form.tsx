@@ -72,6 +72,25 @@ export function LoginForm() {
         />
       </div>
 
+      {state.twoFactorRequired === true && (
+        <div className="space-y-1">
+          <label htmlFor="code" className="block text-sm font-medium">
+            {t("twoFactorLabel")}
+          </label>
+          <input
+            id="code"
+            name="code"
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            autoFocus
+            maxLength={10}
+            className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm tracking-widest outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-900"
+          />
+          <p className="text-xs text-zinc-500">{t("twoFactorHint")}</p>
+        </div>
+      )}
+
       <button
         type="submit"
         disabled={pending}

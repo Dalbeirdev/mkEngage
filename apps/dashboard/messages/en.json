@@ -5,7 +5,9 @@
     "email": "Email",
     "password": "Password",
     "submit": "Sign in",
-    "submitting": "Signing in…"
+    "submitting": "Signing in…",
+    "twoFactorLabel": "Authentication code",
+    "twoFactorHint": "Enter the 6-digit code from your authenticator app (or a recovery code)."
   },
   "shell": {
     "dashboard": "Dashboard",

@@ -12,6 +12,7 @@ import {
   IconStar,
 } from "@/components/icons";
 import { ProfilePreferences } from "@/components/profile-preferences";
+import { TwoFactor } from "@/components/two-factor";
 import { profileSchema, type Profile } from "@/lib/api/schemas";
 
 const cardShell =
@@ -224,12 +225,7 @@ export default function ProfilePage() {
                   </form>
                 )}
               </li>
-              <li className="flex items-center gap-3 px-5 py-3.5">
-                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-zinc-100 text-zinc-500 dark:bg-zinc-800" aria-hidden>🛡️</span>
-                <span className="text-sm font-medium">Two-Factor Authentication</span>
-                <span className="ms-auto text-sm text-zinc-400">Not enabled</span>
-                <span className="rounded-lg border border-dashed border-zinc-300 px-3 py-1.5 text-xs text-zinc-400 dark:border-zinc-700" title="Coming soon">Coming soon</span>
-              </li>
+              <TwoFactor enabled={data.two_factor_enabled} />
               <li className="flex items-center gap-3 px-5 py-3.5">
                 <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-zinc-100 text-zinc-500 dark:bg-zinc-800" aria-hidden>💻</span>
                 <span className="text-sm font-medium">Active Sessions</span>

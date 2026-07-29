@@ -100,6 +100,7 @@ final class ProfileController extends Controller
             'organization_id' => $user->organization_id,
             'status' => $user->status,
             'role' => $user->roles()->first()?->name,
+            'two_factor_enabled' => $user->two_factor_confirmed_at !== null,
             'active_sessions' => $user->tokens()->count(),
             'created_at' => $user->created_at,
             'activity' => $activity,
