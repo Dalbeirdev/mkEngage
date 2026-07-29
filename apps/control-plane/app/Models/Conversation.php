@@ -48,6 +48,7 @@ final class Conversation extends Model
             'csat_rated_at' => 'datetime',
             'tags' => 'array',
             'flow_state' => 'array',
+            'is_spam' => 'boolean',
         ];
     }
 

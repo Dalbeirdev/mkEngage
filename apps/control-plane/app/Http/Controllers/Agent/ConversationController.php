@@ -35,6 +35,7 @@ final class ConversationController extends Controller
             'tag' => ['sometimes', 'string', 'max:30'],
             'priority' => ['sometimes', 'in:low,normal,high,urgent'],
             'channel' => ['sometimes', 'in:web,whatsapp,telegram,messenger,instagram'],
+            'spam' => ['sometimes', 'in:only,include'],
             'search' => ['sometimes', 'string', 'max:100'],
             'limit' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ]);
@@ -55,6 +56,15 @@ final class ConversationController extends Controller
             ->when(
                 isset($validated['priority']),
                 fn ($query) => $query->where('priority', $validated['priority']),
+            )
+            // Spam is hidden from the inbox by default: "only" shows just spam,
+            // "include" shows everything, absent = exclude spam.
+            ->when(
+                ($validated['spam'] ?? null) === 'only',
+                fn ($query) => $query->where('is_spam', true),
+                fn ($query) => ($validated['spam'] ?? null) === 'include'
+                    ? $query
+                    : $query->where('is_spam', false),
             )
             // Channel filter (Phase 33): "web" means no channel row.
             ->when(($validated['channel'] ?? null) === 'web', fn ($query) => $query->whereNull('channel_id'))
@@ -208,6 +218,7 @@ final class ConversationController extends Controller
         $validated = $request->validate([
             'status' => ['sometimes', 'in:open,pending,closed'],
             'priority' => ['sometimes', 'in:low,normal,high,urgent'],
+            'is_spam' => ['sometimes', 'boolean'],
             'assigned_agent_id' => ['sometimes', 'nullable', 'uuid'],
             'department_id' => ['sometimes', 'uuid'],
             'tags' => ['sometimes', 'array', 'max:10'],
@@ -234,6 +245,10 @@ final class ConversationController extends Controller
 
         if (array_key_exists('priority', $validated)) {
             $conversation->priority = $validated['priority'];
+        }
+
+        if (array_key_exists('is_spam', $validated)) {
+            $conversation->is_spam = (bool) $validated['is_spam'];
         }
 
         if (array_key_exists('tags', $validated)) {
@@ -386,6 +401,7 @@ final class ConversationController extends Controller
             'department_name' => $conversation->department?->name,
             'last_sequence' => $conversation->last_sequence,
             'priority' => $conversation->priority ?? 'normal',
+            'is_spam' => (bool) $conversation->is_spam,
             'source_url' => $conversation->source_url,
             'channel_type' => $conversation->channel?->type,
             'csat_rating' => $conversation->csat_rating,

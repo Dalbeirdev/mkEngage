@@ -109,6 +109,16 @@ async function setPriority(conversationId: string, priority: string) {
   return conversationSchema.parse(await response.json());
 }
 
+async function setSpam(conversationId: string, isSpam: boolean) {
+  const response = await fetch(`/api/cp/conversations/${conversationId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ is_spam: isSpam }),
+  });
+  if (!response.ok) throw new Error(`Spam change failed (${response.status})`);
+  return conversationSchema.parse(await response.json());
+}
+
 async function fetchNotes(conversationId: string) {
   const response = await fetch(`/api/cp/conversations/${conversationId}/notes`, {
     cache: "no-store",
@@ -257,6 +267,14 @@ export default function ConversationThreadPage({
 
   const priorityMutation = useMutation({
     mutationFn: (priority: string) => setPriority(id, priority),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["conversation", id, "meta"] });
+      void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    },
+  });
+
+  const spamMutation = useMutation({
+    mutationFn: (isSpam: boolean) => setSpam(id, isSpam),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["conversation", id, "meta"] });
       void queryClient.invalidateQueries({ queryKey: ["conversations"] });
@@ -552,6 +570,14 @@ export default function ConversationThreadPage({
             className={btnSmall}
           >
             Transfer
+          </button>
+          <button
+            type="button"
+            disabled={spamMutation.isPending}
+            onClick={() => spamMutation.mutate(!(conversation?.is_spam ?? false))}
+            className={btnSmall}
+          >
+            {conversation?.is_spam === true ? "Not spam" : "Mark spam"}
           </button>
           {conversation?.status === "closed" ? (
             <button

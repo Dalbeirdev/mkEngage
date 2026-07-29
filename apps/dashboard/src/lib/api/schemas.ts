@@ -112,6 +112,7 @@ export const conversationSchema = z.object({
   conversation_id: z.uuid(),
   status: z.enum(["open", "pending", "closed"]),
   priority: z.enum(["low", "normal", "high", "urgent"]).catch("normal"),
+  is_spam: z.boolean().catch(false),
   visitor_id: z.uuid().nullable(),
   visitor_name: z.string().nullable(),
   visitor_location: z.string().nullable().optional(),

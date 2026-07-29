@@ -22,7 +22,7 @@ import {
 
 const PAGE_SIZE = 15;
 
-type Tab = "all" | "open" | "pending" | "closed" | "unassigned";
+type Tab = "all" | "open" | "pending" | "closed" | "unassigned" | "spam";
 
 const CHANNEL_META: Record<string, { label: string; dot: string }> = {
   web: { label: "Website", dot: "bg-indigo-500" },
@@ -60,11 +60,12 @@ function convName(c: Conversation): string {
   return c.contact_name ?? c.visitor_name ?? "Anonymous visitor";
 }
 
-async function fetchConversations(departmentId: string, channel: string, search: string, priority: string) {
+async function fetchConversations(departmentId: string, channel: string, search: string, priority: string, spamOnly: boolean) {
   const params = new URLSearchParams({ status: "all", limit: "100" });
   if (departmentId !== "all") params.set("department_id", departmentId);
   if (channel !== "all") params.set("channel", channel);
   if (priority !== "all") params.set("priority", priority);
+  if (spamOnly) params.set("spam", "only");
   if (search.trim() !== "") params.set("search", search.trim());
   const res = await fetch(`/api/cp/conversations?${params.toString()}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`Failed to load conversations (${res.status})`);
@@ -95,9 +96,10 @@ export default function ConversationsPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
+  const spamView = tab === "spam";
   const { data, isPending, isError } = useQuery({
-    queryKey: ["conversations", departmentId, channel, priority, debouncedSearch],
-    queryFn: () => fetchConversations(departmentId, channel, debouncedSearch, priority),
+    queryKey: ["conversations", departmentId, channel, priority, spamView, debouncedSearch],
+    queryFn: () => fetchConversations(departmentId, channel, debouncedSearch, priority, spamView),
     refetchInterval: 5000,
     refetchIntervalInBackground: true,
   });
@@ -124,7 +126,8 @@ export default function ConversationsPage() {
   }, [rows]);
 
   const filtered = useMemo(() => {
-    if (tab === "all") return rows;
+    // In the Spam view the server already returned spam-only rows.
+    if (tab === "all" || tab === "spam") return rows;
     if (tab === "unassigned") return rows.filter((r) => r.assigned_agent_id === null);
     return rows.filter((r) => r.status === tab);
   }, [rows, tab]);
@@ -167,12 +170,14 @@ export default function ConversationsPage() {
     URL.revokeObjectURL(url);
   }
 
-  const tabs: { key: Tab; label: string; count: number }[] = [
-    { key: "all", label: "All", count: counts.all },
-    { key: "open", label: "Open", count: counts.open },
-    { key: "pending", label: "Pending", count: counts.pending },
-    { key: "closed", label: "Closed", count: counts.closed },
-    { key: "unassigned", label: "Unassigned", count: counts.unassigned },
+  const tabs: { key: Tab; label: string; count: number | null }[] = [
+    { key: "all", label: "All", count: spamView ? null : counts.all },
+    { key: "open", label: "Open", count: spamView ? null : counts.open },
+    { key: "pending", label: "Pending", count: spamView ? null : counts.pending },
+    { key: "closed", label: "Closed", count: spamView ? null : counts.closed },
+    { key: "unassigned", label: "Unassigned", count: spamView ? null : counts.unassigned },
+    // Spam count is only known while the Spam view is open (server-scoped).
+    { key: "spam", label: "Spam", count: spamView ? counts.all : null },
   ];
 
   return (
@@ -233,7 +238,7 @@ export default function ConversationsPage() {
               }`}
             >
               {tb.label}
-              <span className="ms-1.5 text-xs text-zinc-400">{tb.count}</span>
+              {tb.count !== null && <span className="ms-1.5 text-xs text-zinc-400">{tb.count}</span>}
             </button>
           ))}
         </div>
