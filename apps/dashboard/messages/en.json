@@ -26,7 +26,8 @@
     "searchPlaceholder": "Search anything...",
     "notifications": "Notifications",
     "upsellTitle": "Let AI handle more conversations!",
-    "upsellCta": "Explore AI"
+    "upsellCta": "Explore AI",
+    "moderation": "Moderation"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -381,5 +382,34 @@
     "noWebhooks": "No webhook endpoints yet.",
     "sendTest": "Send test",
     "remove": "Remove"
+  },
+  "moderation": {
+    "title": "Moderation",
+    "subtitle": "Block abusive visitors and filter unwanted language across every channel.",
+    "profanityTitle": "Profanity filter",
+    "profanityHelp": "Matched words in visitor messages are masked before they reach agents. Whole-word, case-insensitive.",
+    "profanityEnable": "Enable profanity filter",
+    "maskChar": "Mask character",
+    "termsLabel": "Blocked words",
+    "termsHelp": "One word per line. Stored lowercased; duplicates removed.",
+    "termsPlaceholder": "badword\nanotherword",
+    "termCount": "{count} words",
+    "save": "Save filter",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "saveError": "Could not save the filter. Please try again.",
+    "banTitle": "Banned IP addresses",
+    "banHelp": "A banned IP is refused a new chat session on your widget. Supports IPv4 and IPv6.",
+    "banIpLabel": "IP address",
+    "banIpPlaceholder": "203.0.113.42",
+    "banReasonPlaceholder": "Reason (optional)",
+    "banAdd": "Ban IP",
+    "banAdding": "Banning…",
+    "banError": "Could not ban that address — check the IP is valid.",
+    "banEmpty": "No IP addresses are banned.",
+    "banRemove": "Unban",
+    "bannedOn": "Banned {date}",
+    "loading": "Loading…",
+    "error": "Could not load moderation settings."
   }
 }

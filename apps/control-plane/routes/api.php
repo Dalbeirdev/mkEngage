@@ -18,6 +18,7 @@ use App\Http\Controllers\Agent\DeveloperController;
 use App\Http\Controllers\Agent\InsightsController;
 use App\Http\Controllers\Agent\KnowledgeController;
 use App\Http\Controllers\Agent\LiveVisitorController;
+use App\Http\Controllers\Agent\ModerationController;
 use App\Http\Controllers\Agent\OrganizationLogoController;
 use App\Http\Controllers\Agent\ProfileController;
 use App\Http\Controllers\Agent\WidgetSettingsController;
@@ -128,6 +129,12 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
         Route::get('/organization/widget-settings', [WidgetSettingsController::class, 'show']);
         Route::put('/organization/widget-settings', [WidgetSettingsController::class, 'update']);
         Route::post('/organization/widget-settings/rotate-secret', [WidgetSettingsController::class, 'rotateSecret']);
+
+        // Moderation (abuse controls): profanity filter config + IP ban list.
+        Route::get('/moderation', [ModerationController::class, 'show']);
+        Route::put('/moderation', [ModerationController::class, 'update']);
+        Route::post('/moderation/ip-bans', [ModerationController::class, 'storeBan']);
+        Route::delete('/moderation/ip-bans/{ipBan}', [ModerationController::class, 'destroyBan']);
 
         Route::get('/knowledge/documents', [KnowledgeController::class, 'index']);
         Route::post('/knowledge/documents', [KnowledgeController::class, 'store']);

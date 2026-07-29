@@ -15,6 +15,7 @@ import {
   IconDepartments,
   IconDevelopers,
   IconKnowledge,
+  IconModeration,
   IconProfile,
   IconSearch,
   IconSparkles,
@@ -60,6 +61,7 @@ export default async function AppLayout({
     { href: "/settings/canned", label: t("cannedReplies"), icon: <IconCanned /> },
   ];
   const settingsNav = [
+    { href: "/settings/moderation", label: t("moderation"), icon: <IconModeration /> },
     { href: "/settings/developers", label: t("developers"), icon: <IconDevelopers /> },
     { href: "/settings/profile", label: t("profile"), icon: <IconProfile /> },
   ];

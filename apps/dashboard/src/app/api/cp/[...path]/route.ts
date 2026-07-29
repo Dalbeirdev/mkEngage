@@ -29,6 +29,8 @@ const ALLOWED = [
   /^chatbots(\/[0-9a-f-]{36})?(\/flow)?$/,
   /^organization\/widget-settings(\/rotate-secret)?$/,
   /^organization\/logo$/,
+  /^moderation$/,
+  /^moderation\/ip-bans(\/[0-9a-f-]{36})?$/,
   /^departments(\/[0-9a-f-]{36})?(\/members)?$/,
   /^users$/,
   /^profile(\/password)?$/,

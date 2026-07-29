@@ -103,6 +103,13 @@ export const IconDevelopers = () => (
   </svg>
 );
 
+export const IconModeration = () => (
+  <svg {...base}>
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    <path d="M9 12l2 2 4-4" />
+  </svg>
+);
+
 export const IconSettings = () => (
   <svg {...base}>
     <circle cx="12" cy="12" r="3" />

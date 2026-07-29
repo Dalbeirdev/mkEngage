@@ -9,6 +9,7 @@ use App\Models\Organization;
 use App\Models\Visitor;
 use App\Services\BusinessHours;
 use App\Services\GeoLocator;
+use App\Services\ModerationService;
 use App\Tenancy\Tenancy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,7 +26,7 @@ use Illuminate\Support\Facades\RateLimiter;
  */
 final class WidgetSessionController extends Controller
 {
-    public function __invoke(Request $request, Tenancy $tenancy, BusinessHours $businessHours, GeoLocator $geo): JsonResponse
+    public function __invoke(Request $request, Tenancy $tenancy, BusinessHours $businessHours, GeoLocator $geo, ModerationService $moderation): JsonResponse
     {
         $validated = $request->validate([
             'site_key' => ['required', 'string', 'max:40'],
@@ -49,9 +50,15 @@ final class WidgetSessionController extends Controller
 
         // Coarse location from the edge proxy's geo headers (no IP stored).
         $location = $geo->locate($request);
+        $ip = (string) $request->ip();
 
         /** @var array{visitor_id: string, token: string} $session */
-        $session = $tenancy->run($organization->id, function () use ($organization, $validated, $location): array {
+        $session = $tenancy->run($organization->id, function () use ($organization, $validated, $location, $ip, $moderation): array {
+            // Moderation: a banned IP is refused before any visitor identity or
+            // token exists — the ban list is org-scoped, so this check needs the
+            // tenant context established by run().
+            abort_if($moderation->isIpBanned($ip), 403, 'Access denied.');
+
             $visitor = Visitor::query()->create([
                 'consent_state' => $validated['consent_state'] ?? 'unknown',
                 'last_seen_at' => now(),

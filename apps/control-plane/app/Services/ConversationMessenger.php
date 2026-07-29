@@ -30,6 +30,7 @@ final class ConversationMessenger
     public function __construct(
         private readonly GatewayBroadcaster $broadcaster,
         private readonly EventPublisher $events,
+        private readonly ModerationService $moderation,
     ) {}
 
     /**
@@ -57,6 +58,13 @@ final class ConversationMessenger
             // Retry of an already-persisted send: the original message (and
             // its original attachment links) wins — new ids are ignored.
             return ['message' => $existing->load('attachments'), 'duplicate' => true];
+        }
+
+        // Moderation: mask configured profanity in visitor-authored text before
+        // it is persisted, so the stored body, previews, outbox event and
+        // webhook payload all carry the filtered text (agents/bots pass through).
+        if ($senderType === 'visitor') {
+            $body = $this->moderation->maskProfanity($body);
         }
 
         DB::table('conversations')
