@@ -38,6 +38,12 @@ final class ChannelController extends Controller
             // Email channel: the address replies are sent from.
             'from_address' => ['required_if:type,email', 'email', 'max:255'],
             'from_name' => ['sometimes', 'nullable', 'string', 'max:100'],
+            // Optional per-org SMTP (else the global mailer is used).
+            'smtp_host' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'smtp_port' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:65535'],
+            'smtp_username' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'smtp_password' => ['sometimes', 'nullable', 'string', 'max:512'],
+            'smtp_encryption' => ['sometimes', 'nullable', 'in:tls,ssl'],
             // WhatsApp Cloud API credentials
             'phone_number_id' => ['required_if:type,whatsapp', 'string', 'max:64'],
             'waba_id' => ['sometimes', 'nullable', 'string', 'max:64'],
@@ -66,6 +72,11 @@ final class ChannelController extends Controller
             'email' => [
                 'from_address' => $validated['from_address'],
                 'from_name' => $validated['from_name'] ?? null,
+                'smtp_host' => $validated['smtp_host'] ?? null,
+                'smtp_port' => $validated['smtp_port'] ?? null,
+                'smtp_username' => $validated['smtp_username'] ?? null,
+                'smtp_password' => $validated['smtp_password'] ?? null,
+                'smtp_encryption' => $validated['smtp_encryption'] ?? null,
             ],
             default => [
                 'phone_number_id' => $validated['phone_number_id'],

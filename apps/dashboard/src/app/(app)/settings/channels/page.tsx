@@ -94,6 +94,11 @@ export default function ChannelsPage() {
   const [igId, setIgId] = useState("");
   const [fromAddress, setFromAddress] = useState("");
   const [fromName, setFromName] = useState("");
+  const [smtpHost, setSmtpHost] = useState("");
+  const [smtpPort, setSmtpPort] = useState("");
+  const [smtpUser, setSmtpUser] = useState("");
+  const [smtpPass, setSmtpPass] = useState("");
+  const [smtpEnc, setSmtpEnc] = useState("tls");
 
   const { data, isPending, isError } = useQuery({ queryKey: ["channels"], queryFn: fetchChannels });
   const invalidate = () => void queryClient.invalidateQueries({ queryKey: ["channels"] });
@@ -111,6 +116,10 @@ export default function ChannelsPage() {
       setIgId("");
       setFromAddress("");
       setFromName("");
+      setSmtpHost("");
+      setSmtpPort("");
+      setSmtpUser("");
+      setSmtpPass("");
       invalidate();
     },
   });
@@ -177,7 +186,21 @@ export default function ChannelsPage() {
                   : type === "instagram"
                     ? { type, name: name.trim(), ig_id: igId.trim() === "" ? null : igId.trim(), access_token: accessToken.trim(), app_secret: appSecret.trim() }
                     : type === "email"
-                      ? { type, name: name.trim(), from_address: fromAddress.trim(), from_name: fromName.trim() === "" ? null : fromName.trim() }
+                      ? {
+                          type,
+                          name: name.trim(),
+                          from_address: fromAddress.trim(),
+                          from_name: fromName.trim() === "" ? null : fromName.trim(),
+                          ...(smtpHost.trim() !== ""
+                            ? {
+                                smtp_host: smtpHost.trim(),
+                                smtp_port: smtpPort.trim() === "" ? 587 : Number(smtpPort.trim()),
+                                smtp_username: smtpUser.trim() === "" ? null : smtpUser.trim(),
+                                smtp_password: smtpPass.trim() === "" ? null : smtpPass.trim(),
+                                smtp_encryption: smtpEnc,
+                              }
+                            : {}),
+                        }
                       : {
                       type,
                       name: name.trim(),
@@ -205,6 +228,17 @@ export default function ChannelsPage() {
               <>
                 <input type="email" required maxLength={255} value={fromAddress} onChange={(e) => setFromAddress(e.target.value)} placeholder="From address (e.g. support@yourco.com)" aria-label="From address" className={inputCls} />
                 <input type="text" maxLength={100} value={fromName} onChange={(e) => setFromName(e.target.value)} placeholder="From name (optional)" aria-label="From name" className={inputCls} />
+                <div className="sm:col-span-2 mt-1 text-xs font-medium text-zinc-500">
+                  Own SMTP (optional) — leave blank to send via the platform mailer
+                </div>
+                <input type="text" maxLength={255} value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} placeholder="SMTP host (e.g. smtp.postmarkapp.com)" aria-label="SMTP host" className={inputCls} />
+                <input type="number" min={1} max={65535} value={smtpPort} onChange={(e) => setSmtpPort(e.target.value)} placeholder="Port (587)" aria-label="SMTP port" className={inputCls} />
+                <input type="text" maxLength={255} value={smtpUser} onChange={(e) => setSmtpUser(e.target.value)} placeholder="SMTP username" aria-label="SMTP username" autoComplete="off" className={inputCls} />
+                <input type="password" maxLength={512} value={smtpPass} onChange={(e) => setSmtpPass(e.target.value)} placeholder="SMTP password" aria-label="SMTP password" autoComplete="new-password" className={inputCls} />
+                <select value={smtpEnc} onChange={(e) => setSmtpEnc(e.target.value)} aria-label="SMTP encryption" className={inputCls}>
+                  <option value="tls">TLS</option>
+                  <option value="ssl">SSL</option>
+                </select>
               </>
             )}
             {type === "instagram" && (

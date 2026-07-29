@@ -209,19 +209,76 @@ final class DeliverChannelMessage implements ShouldQueue
             );
     }
 
-    /** Email reply via the configured mailer (SMTP in prod, log/array in dev). */
+    /**
+     * Email reply. When the channel carries its own SMTP credentials the send
+     * goes through a per-org mailer (multi-tenant deliverability); otherwise it
+     * falls back to the app's global mailer (MAIL_* env — SMTP in prod, log in
+     * dev).
+     */
     private function deliverEmail(Channel $channel, string $to, Message $message): void
     {
         $from = $channel->configString('from_address');
         $fromName = $channel->configString('from_name');
         $body = $this->renderBody($message);
 
-        Mail::raw($body, function (\Illuminate\Mail\Message $mail) use ($to, $from, $fromName): void {
+        $callback = function (\Illuminate\Mail\Message $mail) use ($to, $from, $fromName): void {
             $mail->to($to)->subject('Re: your conversation');
             if ($from !== '') {
                 $mail->from($from, $fromName !== '' ? $fromName : null);
             }
-        });
+        };
+
+        $smtp = self::emailSmtpConfig($channel);
+        if ($smtp === null) {
+            Mail::raw($body, $callback);
+
+            return;
+        }
+
+        // Per-org SMTP: register a mailer under a channel-unique name and purge
+        // any cached instance so the just-set config always wins.
+        $name = 'channel-'.$channel->id;
+        config()->set("mail.mailers.{$name}", $smtp);
+        Mail::purge($name);
+        Mail::mailer($name)->raw($body, $callback);
+    }
+
+    /**
+     * Build the SMTP mailer config for an email channel from its stored (and
+     * encrypted) credentials, or null when the channel has no SMTP of its own.
+     *
+     * @return array<string, mixed>|null
+     */
+    public static function emailSmtpConfig(Channel $channel): ?array
+    {
+        $host = $channel->configString('smtp_host');
+        if ($host === '') {
+            return null;
+        }
+
+        $encryption = $channel->configString('smtp_encryption');
+        $username = $channel->configString('smtp_username');
+        $password = $channel->configString('smtp_password');
+
+        // Port may be stored as an int or a numeric string — read it robustly.
+        $config = is_array($channel->config) ? $channel->config : [];
+        $rawPort = $config['smtp_port'] ?? null;
+        $port = 587;
+        if (is_int($rawPort)) {
+            $port = $rawPort;
+        } elseif (is_string($rawPort) && ctype_digit($rawPort)) {
+            $port = (int) $rawPort;
+        }
+
+        return [
+            'transport' => 'smtp',
+            'host' => $host,
+            'port' => $port,
+            'encryption' => $encryption !== '' ? $encryption : null,
+            'username' => $username !== '' ? $username : null,
+            'password' => $password !== '' ? $password : null,
+            'timeout' => 15,
+        ];
     }
 
     /** Deliver one clean attachment as native media to the channel (Phase 37). */

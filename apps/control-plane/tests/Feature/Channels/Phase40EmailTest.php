@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Jobs\DeliverChannelMessage;
 use App\Models\Channel;
 use App\Models\Contact;
 use App\Models\Conversation;
@@ -91,6 +92,61 @@ it('ignores a payload with no usable sender address', function (): void {
 
     app(Tenancy::class)->run($org->id, function () use ($channel): void {
         expect(Conversation::query()->where('channel_id', $channel->id)->count())->toBe(0);
+    });
+});
+
+it('uses the global mailer when the channel has no SMTP of its own', function (): void {
+    [$org, $channel] = emailChannel();
+
+    app(Tenancy::class)->run($org->id, function () use ($channel): void {
+        expect(DeliverChannelMessage::emailSmtpConfig($channel))->toBeNull();
+    });
+});
+
+it('builds a per-org SMTP mailer from the channel credentials', function (): void {
+    $org = Organization::factory()->create();
+    $channel = app(Tenancy::class)->run($org->id, fn (): Channel => Channel::query()->create([
+        'organization_id' => $org->id, 'type' => 'email', 'name' => 'Own SMTP', 'status' => 'active',
+        'config' => [
+            'from_address' => 'help@acme.test',
+            'smtp_host' => 'smtp.acme.test', 'smtp_port' => 2525,
+            'smtp_username' => 'apikey', 'smtp_password' => 's3cret', 'smtp_encryption' => 'tls',
+        ],
+        'webhook_verify_token' => 'x',
+    ]));
+
+    $cfg = app(Tenancy::class)->run($org->id, fn () => DeliverChannelMessage::emailSmtpConfig($channel));
+
+    // Read back through the encrypted cast, so this also proves the round-trip.
+    expect($cfg)->toMatchArray([
+        'transport' => 'smtp', 'host' => 'smtp.acme.test', 'port' => 2525,
+        'encryption' => 'tls', 'username' => 'apikey', 'password' => 's3cret',
+    ]);
+});
+
+it('stores per-org SMTP on channel creation and never returns it', function (): void {
+    $org = Organization::factory()->create();
+    app(Tenancy::class)->run($org->id, function () use ($org): void {
+        User::factory()->create([
+            'organization_id' => $org->id, 'email' => 'agent@smtp.test', 'password' => Hash::make('password'),
+        ]);
+    });
+    auth()->forgetGuards();
+    $token = test()->postJson('/api/auth/token', [
+        'organization' => $org->slug, 'email' => 'agent@smtp.test',
+        'password' => 'password', 'device_name' => 'pest',
+    ])->assertCreated()->json('token');
+
+    $id = test()->withToken($token)->postJson('/api/channels', [
+        'type' => 'email', 'name' => 'Custom SMTP', 'from_address' => 'support@acme.test',
+        'smtp_host' => 'smtp.acme.test', 'smtp_port' => 587,
+        'smtp_username' => 'u', 'smtp_password' => 'p', 'smtp_encryption' => 'tls',
+    ])->assertCreated()->assertJsonMissingPath('config')->json('channel_id');
+
+    app(Tenancy::class)->run($org->id, function () use ($id): void {
+        $channel = Channel::query()->findOrFail($id);
+        expect($channel->configString('smtp_host'))->toBe('smtp.acme.test')
+            ->and($channel->configString('smtp_password'))->toBe('p');
     });
 });
 
