@@ -14,6 +14,7 @@ import {
   messageListSchema,
   noteListSchema,
   noteSchema,
+  userListSchema,
   type Attachment,
 } from "@/lib/api/schemas";
 import { flashTitle, playPing } from "@/lib/notify";
@@ -69,6 +70,22 @@ async function assignConversation(conversationId: string, assignee: "me" | "auto
     body: JSON.stringify({ assignee }),
   });
   if (!response.ok) throw new Error(`Assign failed (${response.status})`);
+  return conversationSchema.parse(await response.json());
+}
+
+async function fetchAgents() {
+  const response = await fetch("/api/cp/users", { cache: "no-store" });
+  if (!response.ok) throw new Error(`Failed to load agents (${response.status})`);
+  return userListSchema.parse(await response.json()).data;
+}
+
+async function transferConversation(conversationId: string, toAgentId: string, note: string) {
+  const response = await fetch(`/api/cp/conversations/${conversationId}/transfer`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ to_agent_id: toAgentId, note: note.trim() === "" ? null : note.trim() }),
+  });
+  if (!response.ok) throw new Error(`Transfer failed (${response.status})`);
   return conversationSchema.parse(await response.json());
 }
 
@@ -224,6 +241,24 @@ export default function ConversationThreadPage({
     mutationFn: (status: "open" | "closed") => setStatus(id, status),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["conversation", id, "meta"] });
+      void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    },
+  });
+
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferTo, setTransferTo] = useState("");
+  const [transferNote, setTransferNote] = useState("");
+
+  const agents = useQuery({ queryKey: ["agents"], queryFn: fetchAgents, enabled: transferOpen });
+
+  const transferMutation = useMutation({
+    mutationFn: () => transferConversation(id, transferTo, transferNote),
+    onSuccess: () => {
+      setTransferOpen(false);
+      setTransferTo("");
+      setTransferNote("");
+      void queryClient.invalidateQueries({ queryKey: ["conversation", id, "meta"] });
+      void queryClient.invalidateQueries({ queryKey: ["conversation", id, "notes"] });
       void queryClient.invalidateQueries({ queryKey: ["conversations"] });
     },
   });
@@ -480,6 +515,13 @@ export default function ConversationThreadPage({
             className={btnSmall}
           >
             {t("assignToMe")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setTransferOpen(true)}
+            className={btnSmall}
+          >
+            Transfer
           </button>
           {conversation?.status === "closed" ? (
             <button
@@ -904,6 +946,62 @@ export default function ConversationThreadPage({
           </dl>
         </section>
       </aside>
+
+      {transferOpen && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Transfer conversation">
+          <button type="button" aria-label="Close" className="absolute inset-0 bg-black/30" onClick={() => setTransferOpen(false)} />
+          <div className="relative w-full max-w-sm space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-900">
+            <div>
+              <h2 className="text-lg font-bold">Transfer to a colleague</h2>
+              <p className="text-sm text-zinc-500">Reassign this conversation and leave a handoff note.</p>
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="transfer-agent" className="block text-sm font-medium">Agent</label>
+              <select
+                id="transfer-agent"
+                value={transferTo}
+                onChange={(e) => setTransferTo(e.target.value)}
+                className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+              >
+                <option value="">{agents.isPending ? "Loading agents…" : "Select an agent…"}</option>
+                {(agents.data ?? []).map((a) => (
+                  <option key={a.user_id} value={a.user_id}>{a.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="transfer-note" className="block text-sm font-medium">Handoff note</label>
+              <textarea
+                id="transfer-note"
+                rows={3}
+                maxLength={2000}
+                value={transferNote}
+                onChange={(e) => setTransferNote(e.target.value)}
+                placeholder="Why are you handing this off? (optional)"
+                className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+              />
+            </div>
+            {transferMutation.isError && (
+              <p className="text-sm text-red-600" role="alert">
+                Couldn’t transfer — the agent must be an active member of this conversation’s department.
+              </p>
+            )}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={transferMutation.isPending || transferTo === ""}
+                onClick={() => transferMutation.mutate()}
+                className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
+              >
+                {transferMutation.isPending ? "Transferring…" : "Transfer"}
+              </button>
+              <button type="button" onClick={() => setTransferOpen(false)} className="rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

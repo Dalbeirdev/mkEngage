@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Agent;
 use App\Http\Controllers\Controller;
 use App\Jobs\DeliverWebhooks;
 use App\Models\Conversation;
+use App\Models\ConversationNote;
 use App\Models\ConversationRead;
 use App\Models\Department;
 use App\Models\Message;
@@ -288,6 +289,46 @@ final class ConversationController extends Controller
 
         // The service mutated $conversation in place; reload its relations
         // (fresh assignment) without another find().
+        $conversation->load(['visitor', 'contact', 'department', 'assignedAgent:id,name', 'channel:id,type,name']);
+
+        return response()->json($this->toContract($conversation));
+    }
+
+    /**
+     * Agent-to-agent handoff: reassign to a colleague AND leave an internal
+     * note explaining why. The reassignment emits the live assignment event
+     * (the receiving agent's inbox updates); the note gives them the context a
+     * plain reassign never carried.
+     */
+    public function transfer(Request $request, string $conversationId, AssignmentService $assignments): JsonResponse
+    {
+        $conversation = Conversation::query()->find($conversationId);
+        abort_if($conversation === null, 404);
+
+        $validated = $request->validate([
+            'to_agent_id' => ['required', 'uuid'],
+            'note' => ['sometimes', 'nullable', 'string', 'max:2000'],
+        ]);
+
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 403);
+
+        // Validates active-department-membership and emits the live event.
+        $assignments->transfer($conversation, $validated['to_agent_id'], $actor->id);
+
+        // Record the handoff as an internal note the receiving agent will see.
+        // transfer() already validated the target exists as an active member.
+        $rawName = User::query()->whereKey((string) $validated['to_agent_id'])->value('name');
+        $targetName = is_string($rawName) ? $rawName : 'another agent';
+        $reason = isset($validated['note']) && is_string($validated['note']) ? trim($validated['note']) : '';
+        $body = 'Transferred to '.$targetName.($reason !== '' ? ' — '.$reason : '');
+
+        ConversationNote::query()->create([
+            'conversation_id' => $conversation->id,
+            'author_id' => $actor->id,
+            'body' => $body,
+        ]);
+
         $conversation->load(['visitor', 'contact', 'department', 'assignedAgent:id,name', 'channel:id,type,name']);
 
         return response()->json($this->toContract($conversation));

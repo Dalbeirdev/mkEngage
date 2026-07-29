@@ -62,6 +62,21 @@ final class AssignmentService
      */
     public function assignTo(Conversation $conversation, string $agentId, ?string $actorId = null): void
     {
+        $this->assignChecked($conversation, $agentId, 'assignment.assigned', $actorId);
+    }
+
+    /**
+     * Agent-to-agent handoff: same validation and live-assignment event as
+     * assignTo, but recorded as a transfer so the receiving agent's UI can
+     * distinguish a deliberate handoff from a routing reassignment.
+     */
+    public function transfer(Conversation $conversation, string $agentId, ?string $actorId = null): void
+    {
+        $this->assignChecked($conversation, $agentId, 'assignment.transferred', $actorId);
+    }
+
+    private function assignChecked(Conversation $conversation, string $agentId, string $action, ?string $actorId): void
+    {
         abort_if($conversation->department_id === null, 422, 'Conversation has no department.');
 
         $department = Department::query()->findOrFail($conversation->department_id);
@@ -73,7 +88,7 @@ final class AssignmentService
 
         abort_unless($isMember, 422, 'Agent is not an active member of this department.');
 
-        $this->apply($conversation, $agentId, $department, 'assignment.assigned', $actorId);
+        $this->apply($conversation, $agentId, $department, $action, $actorId);
     }
 
     /** Clear the assignment (return the conversation to the department queue). */
