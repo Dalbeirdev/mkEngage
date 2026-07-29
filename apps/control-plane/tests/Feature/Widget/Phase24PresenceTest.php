@@ -105,6 +105,17 @@ it('lists live visitors with page context and hides stale ones', function (): vo
         ->and($list[0]['conversation_id'])->toBeNull();
 });
 
+it('returns an empty board with no live visitors (no empty-org-id crash)', function (): void {
+    // Regression: the message-count aggregate used to bind an empty
+    // organization_id when the board was empty, and Postgres rejected the
+    // ''→uuid cast (500). It must return an empty list cleanly.
+    $org = Organization::factory()->create();
+    $agentToken = p24AgentToken($org);
+
+    test()->withToken($agentToken)->getJson('/api/visitors/live')
+        ->assertOk()->assertExactJson(['data' => []]);
+});
+
 it('never leaks another organization\'s live visitors', function (): void {
     [, , $tokenA] = p24Session('granted');
     test()->withToken($tokenA)->postJson('/api/widget/heartbeat', [])->assertOk();

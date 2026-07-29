@@ -40,14 +40,19 @@ final class LiveVisitorController extends Controller
             ->keyBy('visitor_id');
 
         // One aggregate for message counts (lead-scoring signal, Phase 25).
-        // Raw query ⇒ explicit org filter (two-layer tenancy).
-        $messageCounts = DB::table('messages')
-            ->whereIn('sender_id', $visitors->pluck('id')->all())
-            ->where('sender_type', 'visitor')
-            ->where('organization_id', $visitors->first()->organization_id ?? '')
-            ->selectRaw('sender_id, count(*) as n')
-            ->groupBy('sender_id')
-            ->pluck('n', 'sender_id');
+        // Raw query ⇒ explicit org filter (two-layer tenancy). Skip entirely
+        // when there are no live visitors — otherwise the org_id bind would be
+        // an empty string and Postgres rejects the ''→uuid cast.
+        $first = $visitors->first();
+        $messageCounts = $first === null
+            ? collect()
+            : DB::table('messages')
+                ->whereIn('sender_id', $visitors->pluck('id')->all())
+                ->where('sender_type', 'visitor')
+                ->where('organization_id', (string) $first->organization_id)
+                ->selectRaw('sender_id, count(*) as n')
+                ->groupBy('sender_id')
+                ->pluck('n', 'sender_id');
 
         return response()->json([
             'data' => $visitors->map(function (Visitor $visitor) use ($openConversations, $messageCounts, $scorer): array {
