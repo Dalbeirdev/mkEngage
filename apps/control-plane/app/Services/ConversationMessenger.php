@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Jobs\DeliverChannelMessage;
 use App\Jobs\DeliverWebhooks;
+use App\Jobs\NotifySlack;
 use App\Models\Attachment;
 use App\Models\Conversation;
 use App\Models\Message;
@@ -151,6 +152,16 @@ final class ConversationMessenger
                 'preview' => mb_substr($body, 0, 140),
             ],
         )->afterCommit();
+
+        // Slack integration: the first customer message opens a conversation —
+        // notify the org's Slack channel (queued; no-op if not configured).
+        if (in_array($senderType, ['visitor', 'contact'], true) && (int) $message->sequence_number === 1) {
+            NotifySlack::dispatch(
+                (string) $conversation->organization_id,
+                $conversation->id,
+                mb_substr($body, 0, 140),
+            )->afterCommit();
+        }
 
         return ['message' => $message->load('attachments'), 'duplicate' => false];
     }

@@ -17,6 +17,7 @@ use App\Http\Controllers\Agent\ConversationNoteController;
 use App\Http\Controllers\Agent\DepartmentController;
 use App\Http\Controllers\Agent\DeveloperController;
 use App\Http\Controllers\Agent\InsightsController;
+use App\Http\Controllers\Agent\IntegrationController;
 use App\Http\Controllers\Agent\KnowledgeController;
 use App\Http\Controllers\Agent\LiveVisitorController;
 use App\Http\Controllers\Agent\ModerationController;
@@ -198,6 +199,11 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
 
         // mkEngage Insights (tenant-scoped analytics overview).
         Route::get('/insights/overview', [InsightsController::class, 'overview']);
+
+        // Third-party integrations (Slack notifications in v1).
+        Route::get('/integrations/slack', [IntegrationController::class, 'show']);
+        Route::put('/integrations/slack', [IntegrationController::class, 'updateSlack']);
+        Route::post('/integrations/slack/test', [IntegrationController::class, 'testSlack']);
 
         // Developer platform (Phase 35, §15).
         Route::get('/api-keys', [DeveloperController::class, 'listKeys']);

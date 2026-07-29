@@ -154,6 +154,10 @@ export const savedViewSchema = z.object({
 export type SavedView = z.infer<typeof savedViewSchema>;
 export const savedViewListSchema = z.object({ data: z.array(savedViewSchema) });
 
+export const slackIntegrationSchema = z.object({
+  slack: z.object({ enabled: z.boolean(), configured: z.boolean() }),
+});
+
 export const conversationListSchema = z.object({
   data: z.array(conversationSchema),
 });

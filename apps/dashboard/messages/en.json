@@ -29,7 +29,8 @@
     "notifications": "Notifications",
     "upsellTitle": "Let AI handle more conversations!",
     "upsellCta": "Explore AI",
-    "moderation": "Moderation"
+    "moderation": "Moderation",
+    "integrations": "Integrations"
   },
   "dashboard": {
     "title": "Dashboard",

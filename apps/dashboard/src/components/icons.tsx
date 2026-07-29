@@ -103,6 +103,14 @@ export const IconDevelopers = () => (
   </svg>
 );
 
+export const IconIntegrations = () => (
+  <svg {...base}>
+    <path d="M6 3v6a6 6 0 0 0 12 0V3" />
+    <path d="M6 3H4m2 0h2m8 0h2m-4 0h2" />
+    <path d="M12 15v6" />
+  </svg>
+);
+
 export const IconModeration = () => (
   <svg {...base}>
     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
