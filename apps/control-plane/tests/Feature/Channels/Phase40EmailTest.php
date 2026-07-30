@@ -14,6 +14,7 @@ use Illuminate\Mail\Transport\ArrayTransport;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Symfony\Component\Mime\Email;
 
 /**
  * Email channel — token-authenticated inbound-parse webhook, address-keyed
@@ -148,6 +149,48 @@ it('stores per-org SMTP on channel creation and never returns it', function (): 
         expect($channel->configString('smtp_host'))->toBe('smtp.acme.test')
             ->and($channel->configString('smtp_password'))->toBe('p');
     });
+});
+
+it('threads the reply subject as Re: of the inbound subject', function (): void {
+    config()->set('mail.default', 'array');
+
+    [$org, $channel] = emailChannel();
+    // Inbound already carries a Re: — the reply must not stack another.
+    emailPost($org, $channel, [
+        'from' => 'thread@example.com', 'subject' => 'Re: Invoice #42 overdue', 'text' => 'ping',
+    ])->assertOk();
+
+    app(Tenancy::class)->run($org->id, function () use ($org): void {
+        User::factory()->create([
+            'organization_id' => $org->id, 'email' => 'agent@thread.test', 'password' => Hash::make('password'),
+        ]);
+    });
+    auth()->forgetGuards();
+    $token = test()->postJson('/api/auth/token', [
+        'organization' => $org->slug, 'email' => 'agent@thread.test',
+        'password' => 'password', 'device_name' => 'pest',
+    ])->assertCreated()->json('token');
+
+    $conversation = app(Tenancy::class)->run(
+        $org->id,
+        fn (): Conversation => Conversation::query()->where('external_thread_id', 'thread@example.com')->firstOrFail(),
+    );
+    expect($conversation->email_subject)->toBe('Re: Invoice #42 overdue');
+
+    test()->withToken($token)->postJson("/api/conversations/{$conversation->id}/messages", [
+        'idempotency_key' => (string) Str::uuid7(),
+        'content_type' => 'text',
+        'body' => 'Sorted now.',
+    ])->assertCreated();
+
+    /** @var ArrayTransport $transport */
+    $transport = Mail::getSymfonyTransport();
+    $subjects = collect($transport->messages())
+        ->map(fn ($sent) => $sent->getOriginalMessage())
+        ->filter(fn ($msg) => $msg instanceof Email)
+        ->map(fn (Email $msg) => $msg->getSubject());
+
+    expect($subjects)->toContain('Re: Invoice #42 overdue');
 });
 
 it('delivers an agent reply via the mailer', function (): void {

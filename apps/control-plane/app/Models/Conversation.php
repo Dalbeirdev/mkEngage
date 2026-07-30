@@ -37,6 +37,7 @@ final class Conversation extends Model
         'source_url',
         'channel_id',
         'external_thread_id',
+        'email_subject',
     ];
 
     protected function casts(): array

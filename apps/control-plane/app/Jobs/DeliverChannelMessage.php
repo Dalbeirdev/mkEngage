@@ -60,7 +60,7 @@ final class DeliverChannelMessage implements ShouldQueue
             try {
                 // Email replies go out via the mailer, not an HTTP provider API.
                 if ($channel->type === 'email') {
-                    $this->deliverEmail($channel, $thread, $message);
+                    $this->deliverEmail($channel, $thread, $message, $conversation->email_subject);
 
                     return;
                 }
@@ -215,14 +215,22 @@ final class DeliverChannelMessage implements ShouldQueue
      * falls back to the app's global mailer (MAIL_* env — SMTP in prod, log in
      * dev).
      */
-    private function deliverEmail(Channel $channel, string $to, Message $message): void
+    private function deliverEmail(Channel $channel, string $to, Message $message, ?string $threadSubject = null): void
     {
         $from = $channel->configString('from_address');
         $fromName = $channel->configString('from_name');
         $body = $this->renderBody($message);
 
-        $callback = function (\Illuminate\Mail\Message $mail) use ($to, $from, $fromName): void {
-            $mail->to($to)->subject('Re: your conversation');
+        // Thread in the customer's client: "Re: {original subject}" — without
+        // stacking Re: prefixes when the inbound already carried one.
+        $subject = 'Re: your conversation';
+        if (is_string($threadSubject) && trim($threadSubject) !== '') {
+            $clean = preg_replace('/^(\s*re:\s*)+/i', '', trim($threadSubject)) ?? trim($threadSubject);
+            $subject = 'Re: '.($clean !== '' ? $clean : trim($threadSubject));
+        }
+
+        $callback = function (\Illuminate\Mail\Message $mail) use ($to, $from, $fromName, $subject): void {
+            $mail->to($to)->subject($subject);
             if ($from !== '') {
                 $mail->from($from, $fromName !== '' ? $fromName : null);
             }

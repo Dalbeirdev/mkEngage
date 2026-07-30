@@ -39,18 +39,24 @@ final class EmailInbound
             ->latest('created_at')
             ->first();
 
+        $subject = trim($data['subject']);
+
         if ($conversation === null) {
             $conversation = Conversation::query()->create([
                 'contact_id' => $contact->id,
                 'channel_id' => $channel->id,
                 'external_thread_id' => $data['address'],
+                // The opening subject threads all later replies ("Re: …").
+                'email_subject' => $subject !== '' ? mb_substr($subject, 0, 255) : null,
                 'chatbot_id' => Chatbot::query()->where('status', 'active')->first()?->id,
                 'department_id' => Department::query()->where('is_default', true)->first()?->id,
             ]);
             $this->assignments->autoAssign($conversation);
+        } elseif ($conversation->email_subject === null && $subject !== '') {
+            // Older threads without a stored subject adopt the first one seen.
+            $conversation->email_subject = mb_substr($subject, 0, 255);
+            $conversation->save();
         }
-
-        $subject = trim($data['subject']);
         $body = $subject !== '' ? $subject."\n\n".$data['text'] : $data['text'];
         if (trim($body) === '') {
             $body = '[empty email]';
