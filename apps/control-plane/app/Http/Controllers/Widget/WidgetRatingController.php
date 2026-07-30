@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Widget;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\DeliverWebhooks;
 use App\Models\Conversation;
 use App\Models\Visitor;
 use Illuminate\Http\JsonResponse;
@@ -40,6 +41,17 @@ final class WidgetRatingController extends Controller
         $conversation->csat_comment = $validated['comment'] ?? null;
         $conversation->csat_rated_at = now();
         $conversation->save();
+
+        // Customer webhooks (§15): a CSAT score landed.
+        DeliverWebhooks::dispatch(
+            (string) $conversation->organization_id,
+            'csat.received',
+            [
+                'conversation_id' => $conversation->id,
+                'rating' => $conversation->csat_rating,
+                'comment' => $conversation->csat_comment,
+            ],
+        )->afterCommit();
 
         return response()->json([
             'conversation_id' => $conversation->id,

@@ -32,7 +32,13 @@ const webhookListSchema = z.object({
   ),
 });
 
-const EVENTS = ["message.created", "conversation.closed"] as const;
+const EVENTS = [
+  "message.created",
+  "conversation.created",
+  "conversation.assigned",
+  "conversation.closed",
+  "csat.received",
+] as const;
 
 function Reveal({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);

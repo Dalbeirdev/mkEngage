@@ -22,7 +22,13 @@ use Illuminate\Support\Str;
  */
 final class DeveloperController extends Controller
 {
-    public const WEBHOOK_EVENTS = ['message.created', 'conversation.closed'];
+    public const WEBHOOK_EVENTS = [
+        'message.created',
+        'conversation.created',
+        'conversation.assigned',
+        'conversation.closed',
+        'csat.received',
+    ];
 
     // ── API keys ────────────────────────────────────────────────────────────
 

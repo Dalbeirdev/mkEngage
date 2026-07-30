@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Jobs\DeliverWebhooks;
 use App\Models\Conversation;
 use App\Models\Department;
 use App\Models\User;
@@ -217,5 +218,16 @@ final class AssignmentService
             ],
             $actorId,
         );
+
+        // Customer webhooks (§15): mirror the internal event outward.
+        DeliverWebhooks::dispatch(
+            (string) $conversation->organization_id,
+            'conversation.assigned',
+            [
+                'conversation_id' => $conversation->id,
+                'assigned_agent_id' => $agentId,
+                'action' => $action,
+            ],
+        )->afterCommit();
     }
 }

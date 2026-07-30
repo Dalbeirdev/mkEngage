@@ -153,6 +153,22 @@ final class ConversationMessenger
             ],
         )->afterCommit();
 
+        // The first message of a conversation marks it active — fire the
+        // conversation.created webhook (customer webhooks, §15).
+        if ((int) $message->sequence_number === 1) {
+            DeliverWebhooks::dispatch(
+                (string) $conversation->organization_id,
+                'conversation.created',
+                [
+                    'conversation_id' => $conversation->id,
+                    'channel_id' => $conversation->channel_id,
+                    'contact_id' => $conversation->contact_id,
+                    'visitor_id' => $conversation->visitor_id,
+                    'first_sender_type' => $senderType,
+                ],
+            )->afterCommit();
+        }
+
         // Slack integration: the first customer message opens a conversation —
         // notify the org's Slack channel (queued; no-op if not configured).
         if (in_array($senderType, ['visitor', 'contact'], true) && (int) $message->sequence_number === 1) {

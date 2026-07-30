@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\Department;
 use App\Models\Organization;
 use App\Models\User;
 use App\Tenancy\Tenancy;
@@ -164,6 +165,66 @@ it('fires conversation.closed webhooks and the test event', function (): void {
     test()->withToken($agentToken)->postJson("/api/webhook-endpoints/{$endpointId}/test")
         ->assertOk();
     Http::assertSent(fn ($request): bool => $request->header('X-MkEngage-Event')[0] === 'webhook.test');
+});
+
+it('fires conversation.created, conversation.assigned and csat.received webhooks', function (): void {
+    Http::fake(['*' => Http::response('ok', 200)]);
+    [$org, $agentToken] = p35Org();
+
+    test()->withToken($agentToken)->postJson('/api/webhook-endpoints', [
+        'url' => 'https://receiver.example/catalog',
+        'events' => ['conversation.created', 'conversation.assigned', 'csat.received'],
+    ])->assertCreated();
+
+    // A default department with the agent as member, so self-assign works
+    // (widget conversations adopt the default department at creation).
+    app(Tenancy::class)->run($org->id, function () use ($org): void {
+        $dept = Department::query()->create([
+            'name' => 'Support', 'is_default' => true, 'assignment_strategy' => 'manual',
+        ]);
+        $agent = User::query()->where('email', 'dev@p35.test')->firstOrFail();
+        $dept->users()->attach($agent->id, [
+            'id' => (string) Str::uuid7(), 'organization_id' => $org->id,
+        ]);
+    });
+
+    // First visitor message → conversation.created.
+    auth()->forgetGuards();
+    $widgetToken = test()->postJson('/api/widget/session', [
+        'site_key' => $org->fresh()?->widget_site_key,
+    ])->assertCreated()->json('token');
+    $conversationId = test()->withToken($widgetToken)
+        ->postJson('/api/widget/conversations', [])->assertCreated()->json('conversation_id');
+    test()->withToken($widgetToken)->postJson("/api/widget/conversations/{$conversationId}/messages", [
+        'idempotency_key' => (string) Str::uuid7(),
+        'content_type' => 'text',
+        'body' => 'Hello',
+    ])->assertCreated();
+
+    Http::assertSent(fn ($request): bool => $request->header('X-MkEngage-Event')[0] === 'conversation.created'
+        && $request['data']['conversation_id'] === $conversationId
+        && $request['data']['first_sender_type'] === 'visitor');
+
+    // Self-assign → conversation.assigned.
+    auth()->forgetGuards();
+    test()->withToken($agentToken)->postJson("/api/conversations/{$conversationId}/assign", ['assignee' => 'me'])
+        ->assertOk();
+    Http::assertSent(fn ($request): bool => $request->header('X-MkEngage-Event')[0] === 'conversation.assigned'
+        && $request['data']['conversation_id'] === $conversationId
+        && $request['data']['action'] === 'assignment.assigned');
+
+    // Close, then the visitor rates → csat.received.
+    test()->withToken($agentToken)->patchJson("/api/conversations/{$conversationId}", ['status' => 'closed'])
+        ->assertOk();
+    auth()->forgetGuards();
+    test()->withToken($widgetToken)->postJson("/api/widget/conversations/{$conversationId}/rating", [
+        'rating' => 5, 'comment' => 'Great help!',
+    ])->assertCreated();
+
+    Http::assertSent(fn ($request): bool => $request->header('X-MkEngage-Event')[0] === 'csat.received'
+        && $request['data']['conversation_id'] === $conversationId
+        && $request['data']['rating'] === 5
+        && $request['data']['comment'] === 'Great help!');
 });
 
 it('rejects invalid webhook subscriptions', function (): void {
