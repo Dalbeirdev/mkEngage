@@ -1,16 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-export const metadata: Metadata = { title: "Resources — mkEngage" };
+import { ARTICLES } from "./articles";
 
-const RESOURCES = [
-  { kind: "Blog", t: "5 ways AI chatbots cut response time by 90%", d: "Practical playbooks from teams who automated their front line without losing the human touch.", cover: "linear-gradient(135deg,#6d3bf5,#a855f7)", link: "Read article" },
-  { kind: "Guide", t: "The omnichannel support starter kit", d: "Connect WhatsApp, Telegram, Messenger and your website into one shared inbox — step by step.", cover: "linear-gradient(135deg,#3b7bf6,#8b3dff)", link: "Get the guide" },
-  { kind: "Docs", t: "Developer documentation", d: "API keys, signed webhooks, the read API and the embeddable widget — everything to build on mkEngage.", cover: "linear-gradient(135deg,#8b3dff,#ec3f94)", link: "Open docs" },
-  { kind: "Webinar", t: "Building your first AI flow", d: "A 30-minute walkthrough of the visual flow builder, from greeting to human handoff.", cover: "linear-gradient(135deg,#ec3f94,#f5a623)", link: "Watch now" },
-  { kind: "Help Center", t: "Setting up business hours & CSAT", d: "Configure availability, offline notices and post-chat satisfaction ratings in minutes.", cover: "linear-gradient(135deg,#0ea5e9,#6d3bf5)", link: "Read article" },
-  { kind: "Changelog", t: "What's new in mkEngage", d: "Reactions sync, outbound media, geo-location, the new dashboard — see everything we ship.", cover: "linear-gradient(135deg,#16a34a,#0ea5a3)", link: "See updates" },
-];
+export const metadata: Metadata = { title: "Resources — mkEngage" };
 
 export default function ResourcesPage() {
   return (
@@ -26,8 +19,8 @@ export default function ResourcesPage() {
       <section className="section">
         <div className="wrap">
           <div className="res-grid">
-            {RESOURCES.map((r) => (
-              <article className="res" key={r.t}>
+            {ARTICLES.map((r) => (
+              <Link className="res" key={r.slug} href={`/resources/${r.slug}`} style={{ textDecoration: "none", color: "inherit", display: "block" }}>
                 <div className="cover" style={{ background: r.cover }}>
                   <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg>
                 </div>
@@ -37,7 +30,7 @@ export default function ResourcesPage() {
                   <p>{r.d}</p>
                   <span className="rlink">{r.link} →</span>
                 </div>
-              </article>
+              </Link>
             ))}
           </div>
         </div>
