@@ -72,6 +72,10 @@ services:
     environment: *cp-env
     volumes:
       - cp-storage:/app/storage
+    # The base image's healthcheck probes the HTTP port, which worker
+    # processes don't serve — disable it or they report a false "unhealthy".
+    healthcheck:
+      disable: true
 
   outbox-relay:
     build: ../apps/control-plane
@@ -85,6 +89,8 @@ services:
     environment: *cp-env
     volumes:
       - cp-storage:/app/storage
+    healthcheck:
+      disable: true
 
   dashboard:
     build: ../apps/dashboard
