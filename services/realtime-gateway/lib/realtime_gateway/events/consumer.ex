@@ -75,7 +75,23 @@ defmodule RealtimeGateway.Events.Consumer do
 
   defp broadcast_message(_org_id, _data), do: :ok
 
-  defp ensure_stream_and_consumer do
+  # On a cold boot Gnat.ConnectionSupervisor registers :gnat_conn only once
+  # the NATS connection is actually up, so the JetStream calls below can race
+  # it (noproc exit) or reach a NATS that is still initializing. Retry rather
+  # than crash the VM into a container restart loop.
+  defp ensure_stream_and_consumer(attempts \\ 60) do
+    do_ensure_stream_and_consumer()
+  catch
+    kind, reason ->
+      if attempts > 0 do
+        Process.sleep(1_000)
+        ensure_stream_and_consumer(attempts - 1)
+      else
+        :erlang.raise(kind, reason, __STACKTRACE__)
+      end
+  end
+
+  defp do_ensure_stream_and_consumer do
     alias Gnat.Jetstream.API.{Consumer, Stream}
 
     stream = %Stream{name: @stream, subjects: @subjects, retention: :limits}
