@@ -27,6 +27,29 @@ One server, Docker Compose, automatic HTTPS. The stack:
   `app.YOURDOMAIN`, `api.YOURDOMAIN`, `ws.YOURDOMAIN`.
 - Ports 80 and 443 open in the firewall.
 
+### Windows server?
+
+The same compose stack runs on Windows via Docker Desktop (WSL 2 backend):
+
+1. Don't work inside `C:\Windows\System32` — clone into a real folder, e.g.
+   `C:\mkengage`. If you already cloned in System32, move it:
+   `move C:\Windows\System32\mkEngage C:\mkengage`
+2. Install WSL 2, reboot, then install Docker Desktop:
+   ```powershell
+   wsl --install -d Ubuntu     # reboot when prompted
+   winget install Docker.DockerDesktop
+   ```
+   Start Docker Desktop once and wait until it reports "running"
+   (`docker version` works in a new terminal).
+3. Command translations for the steps below (PowerShell/cmd):
+   `cp .env.example .env` → `copy .env.example .env`, and edit with
+   `notepad .env` instead of nano. Everything `docker compose ...` is
+   identical.
+4. Let's Encrypt still needs the three public DNS records reaching this
+   machine on ports 80/443 (router/NAT + Windows Firewall). Without a
+   public domain, HTTPS certificates cannot be issued — tell us if this is
+   a LAN-only box and use an internal-mode Caddyfile instead.
+
 ## Security first
 
 - **Never paste server passwords into chats or tickets.** If one leaks,
