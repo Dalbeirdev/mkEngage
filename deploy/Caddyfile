@@ -1,0 +1,20 @@
+# mkEngage reverse proxy — automatic HTTPS via Let's Encrypt.
+# DOMAIN and ACME_EMAIL come from deploy/.env through docker compose.
+{
+	email {$ACME_EMAIL}
+}
+
+# Agent dashboard + marketing site
+app.{$DOMAIN} {
+	reverse_proxy dashboard:3000
+}
+
+# Control-plane API (also the channel webhooks + widget API)
+api.{$DOMAIN} {
+	reverse_proxy control-plane:8000
+}
+
+# Realtime gateway (WebSockets)
+ws.{$DOMAIN} {
+	reverse_proxy gateway:4000
+}

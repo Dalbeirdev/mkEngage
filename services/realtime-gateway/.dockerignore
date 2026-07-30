@@ -1,0 +1,5 @@
+.env
+.env.*
+_build/
+deps/
+.elixir_ls/

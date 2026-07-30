@@ -1,0 +1,145 @@
+# mkEngage self-hosted production stack.
+# Copy deploy/.env.example to deploy/.env, fill it in, then:
+#   docker compose -f docker-compose.prod.yml up -d --build
+# See deploy/DEPLOY.md for the full runbook.
+name: mkengage
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-mkengage}
+      POSTGRES_USER: ${DB_USERNAME:-mkengage}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in deploy/.env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-mkengage}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  nats:
+    image: nats:2-alpine
+    restart: unless-stopped
+    command: ["-js"]
+
+  control-plane:
+    build: ../apps/control-plane
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_started
+    environment: &cp-env
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: "${APP_KEY:?see deploy/.env.example for how to generate}"
+      APP_URL: https://api.${DOMAIN}
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_DATABASE: ${DB_DATABASE:-mkengage}
+      DB_USERNAME: ${DB_USERNAME:-mkengage}
+      DB_PASSWORD: ${DB_PASSWORD}
+      QUEUE_CONNECTION: database
+      CACHE_STORE: database
+      SESSION_DRIVER: database
+      NATS_URL: nats://nats:4222
+      GATEWAY_SIGNING_KEY: ${GATEWAY_SIGNING_KEY:?openssl rand -hex 32}
+      GATEWAY_URL: wss://ws.${DOMAIN}/socket
+      AI_SERVICE_URL: http://ai-service:8100
+      AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:?openssl rand -hex 32}
+      MAIL_MAILER: ${MAIL_MAILER:-log}
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_SCHEME: ${MAIL_SCHEME:-tls}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-hello@example.com}
+    volumes:
+      - cp-storage:/app/storage
+
+  queue-worker:
+    build: ../apps/control-plane
+    restart: unless-stopped
+    command: ["php", "artisan", "queue:work", "--tries=3", "--max-time=3600"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment: *cp-env
+    volumes:
+      - cp-storage:/app/storage
+
+  outbox-relay:
+    build: ../apps/control-plane
+    restart: unless-stopped
+    command: ["php", "artisan", "outbox:relay"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_started
+    environment: *cp-env
+    volumes:
+      - cp-storage:/app/storage
+
+  dashboard:
+    build: ../apps/dashboard
+    restart: unless-stopped
+    environment:
+      CONTROL_PLANE_API_URL: http://control-plane:8000
+    depends_on:
+      - control-plane
+
+  gateway:
+    build: ../services/realtime-gateway
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_started
+    environment:
+      PHX_SERVER: "true"
+      PHX_HOST: ws.${DOMAIN}
+      PORT: "4000"
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:?mix phx.gen.secret or openssl rand -hex 64}
+      DATABASE_URL: ecto://${DB_USERNAME:-mkengage}:${DB_PASSWORD}@postgres/${DB_DATABASE:-mkengage}
+      GATEWAY_SIGNING_KEY: ${GATEWAY_SIGNING_KEY}
+      NATS_URL: nats://nats:4222
+
+  ai-service:
+    build: ../services/ai-service
+    restart: unless-stopped
+    environment:
+      AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN}
+      AI_SERVICE_GOOGLE_API_KEY: ${AI_SERVICE_GOOGLE_API_KEY:-}
+      AI_SERVICE_ANTHROPIC_API_KEY: ${AI_SERVICE_ANTHROPIC_API_KEY:-}
+      AI_SERVICE_OPENAI_API_KEY: ${AI_SERVICE_OPENAI_API_KEY:-}
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?e.g. mkengage.example.com}
+      ACME_EMAIL: ${ACME_EMAIL:?letsencrypt contact email}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - dashboard
+      - control-plane
+      - gateway
+
+volumes:
+  pgdata:
+  cp-storage:
+  caddy-data:
+  caddy-config:
