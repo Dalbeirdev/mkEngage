@@ -14,7 +14,10 @@ export async function setSessionToken(token: string): Promise<void> {
   jar.set(TOKEN_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    // Secure in production — except LAN/internal deployments served over
+    // plain HTTP (INSECURE_COOKIES=1 in deploy LAN mode), where a Secure
+    // cookie would be silently dropped and login would fail.
+    secure: process.env.NODE_ENV === "production" && process.env.INSECURE_COOKIES !== "1",
     path: "/",
     maxAge: 60 * 60 * 12, // 12h; control plane can revoke sooner
   });

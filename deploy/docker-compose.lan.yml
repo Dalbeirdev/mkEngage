@@ -1,0 +1,49 @@
+# LAN / internal mode — no public domain, no HTTPS. Use TOGETHER with the
+# base file:
+#   docker compose -f docker-compose.prod.yml -f docker-compose.lan.yml up -d --build
+#
+# Requires SERVER_ADDR in deploy/.env (the machine's LAN IP or hostname).
+# DOMAIN/ACME_EMAIL still need placeholder values to satisfy the base file's
+# guards (e.g. DOMAIN=lan.internal, ACME_EMAIL=none@lan.internal) — they are
+# unused here because Caddy is disabled.
+#
+# Access from the LAN:
+#   Dashboard  http://SERVER_ADDR:8080
+#   API        http://SERVER_ADDR:8000
+#   WebSocket  ws://SERVER_ADDR:4000/socket
+#
+# Only for trusted internal networks: traffic is unencrypted.
+name: mkengage
+
+services:
+  control-plane:
+    ports:
+      - "8000:8000"
+    environment: &lan-cp-env
+      APP_URL: "http://${SERVER_ADDR:?set SERVER_ADDR (LAN IP) in deploy/.env}:8000"
+      GATEWAY_URL: "ws://${SERVER_ADDR}:4000/socket"
+
+  queue-worker:
+    environment: *lan-cp-env
+
+  outbox-relay:
+    environment: *lan-cp-env
+
+  dashboard:
+    ports:
+      - "8080:3000"
+    environment:
+      # Plain-HTTP LAN serving: a Secure login cookie would be dropped.
+      INSECURE_COOKIES: "1"
+
+  gateway:
+    ports:
+      - "4000:4000"
+    environment:
+      PHX_HOST: ${SERVER_ADDR}
+
+  caddy:
+    # No public domain → no ACME. Parking Caddy behind an unused profile
+    # keeps it out of `up` without editing the base file.
+    profiles:
+      - disabled
