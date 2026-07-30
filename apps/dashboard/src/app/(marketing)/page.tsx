@@ -29,8 +29,8 @@ const INTEGRATIONS = [
 ];
 
 const QUOTES = [
-  { q: "mkEngage has transformed the way we support our customers. Our response time dropped by 90%!", n: "Anita Patel", r: "Co-founder, BrightMart", c: "#6d3bf5", i: "AP" },
-  { q: "The AI chatbot is super smart and easy to set up. We saw a 35% increase in leads within the first month.", n: "Rohit Verma", r: "CEO, TechNova", c: "#3b7bf6", i: "RV" },
+  { q: "mkEngage has transformed the way we support our customers. Our response time dropped by 90%!", n: "Emily Carter", r: "Co-founder, BrightMart", c: "#6d3bf5", i: "EC" },
+  { q: "The AI chatbot is super smart and easy to set up. We saw a 35% increase in leads within the first month.", n: "Michael Torres", r: "CEO, TechNova", c: "#3b7bf6", i: "MT" },
   { q: "Finally, a platform that brings everything together — chat, automation, and CRM. Amazing support team too!", n: "Sarah Johnson", r: "Marketing Head, ShopEase", c: "#ec3f94", i: "SJ" },
 ];
 
@@ -82,10 +82,10 @@ export default function HomePage() {
                   <div className="bubble in" style={{ opacity: 0.6 }}>● ● ●</div>
                 </div>
                 <div className="mock-info">
-                  <div className="who"><span />Rahul Sharma</div>
+                  <div className="who"><span />Jason Miller</div>
                   <span className="ret">Returning visitor</span>
                   <dl>
-                    <div><dt>Location</dt><dd>Bangalore, India</dd></div>
+                    <div><dt>Location</dt><dd>Austin, TX, USA</dd></div>
                     <div><dt>Device</dt><dd>Windows · Chrome</dd></div>
                     <div><dt>Time on site</dt><dd>4m 32s</dd></div>
                   </dl>

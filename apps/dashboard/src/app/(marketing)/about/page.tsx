@@ -18,11 +18,11 @@ const TIMELINE = [
 ];
 
 const TEAM = [
-  { n: "Rahul Sharma", r: "Co-founder & CEO", i: "RS", bg: "linear-gradient(140deg,#6d3bf5,#a855f7)" },
-  { n: "Anita Patel", r: "Co-founder & COO", i: "AP", bg: "linear-gradient(140deg,#3b7bf6,#8b3dff)" },
-  { n: "Vikram Singh", r: "CTO", i: "VS", bg: "linear-gradient(140deg,#8b3dff,#ec3f94)" },
-  { n: "Priya Nair", r: "Head of Product", i: "PN", bg: "linear-gradient(140deg,#ec3f94,#f5a623)" },
-  { n: "Arjun Mehta", r: "Head of Growth", i: "AM", bg: "linear-gradient(140deg,#0ea5e9,#6d3bf5)" },
+  { n: "David Anderson", r: "Co-founder & CEO", i: "DA", bg: "linear-gradient(140deg,#6d3bf5,#a855f7)" },
+  { n: "Emily Carter", r: "Co-founder & COO", i: "EC", bg: "linear-gradient(140deg,#3b7bf6,#8b3dff)" },
+  { n: "Michael Torres", r: "CTO", i: "MT", bg: "linear-gradient(140deg,#8b3dff,#ec3f94)" },
+  { n: "Sarah Mitchell", r: "Head of Product", i: "SM", bg: "linear-gradient(140deg,#ec3f94,#f5a623)" },
+  { n: "James Cooper", r: "Head of Growth", i: "JC", bg: "linear-gradient(140deg,#0ea5e9,#6d3bf5)" },
 ];
 
 export default function AboutPage() {
