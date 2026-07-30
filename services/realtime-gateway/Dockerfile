@@ -9,8 +9,10 @@ RUN mix deps.get --only prod && mix deps.compile
 COPY . .
 RUN mix compile && mix release
 
-FROM alpine:3.20
-RUN apk add --no-cache libstdc++ ncurses-libs openssl
+# Runtime must share the build stage's base: the release's crypto NIF links
+# against the builder's OpenSSL, and a different Alpine release ships an
+# OpenSSL with mismatched symbols (EVP_PKEY_* "symbol not found" crash loop).
+FROM elixir:1.18-alpine
 WORKDIR /app
 COPY --from=build /app/_build/prod/rel/realtime_gateway ./
 ENV PHX_SERVER=true PORT=4000
