@@ -13,6 +13,7 @@ const moderationSchema = z.object({
     mask_char: z.string(),
     terms: z.array(z.string()),
   }),
+  auto_close: z.object({ enabled: z.boolean(), threshold: z.number().int() }).catch({ enabled: false, threshold: 3 }),
   ip_bans: z.array(
     z.object({
       ip_ban_id: z.string(),
@@ -31,11 +32,14 @@ async function fetchModeration(): Promise<Moderation> {
   return moderationSchema.parse(await response.json());
 }
 
-async function saveProfanity(payload: { enabled: boolean; mask_char: string; terms: string[] }) {
+async function saveProfanity(payload: {
+  profanity: { enabled: boolean; mask_char: string; terms: string[] };
+  auto_close: { enabled: boolean; threshold: number };
+}) {
   const response = await fetch("/api/cp/moderation", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ profanity: payload }),
+    body: JSON.stringify(payload),
   });
   if (!response.ok) throw new Error(`Save failed (${response.status})`);
   return moderationSchema.parse(await response.json());
@@ -65,6 +69,8 @@ function ProfanitySection({ data }: { data: Moderation }) {
   const [enabled, setEnabled] = useState(data.profanity.enabled);
   const [maskChar, setMaskChar] = useState(data.profanity.mask_char || "*");
   const [termsText, setTermsText] = useState(data.profanity.terms.join("\n"));
+  const [autoClose, setAutoClose] = useState(data.auto_close.enabled);
+  const [threshold, setThreshold] = useState(String(data.auto_close.threshold));
   const [saved, setSaved] = useState(false);
 
   const save = useMutation({
@@ -123,6 +129,27 @@ function ProfanitySection({ data }: { data: Moderation }) {
         <p className="text-xs text-zinc-500">{t("termsHelp")}</p>
       </div>
 
+      <fieldset className="space-y-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+        <legend className="px-1 text-sm font-medium">Auto-close on repeat abuse</legend>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={autoClose} onChange={(event) => setAutoClose(event.target.checked)} />
+          Close the conversation and mark it spam after repeated filtered messages
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          Strikes before closing
+          <input
+            type="number"
+            min={1}
+            max={20}
+            value={threshold}
+            disabled={!autoClose}
+            onChange={(event) => setThreshold(event.target.value)}
+            aria-label="Strikes before closing"
+            className={`${input} w-20`}
+          />
+        </label>
+      </fieldset>
+
       {save.isError && (
         <p className="text-sm text-red-600" role="alert">
           {t("saveError")}
@@ -132,7 +159,15 @@ function ProfanitySection({ data }: { data: Moderation }) {
       <button
         type="button"
         disabled={save.isPending}
-        onClick={() => save.mutate({ enabled, mask_char: maskChar.slice(0, 1) || "*", terms })}
+        onClick={() =>
+          save.mutate({
+            profanity: { enabled, mask_char: maskChar.slice(0, 1) || "*", terms },
+            auto_close: {
+              enabled: autoClose,
+              threshold: Math.min(20, Math.max(1, Number(threshold) || 3)),
+            },
+          })
+        }
         className={btnPrimary}
       >
         {save.isPending ? t("saving") : saved ? t("saved") : t("save")}

@@ -30,6 +30,7 @@ final class ModerationController extends Controller
 
         return response()->json([
             'profanity' => $this->profanityContract($organization),
+            'auto_close' => $this->autoCloseContract($organization),
             'ip_bans' => ModerationIpBan::query()
                 ->orderByDesc('created_at')
                 ->get()
@@ -47,6 +48,10 @@ final class ModerationController extends Controller
             'profanity.mask_char' => ['sometimes', 'string', 'size:1'],
             'profanity.terms' => ['sometimes', 'array', 'max:'.self::MAX_TERMS],
             'profanity.terms.*' => ['string', 'max:100'],
+            // Auto-close on repeat abuse: N masked messages → close + spam.
+            'auto_close' => ['sometimes', 'array:enabled,threshold'],
+            'auto_close.enabled' => ['required_with:auto_close', 'boolean'],
+            'auto_close.threshold' => ['sometimes', 'integer', 'min:1', 'max:20'],
         ]);
 
         $organization = $this->organization($context);
@@ -67,6 +72,14 @@ final class ModerationController extends Controller
             'mask_char' => $validated['profanity']['mask_char'] ?? '*',
             'terms' => $terms,
         ];
+
+        if (array_key_exists('auto_close', $validated)) {
+            $moderation['auto_close'] = [
+                'enabled' => (bool) ($validated['auto_close']['enabled'] ?? false),
+                'threshold' => (int) ($validated['auto_close']['threshold'] ?? 3),
+            ];
+        }
+
         $settings['moderation'] = $moderation;
 
         $organization->settings = $settings;
@@ -81,7 +94,12 @@ final class ModerationController extends Controller
     public function storeBan(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'ip_address' => ['required', 'string', 'ip'],
+            // A single IP or a CIDR range (e.g. 203.0.113.0/24, 2001:db8::/32).
+            'ip_address' => ['required', 'string', 'max:45', function (string $attribute, mixed $value, \Closure $fail): void {
+                if (! is_string($value) || ! self::isIpOrCidr($value)) {
+                    $fail('Enter a valid IP address or CIDR range.');
+                }
+            }],
             'reason' => ['sometimes', 'nullable', 'string', 'max:255'],
         ]);
 
@@ -113,6 +131,39 @@ final class ModerationController extends Controller
         $this->audit($request, 'moderation.ip_unbanned', $ban);
 
         return response()->json(null, 204);
+    }
+
+    /** Accepts a bare IPv4/IPv6 address or a CIDR range with a valid prefix. */
+    private static function isIpOrCidr(string $value): bool
+    {
+        if (filter_var($value, FILTER_VALIDATE_IP) !== false) {
+            return true;
+        }
+
+        [$subnet, $bits] = array_pad(explode('/', $value, 2), 2, null);
+        if (! is_string($subnet) || ! is_string($bits) || ! ctype_digit($bits)) {
+            return false;
+        }
+        $packed = @inet_pton($subnet);
+        if ($packed === false) {
+            return false;
+        }
+
+        return (int) $bits <= strlen($packed) * 8;
+    }
+
+    /** @return array{enabled: bool, threshold: int} */
+    private function autoCloseContract(Organization $organization): array
+    {
+        $settings = is_array($organization->settings) ? $organization->settings : [];
+        $moderation = is_array($settings['moderation'] ?? null) ? $settings['moderation'] : [];
+        $autoClose = is_array($moderation['auto_close'] ?? null) ? $moderation['auto_close'] : [];
+        $threshold = $autoClose['threshold'] ?? null;
+
+        return [
+            'enabled' => ($autoClose['enabled'] ?? false) === true,
+            'threshold' => is_int($threshold) && $threshold >= 1 ? $threshold : 3,
+        ];
     }
 
     /** @return array{enabled: bool, mask_char: string, terms: list<string>} */

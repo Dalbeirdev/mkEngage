@@ -133,6 +133,84 @@ it('leaves messages untouched when the filter is disabled', function (): void {
     expect($sent->json('body'))->toBe('oh darn');
 });
 
+it('bans a CIDR range and refuses contained IPs a widget session', function (): void {
+    [$organization, $token] = moderationToken();
+
+    // 127.0.0.0/8 contains the test client's 127.0.0.1.
+    $this->withToken($token)->postJson('/api/moderation/ip-bans', [
+        'ip_address' => '127.0.0.0/8', 'reason' => 'range abuse',
+    ])->assertCreated();
+
+    $this->postJson('/api/widget/session', [
+        'site_key' => $organization->widget_site_key,
+    ])->assertForbidden();
+
+    // Malformed CIDR is rejected.
+    $this->withToken($token)->postJson('/api/moderation/ip-bans', ['ip_address' => '10.0.0.0/64'])
+        ->assertStatus(422);
+});
+
+it('auto-closes and marks spam after repeat profanity strikes', function (): void {
+    [$organization, $token] = moderationToken();
+
+    $this->withToken($token)->putJson('/api/moderation', [
+        'profanity' => ['enabled' => true, 'terms' => ['darn']],
+        'auto_close' => ['enabled' => true, 'threshold' => 2],
+    ])->assertOk()
+        ->assertJsonPath('auto_close.enabled', true)
+        ->assertJsonPath('auto_close.threshold', 2);
+
+    $session = $this->postJson('/api/widget/session', [
+        'site_key' => $organization->widget_site_key,
+    ])->assertCreated();
+    $widgetToken = $session->json('token');
+    $conversationId = $this->withToken($widgetToken)
+        ->postJson('/api/widget/conversations', [])->assertCreated()->json('conversation_id');
+
+    // Strike 1: masked, still open.
+    $this->withToken($widgetToken)->postJson("/api/widget/conversations/{$conversationId}/messages", [
+        'idempotency_key' => (string) Str::uuid7(), 'content_type' => 'text', 'body' => 'darn you',
+    ])->assertCreated();
+
+    // Strike 2: threshold reached → closed + spam.
+    $this->withToken($widgetToken)->postJson("/api/widget/conversations/{$conversationId}/messages", [
+        'idempotency_key' => (string) Str::uuid7(), 'content_type' => 'text', 'body' => 'darn again',
+    ])->assertCreated();
+
+    $meta = $this->withToken($token)->getJson("/api/conversations/{$conversationId}")->assertOk();
+    expect($meta->json('status'))->toBe('closed')
+        ->and($meta->json('is_spam'))->toBeTrue();
+
+    // A closed conversation refuses further messages (409).
+    $this->withToken($widgetToken)->postJson("/api/widget/conversations/{$conversationId}/messages", [
+        'idempotency_key' => (string) Str::uuid7(), 'content_type' => 'text', 'body' => 'more',
+    ])->assertStatus(409);
+});
+
+it('does not auto-close when the feature is disabled', function (): void {
+    [$organization, $token] = moderationToken();
+
+    $this->withToken($token)->putJson('/api/moderation', [
+        'profanity' => ['enabled' => true, 'terms' => ['darn']],
+    ])->assertOk();
+
+    $session = $this->postJson('/api/widget/session', [
+        'site_key' => $organization->widget_site_key,
+    ])->assertCreated();
+    $widgetToken = $session->json('token');
+    $conversationId = $this->withToken($widgetToken)
+        ->postJson('/api/widget/conversations', [])->assertCreated()->json('conversation_id');
+
+    foreach (range(1, 4) as $i) {
+        $this->withToken($widgetToken)->postJson("/api/widget/conversations/{$conversationId}/messages", [
+            'idempotency_key' => (string) Str::uuid7(), 'content_type' => 'text', 'body' => "darn {$i}",
+        ])->assertCreated();
+    }
+
+    expect($this->withToken($token)->getJson("/api/conversations/{$conversationId}")->json('status'))
+        ->toBe('open');
+});
+
 it('requires authentication for moderation settings', function (): void {
     $this->getJson('/api/moderation')->assertUnauthorized();
     $this->postJson('/api/moderation/ip-bans', ['ip_address' => '1.2.3.4'])->assertUnauthorized();

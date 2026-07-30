@@ -64,8 +64,11 @@ final class ConversationMessenger
         // Moderation: mask configured profanity in visitor-authored text before
         // it is persisted, so the stored body, previews, outbox event and
         // webhook payload all carry the filtered text (agents/bots pass through).
+        $strikeLanded = false;
         if ($senderType === 'visitor') {
-            $body = $this->moderation->maskProfanity($body);
+            $filtered = $this->moderation->maskProfanityDetail($body);
+            $body = $filtered['body'];
+            $strikeLanded = $filtered['masked'];
         }
 
         DB::table('conversations')
@@ -91,6 +94,22 @@ final class ConversationMessenger
             'correlation_id' => $correlationId,
             'sent_at' => now(),
         ]);
+
+        // Moderation strikes: each masked visitor message counts one; at the
+        // org's threshold the conversation auto-closes and is marked spam.
+        if ($strikeLanded) {
+            $strikes = (int) $conversation->moderation_strikes + 1;
+            $conversation->moderation_strikes = $strikes;
+
+            $autoClose = $this->moderation->autoCloseConfig();
+            if ($autoClose['enabled'] && $strikes >= $autoClose['threshold'] && $conversation->status !== 'closed') {
+                $conversation->status = 'closed';
+                $conversation->closed_at = now();
+                $conversation->is_spam = true;
+            }
+
+            $conversation->save();
+        }
 
         $attachmentCount = 0;
         if ($attachmentIds !== []) {
