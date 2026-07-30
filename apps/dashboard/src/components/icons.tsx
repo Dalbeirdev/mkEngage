@@ -103,6 +103,14 @@ export const IconDevelopers = () => (
   </svg>
 );
 
+export const IconSla = () => (
+  <svg {...base}>
+    <circle cx="12" cy="13" r="8" />
+    <path d="M12 9v4l2.5 2.5" />
+    <path d="M9 2h6" />
+  </svg>
+);
+
 export const IconIntegrations = () => (
   <svg {...base}>
     <path d="M6 3v6a6 6 0 0 0 12 0V3" />

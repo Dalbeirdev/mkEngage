@@ -437,6 +437,14 @@ export default function ConversationsPage() {
                                   {PRIORITY_META[c.priority].label}
                                 </span>
                               )}
+                              {c.sla_breached && (
+                                <span
+                                  title="First-response SLA breached"
+                                  className="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white"
+                                >
+                                  SLA
+                                </span>
+                              )}
                             </span>
                             {c.last_message !== null && c.last_message !== undefined && (
                               <span className="block max-w-[220px] truncate text-xs text-zinc-400">{c.last_message}</span>

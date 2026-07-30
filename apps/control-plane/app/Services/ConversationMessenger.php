@@ -95,6 +95,13 @@ final class ConversationMessenger
             'sent_at' => now(),
         ]);
 
+        // SLA anchor: the first HUMAN agent reply stops the first-response
+        // clock (chatbot replies deliberately don't).
+        if ($senderType === 'agent' && $conversation->first_agent_reply_at === null) {
+            $conversation->first_agent_reply_at = now();
+            $conversation->save();
+        }
+
         // Moderation strikes: each masked visitor message counts one; at the
         // org's threshold the conversation auto-closes and is marked spam.
         if ($strikeLanded) {

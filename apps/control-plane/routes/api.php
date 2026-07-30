@@ -24,6 +24,7 @@ use App\Http\Controllers\Agent\ModerationController;
 use App\Http\Controllers\Agent\OrganizationLogoController;
 use App\Http\Controllers\Agent\ProfileController;
 use App\Http\Controllers\Agent\SavedViewController;
+use App\Http\Controllers\Agent\SlaController;
 use App\Http\Controllers\Agent\TwoFactorController;
 use App\Http\Controllers\Agent\WidgetSettingsController;
 use App\Http\Controllers\AttachmentStreamController;
@@ -160,6 +161,10 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
         Route::get('/organization/widget-settings', [WidgetSettingsController::class, 'show']);
         Route::put('/organization/widget-settings', [WidgetSettingsController::class, 'update']);
         Route::post('/organization/widget-settings/rotate-secret', [WidgetSettingsController::class, 'rotateSecret']);
+
+        // First-response SLA targets per priority.
+        Route::get('/organization/sla', [SlaController::class, 'show']);
+        Route::put('/organization/sla', [SlaController::class, 'update']);
 
         // Moderation (abuse controls): profanity filter config + IP ban list.
         Route::get('/moderation', [ModerationController::class, 'show']);

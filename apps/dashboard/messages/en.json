@@ -30,7 +30,8 @@
     "upsellTitle": "Let AI handle more conversations!",
     "upsellCta": "Explore AI",
     "moderation": "Moderation",
-    "integrations": "Integrations"
+    "integrations": "Integrations",
+    "sla": "SLA"
   },
   "dashboard": {
     "title": "Dashboard",

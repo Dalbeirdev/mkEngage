@@ -11,10 +11,12 @@ use App\Models\ConversationNote;
 use App\Models\ConversationRead;
 use App\Models\Department;
 use App\Models\Message;
+use App\Models\Organization;
 use App\Models\User;
 use App\Models\Visitor;
 use App\Services\AssignmentService;
 use App\Services\ConversationMessenger;
+use App\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -383,10 +385,52 @@ final class ConversationController extends Controller
         return Str::limit(trim($body), 80);
     }
 
+    /** @var array{enabled: bool, targets: array<string, int|null>}|null per-request SLA config */
+    private ?array $slaConfig = null;
+
+    /** @return array{enabled: bool, targets: array<string, int|null>} */
+    private function slaConfig(): array
+    {
+        if ($this->slaConfig === null) {
+            $organization = Organization::query()
+                ->whereKey(app(TenantContext::class)->organizationId())
+                ->firstOrFail();
+            $this->slaConfig = SlaController::contract($organization);
+        }
+
+        return $this->slaConfig;
+    }
+
+    /**
+     * First-response SLA state: due_at from created_at + the priority's target;
+     * breached only while open and still awaiting the first human reply.
+     *
+     * @return array{sla_due_at: string|null, sla_breached: bool}
+     */
+    private function slaState(Conversation $conversation): array
+    {
+        $sla = $this->slaConfig();
+        $target = $sla['targets'][$conversation->priority ?? 'normal'] ?? null;
+
+        if (! $sla['enabled'] || $target === null || $conversation->created_at === null) {
+            return ['sla_due_at' => null, 'sla_breached' => false];
+        }
+
+        $dueAt = $conversation->created_at->clone()->addMinutes($target);
+        $awaiting = $conversation->first_agent_reply_at === null && $conversation->status !== 'closed';
+
+        return [
+            'sla_due_at' => $dueAt->toIso8601String(),
+            'sla_breached' => $awaiting && now()->greaterThan($dueAt),
+        ];
+    }
+
     /** @return array<string, mixed> */
     private function toContract(Conversation $conversation): array
     {
         return [
+            ...$this->slaState($conversation),
+            'first_agent_reply_at' => $conversation->first_agent_reply_at?->toIso8601String(),
             'conversation_id' => $conversation->id,
             'status' => $conversation->status,
             'visitor_id' => $conversation->visitor_id,
