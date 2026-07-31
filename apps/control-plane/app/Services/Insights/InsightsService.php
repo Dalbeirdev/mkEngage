@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Insights;
 
+use App\Http\Controllers\Agent\SlaController;
+use App\Models\Organization;
 use App\Tenancy\TenantContext;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -45,6 +47,64 @@ final class InsightsService
             'first_response' => $this->firstResponse($start, $end),
             'hourly' => $this->hourly($start, $end),
             'agents' => $this->agents($start, $end),
+            'sla' => $this->sla($start, $end),
+        ];
+    }
+
+    /**
+     * First-response SLA outcomes for conversations created in range. Unlike
+     * the inbox chip (which flags only conversations still awaiting a reply),
+     * this is historical: a conversation whose first human reply came after
+     * its due time stays breached. Unreplied-and-not-yet-due counts as
+     * pending — neither met nor breached.
+     *
+     * @return array<string, mixed>
+     */
+    private function sla(Carbon $start, Carbon $end): array
+    {
+        $organization = Organization::query()->whereKey($this->tenant->organizationId())->first();
+        $config = $organization instanceof Organization
+            ? SlaController::contract($organization)
+            : ['enabled' => false, 'targets' => []];
+
+        $tracked = 0;
+        $met = 0;
+        $pending = 0;
+        $breached = 0;
+
+        if ($config['enabled']) {
+            $rows = DB::table('conversations')
+                ->where('organization_id', $this->tenant->organizationId())
+                ->whereBetween('created_at', [$start, $end])
+                ->get(['created_at', 'priority', 'first_agent_reply_at']);
+
+            foreach ($rows as $row) {
+                $priority = is_string($row->priority) ? $row->priority : 'normal';
+                $target = $config['targets'][$priority] ?? null;
+                $createdAt = is_string($row->created_at) ? Carbon::parse($row->created_at) : null;
+                if (! is_int($target) || $createdAt === null) {
+                    continue;
+                }
+
+                $tracked++;
+                $dueAt = $createdAt->addMinutes($target);
+                $repliedAt = is_string($row->first_agent_reply_at) ? Carbon::parse($row->first_agent_reply_at) : null;
+
+                if ($repliedAt !== null) {
+                    $repliedAt->lessThanOrEqualTo($dueAt) ? $met++ : $breached++;
+                } else {
+                    now()->lessThanOrEqualTo($dueAt) ? $pending++ : $breached++;
+                }
+            }
+        }
+
+        return [
+            'enabled' => $config['enabled'],
+            'tracked' => $tracked,
+            'met' => $met,
+            'pending' => $pending,
+            'breached' => $breached,
+            'breach_rate' => $tracked > 0 ? round($breached / $tracked, 3) : 0.0,
         ];
     }
 

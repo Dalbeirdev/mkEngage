@@ -94,7 +94,7 @@ export function DashboardView() {
   return (
     <div className="space-y-6">
       {/* Metric cards */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      <div className={`grid grid-cols-2 gap-4 sm:grid-cols-3 ${data.sla.enabled ? "lg:grid-cols-3 xl:grid-cols-6" : "lg:grid-cols-5"}`}>
         <MetricCard
           icon={<IconConversations />}
           tint="indigo"
@@ -137,6 +137,15 @@ export function DashboardView() {
           stars={data.csat.average}
           caption={`Based on ${data.csat.responses} rating${data.csat.responses === 1 ? "" : "s"}`}
         />
+        {data.sla.enabled && (
+          <MetricCard
+            icon={<IconClock />}
+            tint="emerald"
+            label="SLA Breaches"
+            value={data.sla.breached.toLocaleString()}
+            caption={`${pct(data.sla.breach_rate)} of ${data.sla.tracked} tracked`}
+          />
+        )}
       </div>
 
       {/* Charts row */}

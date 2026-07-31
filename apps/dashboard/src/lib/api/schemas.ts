@@ -89,6 +89,14 @@ export const insightsOverviewSchema = z.object({
       avg_csat: z.number().nullable(),
     }),
   ),
+  sla: z.object({
+    enabled: z.boolean(),
+    tracked: z.number().int(),
+    met: z.number().int(),
+    pending: z.number().int(),
+    breached: z.number().int(),
+    breach_rate: z.number(),
+  }),
 });
 
 export type InsightsOverview = z.infer<typeof insightsOverviewSchema>;
