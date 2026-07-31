@@ -126,6 +126,29 @@ services:
       AI_SERVICE_ANTHROPIC_API_KEY: ${AI_SERVICE_ANTHROPIC_API_KEY:-}
       AI_SERVICE_OPENAI_API_KEY: ${AI_SERVICE_OPENAI_API_KEY:-}
 
+  # Daily gzip'd pg_dump into ./backups, oldest pruned after
+  # BACKUP_KEEP_DAYS. First dump runs at container start. Copy the files
+  # off the server on a schedule — a backup on the same disk is not a
+  # disaster plan.
+  db-backup:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: ${DB_USERNAME:-mkengage}
+      PGPASSWORD: ${DB_PASSWORD}
+      PGDATABASE: ${DB_DATABASE:-mkengage}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      BACKUP_INTERVAL_HOURS: ${BACKUP_INTERVAL_HOURS:-24}
+    volumes:
+      - ./db-backup.sh:/db-backup.sh:ro
+      - ./backups:/backups
+    entrypoint: ["/bin/sh", "/db-backup.sh"]
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped

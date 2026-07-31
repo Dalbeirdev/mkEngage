@@ -136,9 +136,21 @@ docker compose -f docker-compose.prod.yml logs -f caddy   # certificate issuance
 git pull && docker compose -f docker-compose.prod.yml up -d --build
 docker compose -f docker-compose.prod.yml exec control-plane php artisan migrate --force
 
-# Backups (do this on a schedule + copy off the server)
-docker compose -f docker-compose.prod.yml exec postgres \
-  pg_dump -U mkengage mkengage | gzip > mkengage-$(date +%F).sql.gz
+# Backups run automatically: the db-backup service writes a gzip'd
+# pg_dump to deploy/backups/ every BACKUP_INTERVAL_HOURS (default 24)
+# and prunes files older than BACKUP_KEEP_DAYS (default 14). Check it:
+ls -lh backups/
+docker compose -f docker-compose.prod.yml logs --tail=5 db-backup
+# Still copy the files OFF the server on a schedule — same-disk backups
+# don't survive a dead disk.
+
+# Restore (DESTRUCTIVE — replaces current data with the chosen backup):
+#   docker compose -f docker-compose.prod.yml stop control-plane queue-worker outbox-relay gateway
+#   docker compose -f docker-compose.prod.yml exec -T postgres psql -U mkengage -d postgres \
+#     -c "DROP DATABASE mkengage;" -c "CREATE DATABASE mkengage OWNER mkengage;"
+#   gunzip -c backups/mkengage-YYYY-MM-DD_HHMMSS.sql.gz | \
+#     docker compose -f docker-compose.prod.yml exec -T postgres psql -U mkengage -d mkengage
+#   docker compose -f docker-compose.prod.yml up -d
 
 # Logs
 docker compose -f docker-compose.prod.yml logs -f control-plane queue-worker outbox-relay

@@ -39,3 +39,6 @@ test-results/
 .terraform/
 *.tfstate
 *.tfstate.*
+
+# deploy-time artifacts
+deploy/backups/
