@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * The tenancy root (ADR-007). Deliberately NOT BelongsToOrganization — this
@@ -18,6 +19,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * by membership/authorization at the application layer.
  *
  * @property array<string, mixed>|null $settings
+ * @property Carbon|null $plan_expires_at
  */
 final class Organization extends Model
 {
@@ -47,6 +49,7 @@ final class Organization extends Model
         return [
             'white_label' => 'boolean',
             'settings' => 'array',
+            'plan_expires_at' => 'datetime',
             // Encrypted at rest (§18); KMS envelope encryption replaces the
             // app-key cipher in the production hardening pass.
             'widget_signing_secret' => 'encrypted',

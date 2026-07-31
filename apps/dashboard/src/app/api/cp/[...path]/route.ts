@@ -19,6 +19,7 @@ const ALLOWED = [
   /^integrations\/slack(\/test)?$/,
   /^organization\/sla$/,
   /^organization\/notifications$/,
+  /^organization\/billing$/,
   /^conversations\/[0-9a-f-]{36}\/read$/,
   /^conversations\/[0-9a-f-]{36}\/assist$/,
   /^conversations\/[0-9a-f-]{36}\/notes$/,

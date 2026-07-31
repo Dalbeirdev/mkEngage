@@ -11,3 +11,6 @@ Artisan::command('inspire', function () {
 // Missed-conversation agent emails (runs via the scheduler service —
 // `php artisan schedule:work` in the deployed stack).
 Schedule::command('notifications:missed')->everyMinute();
+
+// Billing v1: reconcile expired paid plans back to free once a day.
+Schedule::command('plans:expire')->daily();

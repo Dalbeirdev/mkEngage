@@ -31,7 +31,8 @@
     "upsellCta": "Explore AI",
     "moderation": "Moderation",
     "integrations": "Integrations",
-    "sla": "SLA"
+    "sla": "SLA",
+    "billing": "Billing"
   },
   "dashboard": {
     "title": "Dashboard",

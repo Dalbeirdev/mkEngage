@@ -68,6 +68,7 @@ export default async function AppLayout({
     { href: "/settings/moderation", label: t("moderation"), icon: <IconModeration /> },
     { href: "/settings/integrations", label: t("integrations"), icon: <IconIntegrations /> },
     { href: "/settings/developers", label: t("developers"), icon: <IconDevelopers /> },
+    { href: "/settings/billing", label: t("billing"), icon: <IconSparkles /> },
     { href: "/settings/profile", label: t("profile"), icon: <IconProfile /> },
   ];
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Agent\AgentAttachmentController;
 use App\Http\Controllers\Agent\AgentMessageController;
 use App\Http\Controllers\Agent\AvailabilityController;
+use App\Http\Controllers\Agent\BillingController;
 use App\Http\Controllers\Agent\CannedResponseController;
 use App\Http\Controllers\Agent\ChannelController;
 use App\Http\Controllers\Agent\ChatbotController;
@@ -171,6 +172,7 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
         Route::put('/organization/sla', [SlaController::class, 'update']);
         Route::get('/organization/notifications', [NotificationSettingsController::class, 'show']);
         Route::put('/organization/notifications', [NotificationSettingsController::class, 'update']);
+        Route::get('/organization/billing', [BillingController::class, 'show']);
 
         // Moderation (abuse controls): profanity filter config + IP ban list.
         Route::get('/moderation', [ModerationController::class, 'show']);

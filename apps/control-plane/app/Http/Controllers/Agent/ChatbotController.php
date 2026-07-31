@@ -7,7 +7,10 @@ namespace App\Http\Controllers\Agent;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLogEntry;
 use App\Models\Chatbot;
+use App\Models\Organization;
 use App\Models\User;
+use App\Services\PlanService;
+use App\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -31,8 +34,13 @@ final class ChatbotController extends Controller
         ]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, TenantContext $context): JsonResponse
     {
+        app(PlanService::class)->assertCanCreate(
+            Organization::query()->whereKey($context->organizationId())->firstOrFail(),
+            'chatbots',
+        );
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'system_prompt' => ['sometimes', 'nullable', 'string', 'max:8000'],
