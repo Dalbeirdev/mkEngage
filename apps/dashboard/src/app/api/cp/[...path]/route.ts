@@ -20,6 +20,7 @@ const ALLOWED = [
   /^organization\/sla$/,
   /^organization\/notifications$/,
   /^organization\/billing$/,
+  /^organization\/billing\/checkout$/,
   /^conversations\/[0-9a-f-]{36}\/read$/,
   /^conversations\/[0-9a-f-]{36}\/assist$/,
   /^conversations\/[0-9a-f-]{36}\/notes$/,

@@ -52,4 +52,16 @@ return [
         'timeout' => env('AI_SERVICE_TIMEOUT', 25),
     ],
 
+    // Stripe subscription checkout (billing v2). Optional: with no secret
+    // key configured, billing stays operator-activated (org:plan) and the
+    // dashboard shows the contact-us upgrade path instead of checkout.
+    'stripe' => [
+        'secret' => env('STRIPE_SECRET_KEY'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+        'prices' => [
+            'pro' => env('STRIPE_PRICE_PRO'),
+            'business' => env('STRIPE_PRICE_BUSINESS'),
+        ],
+    ],
+
 ];

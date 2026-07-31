@@ -20,6 +20,8 @@ use Illuminate\Support\Carbon;
  *
  * @property array<string, mixed>|null $settings
  * @property Carbon|null $plan_expires_at
+ * @property string|null $stripe_customer_id
+ * @property string|null $stripe_subscription_id
  */
 final class Organization extends Model
 {

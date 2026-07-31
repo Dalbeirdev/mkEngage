@@ -1,6 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useSyncExternalStore } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 
 const planInfoSchema = z.object({
@@ -23,6 +24,8 @@ const billingSchema = z.object({
   }),
   usage: z.object({ channels: z.number().int(), chatbots: z.number().int() }),
   catalog: z.record(z.string(), planInfoSchema),
+  checkout_enabled: z.boolean(),
+  checkout_plans: z.array(z.string()),
 });
 type Billing = z.infer<typeof billingSchema>;
 
@@ -58,6 +61,25 @@ function UsageRow({ label, used, max }: { label: string; used: number; max: numb
 
 export default function BillingPage() {
   const { data, isPending, isError } = useQuery({ queryKey: ["billing"], queryFn: fetchBilling });
+  // Hydration-safe read of ?checkout= (server snapshot: none).
+  const checkoutResult = useSyncExternalStore(
+    () => () => {},
+    () => new URLSearchParams(window.location.search).get("checkout"),
+    () => null,
+  );
+
+  const checkout = useMutation({
+    mutationFn: async (plan: string) => {
+      const res = await fetch("/api/cp/organization/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      });
+      if (!res.ok) throw new Error(`Checkout failed (${res.status})`);
+      const { url } = z.object({ url: z.string() }).parse(await res.json());
+      window.location.href = url;
+    },
+  });
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -65,6 +87,17 @@ export default function BillingPage() {
         <h1 className="text-2xl font-bold tracking-tight">Billing</h1>
         <p className="mt-1 text-sm text-zinc-500">Your plan, limits, and usage.</p>
       </div>
+
+      {checkoutResult === "success" && (
+        <p role="status" className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+          Payment received — your plan activates within a minute. Refresh to see it.
+        </p>
+      )}
+      {checkoutResult === "cancelled" && (
+        <p role="status" className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+          Checkout cancelled — your plan is unchanged.
+        </p>
+      )}
 
       {isPending && <p className="text-sm text-zinc-500" role="status">Loading…</p>}
       {isError && <p className="text-sm text-red-600" role="alert">Couldn&apos;t load billing.</p>}
@@ -115,11 +148,26 @@ export default function BillingPage() {
                   {key === data.plan && (
                     <p className="mt-3 text-xs font-semibold text-indigo-600 dark:text-indigo-400">Your plan</p>
                   )}
+                  {key !== data.plan && data.checkout_plans.includes(key) && (
+                    <button
+                      type="button"
+                      disabled={checkout.isPending}
+                      onClick={() => checkout.mutate(key)}
+                      className="mt-3 w-full rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
+                    >
+                      {checkout.isPending ? "Redirecting…" : `Upgrade to ${plan.label}`}
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
+            {checkout.isError && (
+              <p className="text-sm text-red-600" role="alert">Couldn&apos;t start checkout. Try again.</p>
+            )}
             <p className="text-sm text-zinc-500">
-              To upgrade, contact us at{" "}
+              {data.checkout_enabled
+                ? "Pay by card via Stripe — your plan activates automatically. Prefer an invoice?"
+                : "To upgrade, contact us at"}{" "}
               <a href="mailto:sales@mkengage.com" className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
                 sales@mkengage.com
               </a>{" "}

@@ -33,6 +33,7 @@ use App\Http\Controllers\AttachmentStreamController;
 use App\Http\Controllers\Auth\IssueApiTokenController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\Billing\StripeWebhookController;
 use App\Http\Controllers\Channels\EmailWebhookController;
 use App\Http\Controllers\Channels\InstagramWebhookController;
 use App\Http\Controllers\Channels\MessengerWebhookController;
@@ -88,6 +89,10 @@ Route::post('/channels/instagram/{organization}/{channel}', [InstagramWebhookCon
 
 // Inbound email webhook (provider inbound-parse): X-Webhook-Token authenticated.
 Route::post('/channels/email/{organization}/{channel}', [EmailWebhookController::class, 'receive']);
+
+// Stripe billing webhook: Stripe-Signature (t/v1 HMAC) authenticated; 404
+// when checkout isn't configured.
+Route::post('/billing/stripe/webhook', StripeWebhookController::class);
 
 // Signed attachment stream (§14): the temporary signature IS the auth —
 // minted only by the authorized download endpoints, short expiry.
@@ -173,6 +178,7 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
         Route::get('/organization/notifications', [NotificationSettingsController::class, 'show']);
         Route::put('/organization/notifications', [NotificationSettingsController::class, 'update']);
         Route::get('/organization/billing', [BillingController::class, 'show']);
+        Route::post('/organization/billing/checkout', [BillingController::class, 'checkout']);
 
         // Moderation (abuse controls): profanity filter config + IP ban list.
         Route::get('/moderation', [ModerationController::class, 'show']);
