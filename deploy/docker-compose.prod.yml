@@ -38,6 +38,9 @@ services:
       APP_DEBUG: "false"
       APP_KEY: "${APP_KEY:?see deploy/.env.example for how to generate}"
       APP_URL: https://api.${DOMAIN}
+      # Email links (password reset) point at the dashboard origin. The LAN
+      # overlay doesn't need this — there APP_URL is the single origin.
+      DASHBOARD_URL: https://app.${DOMAIN}
       DB_CONNECTION: pgsql
       DB_HOST: postgres
       DB_PORT: "5432"

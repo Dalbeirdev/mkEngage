@@ -54,6 +54,12 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    // Where the agent dashboard lives — used to build links in emails (e.g.
+    // password reset). Falls back to APP_URL, which is correct for the LAN
+    // single-origin deployment; the public deployment sets DASHBOARD_URL to
+    // https://app.DOMAIN.
+    'dashboard_url' => env('DASHBOARD_URL', env('APP_URL', 'http://localhost')),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

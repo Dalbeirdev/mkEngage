@@ -29,6 +29,7 @@ use App\Http\Controllers\Agent\TwoFactorController;
 use App\Http\Controllers\Agent\WidgetSettingsController;
 use App\Http\Controllers\AttachmentStreamController;
 use App\Http\Controllers\Auth\IssueApiTokenController;
+use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Channels\EmailWebhookController;
 use App\Http\Controllers\Channels\InstagramWebhookController;
@@ -55,6 +56,8 @@ use Illuminate\Support\Facades\Route;
 // Unauthenticated: token issuance + widget bootstrap (rate-limited in controllers).
 Route::post('/auth/token', IssueApiTokenController::class);
 Route::post('/auth/register', RegisterController::class);
+Route::post('/auth/forgot-password', [PasswordResetController::class, 'forgot']);
+Route::post('/auth/reset-password', [PasswordResetController::class, 'reset']);
 Route::post('/widget/session', WidgetSessionController::class);
 
 // Public marketing-site leads (contact form + newsletter): unauthenticated,
