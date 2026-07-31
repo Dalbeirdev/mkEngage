@@ -60,10 +60,13 @@ For an internal box that only needs to be reachable on the local network:
    sudo docker compose -f docker-compose.prod.yml -f docker-compose.lan.yml up -d --build
    sudo docker compose -f docker-compose.prod.yml -f docker-compose.lan.yml exec control-plane php artisan migrate --force
    ```
-3. Access: dashboard `http://SERVER_ADDR:8080`, API `http://SERVER_ADDR:8000`,
-   WebSockets `ws://SERVER_ADDR:4000`. Caddy/HTTPS is disabled; the login
-   cookie is issued without the Secure flag (`INSECURE_COOKIES=1`) so plain
-   HTTP works. **Trusted internal networks only.**
+3. Access: everything on one clean origin — `http://SERVER_ADDR` (the
+   caddy-lan service routes `/` → dashboard, `/api` + `/storage` →
+   control-plane, `/socket` → gateway; see Caddyfile.lan). The direct ports
+   still work as fallback: dashboard `:8080`, API `:8000`, WebSockets
+   `:4000`. ACME/HTTPS is disabled; the login cookie is issued without the
+   Secure flag (`INSECURE_COOKIES=1`) so plain HTTP works. **Trusted
+   internal networks only.**
 
 Running inside WSL 2 and other LAN machines can't reach the ports? Enable
 mirrored networking (Windows 11) so WSL services bind on the host address:
@@ -73,7 +76,7 @@ mirrored networking (Windows 11) so WSL services bind on the host address:
 #   [wsl2]
 #   networkingMode=mirrored
 wsl --shutdown     # then reopen Ubuntu and: sudo service docker start
-New-NetFirewallRule -DisplayName "mkEngage LAN" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 8000,8080,4000
+New-NetFirewallRule -DisplayName "mkEngage LAN" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 80,8000,8080,4000
 ```
 
 ## Security first

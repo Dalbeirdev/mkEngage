@@ -1,0 +1,20 @@
+# LAN mode path router — one clean origin on port 80, no port numbers:
+#   http://SERVER_ADDR/          → dashboard (Next.js)
+#   http://SERVER_ADDR/api/*     → control-plane (Laravel API)
+#   http://SERVER_ADDR/storage/* → control-plane (public files, e.g. logos)
+#   http://SERVER_ADDR/socket    → gateway (Phoenix WebSockets)
+# Plain HTTP only (trusted internal networks); auto_https stays off so Caddy
+# never tries to provision certificates for an IP/LAN hostname.
+{
+	auto_https off
+}
+
+:80 {
+	@control-plane path /api/* /storage/* /up
+	reverse_proxy @control-plane control-plane:8000
+
+	@gateway path /socket /socket/*
+	reverse_proxy @gateway gateway:4000
+
+	reverse_proxy dashboard:3000
+}

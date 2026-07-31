@@ -7,7 +7,9 @@
 # guards (e.g. DOMAIN=lan.internal, ACME_EMAIL=none@lan.internal) — they are
 # unused here because Caddy is disabled.
 #
-# Access from the LAN:
+# Access from the LAN — one clean origin, routed by caddy-lan on port 80:
+#   Everything   http://SERVER_ADDR
+# The direct ports remain as fallback:
 #   Dashboard  http://SERVER_ADDR:8080
 #   API        http://SERVER_ADDR:8000
 #   WebSocket  ws://SERVER_ADDR:4000/socket
@@ -20,8 +22,8 @@ services:
     ports:
       - "8000:8000"
     environment: &lan-cp-env
-      APP_URL: "http://${SERVER_ADDR:?set SERVER_ADDR (LAN IP) in deploy/.env}:8000"
-      GATEWAY_URL: "ws://${SERVER_ADDR}:4000/socket"
+      APP_URL: "http://${SERVER_ADDR:?set SERVER_ADDR (LAN IP) in deploy/.env}"
+      GATEWAY_URL: "ws://${SERVER_ADDR}/socket"
 
   queue-worker:
     environment: *lan-cp-env
@@ -47,3 +49,17 @@ services:
     # keeps it out of `up` without editing the base file.
     profiles:
       - disabled
+
+  # LAN counterpart of caddy: plain-HTTP path router so every surface shares
+  # one origin without port numbers (see Caddyfile.lan).
+  caddy-lan:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./Caddyfile.lan:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - dashboard
+      - control-plane
+      - gateway
