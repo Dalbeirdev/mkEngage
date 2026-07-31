@@ -18,6 +18,7 @@ const ALLOWED = [
   /^saved-views(\/[0-9a-f-]{36})?$/,
   /^integrations\/slack(\/test)?$/,
   /^organization\/sla$/,
+  /^organization\/notifications$/,
   /^conversations\/[0-9a-f-]{36}\/read$/,
   /^conversations\/[0-9a-f-]{36}\/assist$/,
   /^conversations\/[0-9a-f-]{36}\/notes$/,

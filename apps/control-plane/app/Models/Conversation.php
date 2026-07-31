@@ -52,6 +52,7 @@ final class Conversation extends Model
             'tags' => 'array',
             'flow_state' => 'array',
             'is_spam' => 'boolean',
+            'missed_notified_sequence' => 'integer',
         ];
     }
 

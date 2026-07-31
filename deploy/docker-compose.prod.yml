@@ -95,6 +95,21 @@ services:
     healthcheck:
       disable: true
 
+  # Laravel scheduler loop — due tasks (e.g. notifications:missed) run
+  # every minute inside this container.
+  scheduler:
+    build: ../apps/control-plane
+    restart: unless-stopped
+    command: ["php", "artisan", "schedule:work"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment: *cp-env
+    volumes:
+      - cp-storage:/app/storage
+    healthcheck:
+      disable: true
+
   dashboard:
     build: ../apps/dashboard
     restart: unless-stopped

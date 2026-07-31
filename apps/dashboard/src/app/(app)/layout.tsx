@@ -64,6 +64,7 @@ export default async function AppLayout({
   ];
   const settingsNav = [
     { href: "/settings/sla", label: t("sla"), icon: <IconSla /> },
+    { href: "/settings/notifications", label: t("notifications"), icon: <IconBell /> },
     { href: "/settings/moderation", label: t("moderation"), icon: <IconModeration /> },
     { href: "/settings/integrations", label: t("integrations"), icon: <IconIntegrations /> },
     { href: "/settings/developers", label: t("developers"), icon: <IconDevelopers /> },

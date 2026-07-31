@@ -21,6 +21,7 @@ use App\Http\Controllers\Agent\IntegrationController;
 use App\Http\Controllers\Agent\KnowledgeController;
 use App\Http\Controllers\Agent\LiveVisitorController;
 use App\Http\Controllers\Agent\ModerationController;
+use App\Http\Controllers\Agent\NotificationSettingsController;
 use App\Http\Controllers\Agent\OrganizationLogoController;
 use App\Http\Controllers\Agent\ProfileController;
 use App\Http\Controllers\Agent\SavedViewController;
@@ -168,6 +169,8 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
         // First-response SLA targets per priority.
         Route::get('/organization/sla', [SlaController::class, 'show']);
         Route::put('/organization/sla', [SlaController::class, 'update']);
+        Route::get('/organization/notifications', [NotificationSettingsController::class, 'show']);
+        Route::put('/organization/notifications', [NotificationSettingsController::class, 'update']);
 
         // Moderation (abuse controls): profanity filter config + IP ban list.
         Route::get('/moderation', [ModerationController::class, 'show']);
