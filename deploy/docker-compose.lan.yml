@@ -24,11 +24,17 @@ services:
     environment: &lan-cp-env
       APP_URL: "http://${SERVER_ADDR:?set SERVER_ADDR (LAN IP) in deploy/.env}"
       GATEWAY_WS_URL: "ws://${SERVER_ADDR}/socket"
+      # Email links (password reset, missed-conversation notices) — must
+      # override the base file's https://app.DOMAIN placeholder.
+      DASHBOARD_URL: "http://${SERVER_ADDR}"
 
   queue-worker:
     environment: *lan-cp-env
 
   outbox-relay:
+    environment: *lan-cp-env
+
+  scheduler:
     environment: *lan-cp-env
 
   dashboard:
