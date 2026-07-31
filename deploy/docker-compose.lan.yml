@@ -23,7 +23,7 @@ services:
       - "8000:8000"
     environment: &lan-cp-env
       APP_URL: "http://${SERVER_ADDR:?set SERVER_ADDR (LAN IP) in deploy/.env}"
-      GATEWAY_URL: "ws://${SERVER_ADDR}/socket"
+      GATEWAY_WS_URL: "ws://${SERVER_ADDR}/socket"
 
   queue-worker:
     environment: *lan-cp-env

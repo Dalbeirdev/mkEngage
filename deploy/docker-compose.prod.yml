@@ -49,7 +49,7 @@ services:
       SESSION_DRIVER: database
       NATS_URL: nats://nats:4222
       GATEWAY_SIGNING_KEY: ${GATEWAY_SIGNING_KEY:?openssl rand -hex 32}
-      GATEWAY_URL: wss://ws.${DOMAIN}/socket
+      GATEWAY_WS_URL: wss://ws.${DOMAIN}/socket
       AI_SERVICE_URL: http://ai-service:8100
       AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:?openssl rand -hex 32}
       MAIL_MAILER: ${MAIL_MAILER:-log}
