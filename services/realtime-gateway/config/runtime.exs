@@ -55,10 +55,16 @@ if config_env() == :prod do
 
   host = System.get_env("PHX_HOST") || "example.com"
 
+  # LAN mode (INSECURE_HTTP=1) serves plain HTTP on one origin; the public
+  # deployment sits behind Caddy TLS. The scheme must match what browsers
+  # use or the WebSocket origin check rejects every connection.
+  {url_scheme, url_port} =
+    if System.get_env("INSECURE_HTTP") == "1", do: {"http", 80}, else: {"https", 443}
+
   config :realtime_gateway, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
   config :realtime_gateway, RealtimeGatewayWeb.Endpoint,
-    url: [host: host, port: 443, scheme: "https"],
+    url: [host: host, port: url_port, scheme: url_scheme],
     http: [
       # Enable IPv6 and bind on all interfaces.
       # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.

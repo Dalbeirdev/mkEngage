@@ -1,16 +1,9 @@
 import Config
 
-# Force using SSL in production. This also sets the "strict-security-transport" header,
-# known as HSTS. If you have a health check endpoint, you may want to exclude it below.
-# Note `:force_ssl` is required to be set at compile-time.
-config :realtime_gateway, RealtimeGatewayWeb.Endpoint,
-  force_ssl: [
-    rewrite_on: [:x_forwarded_proto],
-    exclude: [
-      # paths: ["/health"],
-      hosts: ["localhost", "127.0.0.1"]
-    ]
-  ]
+# No force_ssl here: TLS termination and HTTP→HTTPS redirects are Caddy's
+# job in the public deployment, and LAN mode is plain HTTP by design — a
+# compiled-in Plug.SSL 301 breaks proxied WebSocket upgrades there
+# (X-Forwarded-Proto: http from the LAN path router).
 
 # Do not print debug messages in production
 config :logger, level: :info

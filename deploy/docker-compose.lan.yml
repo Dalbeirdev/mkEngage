@@ -43,6 +43,8 @@ services:
       - "4000:4000"
     environment:
       PHX_HOST: ${SERVER_ADDR}
+      # Plain-HTTP origin (no force_ssl redirect, ws:// origin accepted).
+      INSECURE_HTTP: "1"
 
   caddy:
     # No public domain → no ACME. Parking Caddy behind an unused profile
