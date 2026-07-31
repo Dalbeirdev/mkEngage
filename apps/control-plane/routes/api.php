@@ -212,6 +212,7 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
 
         // mkEngage Insights (tenant-scoped analytics overview).
         Route::get('/insights/overview', [InsightsController::class, 'overview']);
+        Route::get('/insights/export', [InsightsController::class, 'export']);
 
         // Third-party integrations (Slack notifications in v1).
         Route::get('/integrations/slack', [IntegrationController::class, 'show']);

@@ -26,6 +26,7 @@ const ALLOWED = [
   /^conversations\/[0-9a-f-]{36}\/attachments(\/[0-9a-f-]{36}\/download)?$/,
   /^me\/availability$/,
   /^insights\/overview$/,
+  /^insights\/export$/,
   /^visitors\/live$/,
   /^canned-responses(\/[0-9a-f-]{36})?$/,
   /^channels(\/[0-9a-f-]{36})?$/,

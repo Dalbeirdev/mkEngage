@@ -29,3 +29,21 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* Print / save-as-PDF: the Insights "Print / PDF" button prints just the
+   report content — chrome (sidebar, sticky header) stays on screen only. */
+@media print {
+  aside,
+  header {
+    display: none !important;
+  }
+
+  main {
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  body {
+    background: #fff;
+  }
+}

@@ -93,6 +93,24 @@ export function DashboardView() {
 
   return (
     <div className="space-y-6">
+      {/* Report export toolbar */}
+      <div className="flex justify-end gap-2 print:hidden">
+        <a
+          href="/api/cp/insights/export"
+          download
+          className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+        >
+          Export CSV
+        </a>
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+        >
+          Print / PDF
+        </button>
+      </div>
+
       {/* Metric cards */}
       <div className={`grid grid-cols-2 gap-4 sm:grid-cols-3 ${data.sla.enabled ? "lg:grid-cols-3 xl:grid-cols-6" : "lg:grid-cols-5"}`}>
         <MetricCard
