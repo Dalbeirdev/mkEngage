@@ -11,6 +11,7 @@ return [
         'price' => '$0',
         'max_channels' => 2,
         'max_chatbots' => 3,
+        'max_agents' => 3,
         'white_label' => false,
     ],
     'pro' => [
@@ -18,6 +19,7 @@ return [
         'price' => '$29 / month',
         'max_channels' => 6,
         'max_chatbots' => 5,
+        'max_agents' => 10,
         'white_label' => true,
     ],
     'business' => [
@@ -25,6 +27,7 @@ return [
         'price' => '$99 / month',
         'max_channels' => null,
         'max_chatbots' => null,
+        'max_agents' => null,
         'white_label' => true,
     ],
 ];

@@ -32,7 +32,8 @@
     "moderation": "Moderation",
     "integrations": "Integrations",
     "sla": "SLA",
-    "billing": "Billing"
+    "billing": "Billing",
+    "team": "Team"
   },
   "dashboard": {
     "title": "Dashboard",

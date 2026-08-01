@@ -27,6 +27,7 @@ use App\Http\Controllers\Agent\OrganizationLogoController;
 use App\Http\Controllers\Agent\ProfileController;
 use App\Http\Controllers\Agent\SavedViewController;
 use App\Http\Controllers\Agent\SlaController;
+use App\Http\Controllers\Agent\TeamController;
 use App\Http\Controllers\Agent\TwoFactorController;
 use App\Http\Controllers\Agent\WidgetSettingsController;
 use App\Http\Controllers\AttachmentStreamController;
@@ -194,14 +195,12 @@ Route::middleware([EstablishTenantContext::class, 'auth:sanctum', 'ability:user-
         Route::post('/departments', [DepartmentController::class, 'store']);
         Route::patch('/departments/{department}', [DepartmentController::class, 'update']);
         Route::put('/departments/{department}/members', [DepartmentController::class, 'setMembers']);
-        Route::get('/users', function () {
-            return response()->json([
-                'data' => User::query()->orderBy('name')->limit(200)
-                    ->get(['id', 'name', 'email'])
-                    ->map(fn ($user) => ['user_id' => $user->id, 'name' => $user->name, 'email' => $user->email])
-                    ->all(),
-            ]);
-        });
+        // Team management: list, invite (seat-gated), resend invite,
+        // activate/deactivate.
+        Route::get('/users', [TeamController::class, 'index']);
+        Route::post('/users', [TeamController::class, 'store']);
+        Route::post('/users/{user}/invite', [TeamController::class, 'resend']);
+        Route::patch('/users/{user}', [TeamController::class, 'update']);
 
         Route::get('/contacts', [ContactController::class, 'index']);
         Route::post('/contacts', [ContactController::class, 'store']);

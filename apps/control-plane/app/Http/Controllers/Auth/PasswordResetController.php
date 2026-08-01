@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLogEntry;
 use App\Models\Organization;
 use App\Models\User;
+use App\Services\PasswordResetLinks;
 use App\Tenancy\Tenancy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -135,21 +136,7 @@ final class PasswordResetController extends Controller
 
     private function issueAndMailToken(Organization $organization, string $email): void
     {
-        $plain = bin2hex(random_bytes(32));
-
-        DB::table('password_reset_tokens')->upsert([[
-            'email' => $organization->id.'|'.$email,
-            'token' => hash('sha256', $plain),
-            'created_at' => now(),
-        ]], ['email'], ['token', 'created_at']);
-
-        $base = config('app.dashboard_url');
-        $base = is_string($base) && $base !== '' ? rtrim($base, '/') : '';
-        $link = $base.'/reset-password'
-            .'?organization='.rawurlencode($organization->slug)
-            .'&email='.rawurlencode($email)
-            .'&token='.$plain;
-
+        $link = app(PasswordResetLinks::class)->issue($organization, $email);
         $organizationName = $organization->name;
 
         Mail::raw(

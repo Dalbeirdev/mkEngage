@@ -9,6 +9,7 @@ const planInfoSchema = z.object({
   price: z.string(),
   max_channels: z.number().int().nullable(),
   max_chatbots: z.number().int().nullable(),
+  max_agents: z.number().int().nullable(),
   white_label: z.boolean(),
 });
 
@@ -21,8 +22,13 @@ const billingSchema = z.object({
   limits: z.object({
     channels: z.number().int().nullable(),
     chatbots: z.number().int().nullable(),
+    agents: z.number().int().nullable(),
   }),
-  usage: z.object({ channels: z.number().int(), chatbots: z.number().int() }),
+  usage: z.object({
+    channels: z.number().int(),
+    chatbots: z.number().int(),
+    agents: z.number().int(),
+  }),
   catalog: z.record(z.string(), planInfoSchema),
   checkout_enabled: z.boolean(),
   checkout_plans: z.array(z.string()),
@@ -122,6 +128,7 @@ export default function BillingPage() {
               </div>
             </div>
 
+            <UsageRow label="Agents" used={data.usage.agents} max={data.limits.agents} />
             <UsageRow label="Channels" used={data.usage.channels} max={data.limits.channels} />
             <UsageRow label="Chatbots" used={data.usage.chatbots} max={data.limits.chatbots} />
           </section>
@@ -141,6 +148,7 @@ export default function BillingPage() {
                   <p className="font-semibold">{plan.label}</p>
                   <p className="text-sm text-zinc-500">{plan.price}</p>
                   <ul className="mt-3 space-y-1 text-sm text-zinc-600 dark:text-zinc-300">
+                    <li>{plan.max_agents === null ? "Unlimited agents" : `${plan.max_agents} agents`}</li>
                     <li>{plan.max_channels === null ? "Unlimited channels" : `${plan.max_channels} channels`}</li>
                     <li>{plan.max_chatbots === null ? "Unlimited chatbots" : `${plan.max_chatbots} chatbots`}</li>
                     <li>{plan.white_label ? "White-label widget" : "mkEngage branding"}</li>

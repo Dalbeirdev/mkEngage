@@ -57,6 +57,7 @@ export default async function AppLayout({
     { href: "/contacts", label: t("contacts"), icon: <IconContacts /> },
     { href: "/chatbots", label: t("chatbots"), icon: <IconChatbots /> },
     { href: "/knowledge", label: t("knowledge"), icon: <IconKnowledge /> },
+    { href: "/settings/team", label: t("team"), icon: <IconContacts /> },
     { href: "/settings/departments", label: t("departments"), icon: <IconDepartments /> },
     { href: "/settings/channels", label: t("channels"), icon: <IconChannels /> },
     { href: "/settings/widget", label: t("widgetSetup"), icon: <IconWidget /> },

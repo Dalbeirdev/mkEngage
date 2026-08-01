@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Models\Channel;
 use App\Models\Chatbot;
 use App\Models\Organization;
+use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 
@@ -32,7 +33,7 @@ final class PlanService
         return is_array(config("plans.{$plan}")) ? $plan : 'free';
     }
 
-    /** @return array{label: string, price: string, max_channels: int|null, max_chatbots: int|null, white_label: bool} */
+    /** @return array{label: string, price: string, max_channels: int|null, max_chatbots: int|null, max_agents: int|null, white_label: bool} */
     public function limits(string $plan): array
     {
         $config = config("plans.{$plan}");
@@ -44,6 +45,7 @@ final class PlanService
             'price' => is_string($config['price'] ?? null) ? $config['price'] : '',
             'max_channels' => $int($config['max_channels'] ?? null),
             'max_chatbots' => $int($config['max_chatbots'] ?? null),
+            'max_agents' => $int($config['max_agents'] ?? null),
             'white_label' => ($config['white_label'] ?? false) === true,
         ];
     }
@@ -56,6 +58,7 @@ final class PlanService
         [$max, $count] = match ($resource) {
             'channels' => [$limits['max_channels'], Channel::query()->count()],
             'chatbots' => [$limits['max_chatbots'], Chatbot::query()->count()],
+            'agents' => [$limits['max_agents'], User::query()->where('status', 'active')->count()],
             default => [null, 0],
         };
 
@@ -78,8 +81,16 @@ final class PlanService
             'price' => $limits['price'],
             'expires_at' => $organization->plan_expires_at?->toIso8601String(),
             'white_label' => $limits['white_label'],
-            'limits' => ['channels' => $limits['max_channels'], 'chatbots' => $limits['max_chatbots']],
-            'usage' => ['channels' => Channel::query()->count(), 'chatbots' => Chatbot::query()->count()],
+            'limits' => [
+                'channels' => $limits['max_channels'],
+                'chatbots' => $limits['max_chatbots'],
+                'agents' => $limits['max_agents'],
+            ],
+            'usage' => [
+                'channels' => Channel::query()->count(),
+                'chatbots' => Chatbot::query()->count(),
+                'agents' => User::query()->where('status', 'active')->count(),
+            ],
         ];
     }
 

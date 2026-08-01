@@ -39,8 +39,8 @@ it('reports the free plan with usage and the catalog', function (): void {
 
     expect($billing['plan'])->toBe('free')
         ->and($billing['white_label'])->toBeFalse()
-        ->and($billing['limits'])->toBe(['channels' => 2, 'chatbots' => 3])
-        ->and($billing['usage'])->toBe(['channels' => 0, 'chatbots' => 0])
+        ->and($billing['limits'])->toBe(['channels' => 2, 'chatbots' => 3, 'agents' => 3])
+        ->and($billing['usage'])->toBe(['channels' => 0, 'chatbots' => 0, 'agents' => 1])
         ->and(array_keys($billing['catalog']))->toBe(['free', 'pro', 'business']);
 });
 
