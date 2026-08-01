@@ -24,6 +24,7 @@ import {
   IconVisitors,
   IconWidget,
 } from "@/components/icons";
+import { MobileNav } from "@/components/mobile-nav";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ApiError, apiJson } from "@/lib/api/server";
@@ -115,6 +116,7 @@ export default async function AppLayout({
 
       <div className="flex min-w-0 flex-1 flex-col bg-zinc-50 dark:bg-zinc-950">
         <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-zinc-200 bg-white/80 px-4 py-2.5 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/80">
+          <MobileNav mainNav={mainNav} settingsNav={settingsNav} settingsLabel={t("settings")} />
           <form action="/conversations" className="relative hidden max-w-xs flex-1 sm:block">
             <span className="pointer-events-none absolute inset-y-0 start-2.5 grid place-items-center text-zinc-400" aria-hidden>
               <IconSearch />
